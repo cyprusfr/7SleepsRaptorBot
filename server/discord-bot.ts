@@ -4,13 +4,11 @@ import crypto from 'crypto';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID;
-const REQUIRED_ROLE = process.env.REQUIRED_ROLE || 'Raptor Admin';
-const KEY_SYSTEM_ROLE = process.env.KEY_SYSTEM_ROLE || 'Key System';
-const AUTHORIZED_USER_IDS = ['1131426483404026019']; // Users who can bypass role requirements
 
 export class RaptorBot {
   private client: Client;
   private isReady = false;
+  private settings: Map<string, string> = new Map();
 
   constructor() {
     this.client = new Client({
@@ -21,6 +19,42 @@ export class RaptorBot {
 
     this.setupEventHandlers();
     this.registerCommands();
+    this.loadSettings();
+  }
+
+  private async loadSettings() {
+    try {
+      const allSettings = await storage.getAllBotSettings();
+      for (const setting of allSettings) {
+        this.settings.set(setting.key, setting.value);
+      }
+      
+      // Set default settings if they don't exist
+      const defaultSettings = [
+        { key: 'required_role', value: 'Raptor Admin' },
+        { key: 'key_system_role', value: 'Key System' },
+        { key: 'rate_limit_enabled', value: 'true' },
+        { key: 'backup_retention_days', value: '30' },
+        { key: 'authorized_user_id', value: '1131426483404026019' }
+      ];
+
+      for (const defaultSetting of defaultSettings) {
+        if (!this.settings.has(defaultSetting.key)) {
+          await storage.setBotSetting(defaultSetting.key, defaultSetting.value);
+          this.settings.set(defaultSetting.key, defaultSetting.value);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading bot settings:', error);
+    }
+  }
+
+  public async refreshSettings() {
+    await this.loadSettings();
+  }
+
+  private getSetting(key: string, defaultValue: string = ''): string {
+    return this.settings.get(key) || defaultValue;
   }
 
   private setupEventHandlers() {
@@ -276,7 +310,8 @@ export class RaptorBot {
     const userId = interaction.user.id;
     
     // Check if user is in authorized list (bypass role requirements)
-    if (AUTHORIZED_USER_IDS.includes(userId)) {
+    const authorizedUserId = this.getSetting('authorized_user_id', '1131426483404026019');
+    if (userId === authorizedUserId) {
       return true;
     }
 

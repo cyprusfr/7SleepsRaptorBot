@@ -33,8 +33,8 @@ export default function Servers() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
-        botStatus={stats?.botStatus || "offline"}
-        lastSync={stats?.lastSync ? formatDistanceToNow(new Date(stats.lastSync), { addSuffix: true }) : "Never"}
+        botStatus="offline"
+        lastSync="Never"
       />
 
       <main className="flex-1 overflow-auto">

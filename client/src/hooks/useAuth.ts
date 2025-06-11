@@ -6,9 +6,16 @@ export function useAuth() {
     retry: false,
   });
 
+  const { data: dashboardAuth, isLoading: isDashboardAuthLoading } = useQuery({
+    queryKey: ["/api/dashboard-keys/auth-status"],
+    retry: false,
+  });
+
   return {
     user,
-    isLoading,
+    isLoading: isLoading || isDashboardAuthLoading,
     isAuthenticated: !!user,
+    hasDashboardKey: !!(dashboardAuth as any)?.authenticated,
+    dashboardKeyRequired: !(dashboardAuth as any)?.authenticated && !isLoading && !isDashboardAuthLoading,
   };
 }

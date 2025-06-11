@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { HiddenAdminPanel } from "@/components/HiddenAdminPanel";
+import DashboardKeyAuth from "@/components/DashboardKeyAuth";
 import Dashboard from "@/pages/dashboard";
 import KeyManagement from "@/pages/key-management";
 import Users from "@/pages/users";
@@ -17,7 +18,7 @@ import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, dashboardKeyRequired } = useAuth();
 
   if (isLoading) {
     return (
@@ -25,6 +26,10 @@ function Router() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (dashboardKeyRequired) {
+    return <DashboardKeyAuth onAuthenticated={() => window.location.reload()} />;
   }
 
   return (

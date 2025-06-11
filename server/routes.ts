@@ -101,6 +101,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard key authentication status
+  app.get("/api/dashboard-keys/auth-status", async (req, res) => {
+    try {
+      const sessionKeyId = (req.session as any).dashboardKeyId;
+      if (!sessionKeyId) {
+        return res.json({ authenticated: false });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(sessionKeyId);
+      if (!dashboardKey || dashboardKey.status !== 'active') {
+        return res.json({ authenticated: false });
+      }
+
+      res.json({ 
+        authenticated: true,
+        keyId: dashboardKey.keyId,
+        isLinked: !!dashboardKey.userId,
+        discordUsername: dashboardKey.discordUsername
+      });
+    } catch (error) {
+      console.error("Error checking dashboard key status:", error);
+      res.status(500).json({ error: "Failed to check dashboard key status" });
+    }
+  });
+
+  // Validate dashboard key
+  app.post("/api/dashboard-keys/validate", async (req, res) => {
+    try {
+      const { keyId } = req.body;
+      
+      if (!keyId || !keyId.startsWith('dash_')) {
+        return res.status(400).json({ error: "Invalid key format" });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
+      if (!dashboardKey || dashboardKey.status !== 'active') {
+        await storage.logActivity({
+          type: "dashboard_key_validation",
+          description: `Failed validation attempt for key: ${keyId}`,
+          metadata: { 
+            keyId, 
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        });
+        return res.status(401).json({ error: "Invalid or revoked dashboard key" });
+      }
+
+      // Log successful validation
+      await storage.logActivity({
+        type: "dashboard_key_validation",
+        description: `Successful validation for key: ${keyId} (${dashboardKey.discordUsername})`,
+        metadata: { 
+          keyId, 
+          discordUsername: dashboardKey.discordUsername,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      });
+
+      res.json({
+        keyId: dashboardKey.keyId,
+        discordUsername: dashboardKey.discordUsername,
+        discordUserId: dashboardKey.discordUserId,
+        createdAt: dashboardKey.createdAt,
+        isLinked: !!dashboardKey.userId
+      });
+    } catch (error) {
+      console.error("Error validating dashboard key:", error);
+      res.status(500).json({ error: "Failed to validate dashboard key" });
+    }
+  });
+
+  // Link dashboard key to account
+  app.post("/api/dashboard-keys/link", async (req, res) => {
+    try {
+      const { keyId, linkToAccount } = req.body;
+      
+      if (!keyId) {
+        return res.status(400).json({ error: "Key ID required" });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
+      if (!dashboardKey || dashboardKey.status !== 'active') {
+        return res.status(401).json({ error: "Invalid or revoked dashboard key" });
+      }
+
+      // Store key in session for authentication
+      (req.session as any).dashboardKeyId = keyId;
+
+      if (linkToAccount && req.isAuthenticated()) {
+        const userId = req.user.claims.sub;
+        const userEmail = req.user.claims.email;
+        
+        // Link the key to the Google account
+        await storage.linkDashboardKeyToGoogle(keyId, userId, userEmail);
+        
+        await storage.logActivity({
+          type: "dashboard_key_link",
+          description: `Dashboard key ${keyId} linked to Google account: ${userEmail}`,
+          metadata: { 
+            keyId,
+            userId,
+            userEmail,
+            discordUsername: dashboardKey.discordUsername,
+            ip: req.ip
+          }
+        });
+
+        res.json({ 
+          success: true, 
+          linked: true,
+          message: "Dashboard key linked to your account successfully"
+        });
+      } else {
+        await storage.logActivity({
+          type: "dashboard_key_access",
+          description: `Temporary access granted for key: ${keyId} (${dashboardKey.discordUsername})`,
+          metadata: { 
+            keyId,
+            discordUsername: dashboardKey.discordUsername,
+            temporary: true,
+            ip: req.ip
+          }
+        });
+
+        res.json({ 
+          success: true, 
+          linked: false,
+          message: "Temporary access granted"
+        });
+      }
+    } catch (error) {
+      console.error("Error linking dashboard key:", error);
+      res.status(500).json({ error: "Failed to link dashboard key" });
+    }
+  });
+
   // Auth routes with user data
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {

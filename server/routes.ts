@@ -309,6 +309,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User permissions endpoint
+  app.get('/api/user/permissions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get role-based permissions
+      let permissions = storage.getRolePermissions(user.role || 'pending');
+      
+      // Override for owner
+      if (user.email === 'alexkkork123@gmail.com') {
+        permissions = storage.getRolePermissions('owner');
+      }
+
+      res.json(permissions);
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ error: "Failed to fetch permissions" });
+    }
+  });
+
+  // Sync endpoint
+  app.post('/api/sync', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      await raptorBot.refreshSettings();
+      await raptorBot.syncServerData();
+      res.json({ success: true, message: "Sync completed successfully" });
+    } catch (error) {
+      console.error("Sync error:", error);
+      res.status(500).json({ error: "Sync failed" });
+    }
+  });
+
+  // Backup management endpoints
+  app.get('/api/backups', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const backups = await raptorBot.getAllBackups();
+      res.json(backups);
+    } catch (error) {
+      console.error("Error fetching backups:", error);
+      res.status(500).json({ error: "Failed to fetch backups" });
+    }
+  });
+
+  app.post('/api/backups', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { serverId, backupType } = req.body;
+      const userId = req.user.claims.sub;
+      const username = req.user.claims.email;
+      
+      if (!serverId || !backupType) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const backup = await raptorBot.createBackup(serverId, backupType, username);
+      res.json(backup);
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: error.message || "Failed to create backup" });
+    }
+  });
+
+  app.post('/api/backups/:id/restore', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const username = req.user.claims.email;
+      
+      const result = await raptorBot.restoreBackup(id, username);
+      res.json(result);
+    } catch (error) {
+      console.error("Error restoring backup:", error);
+      res.status(500).json({ error: error.message || "Failed to restore backup" });
+    }
+  });
+
+  app.delete('/api/backups/:id', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await raptorBot.deleteBackup(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting backup:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
+    }
+  });
+
   // Discord servers
   app.get("/api/servers", async (req, res) => {
     try {

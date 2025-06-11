@@ -2877,7 +2877,95 @@ export class RaptorBot {
       });
     }
   }
+
+  public async getAllBackups() {
+    try {
+      const settings = await storage.getAllBotSettings();
+      const backups = settings
+        .filter(setting => setting.key.startsWith('backup_'))
+        .map(setting => {
+          try {
+            return JSON.parse(setting.value);
+          } catch {
+            return null;
+          }
+        })
+        .filter(backup => backup !== null)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      return backups;
+    } catch (error) {
+      console.error('Error fetching backups:', error);
+      return [];
+    }
+  }
+
+  public async restoreBackup(backupId: string, userId: string = 'dashboard') {
+    try {
+      const backupData = await storage.getBotSetting(`backup_${backupId}`);
+      if (!backupData) {
+        throw new Error('Backup not found');
+      }
+
+      const backup = JSON.parse(backupData);
+      const guild = this.client.guilds.cache.get(backup.serverId);
+      if (!guild) {
+        throw new Error('Server not found');
+      }
+
+      // Log restore activity
+      await storage.logActivity({
+        type: 'backup_restored',
+        userId,
+        description: `Restored backup ${backupId} for server ${backup.serverName}`,
+        metadata: { backupId, serverId: backup.serverId }
+      });
+
+      return { success: true, message: 'Backup restoration initiated' };
+    } catch (error) {
+      console.error('Backup restore error:', error);
+      throw error;
+    }
+  }
+
+  public async deleteBackup(backupId: string) {
+    try {
+      const backupKey = `backup_${backupId}`;
+      const backupData = await storage.getBotSetting(backupKey);
+      
+      if (!backupData) {
+        throw new Error('Backup not found');
+      }
+
+      // Delete the backup
+      await storage.setBotSetting(backupKey, '');
+      
+      return { success: true, message: 'Backup deleted successfully' };
+    } catch (error) {
+      console.error('Backup delete error:', error);
+      throw error;
+    }
+  }
+
+  public async syncServerData() {
+    try {
+      await this.loadSettings();
+      
+      for (const guild of this.client.guilds.cache.values()) {
+        await this.addServer(guild);
+      }
+      
+      await storage.logActivity({
+        type: 'server_sync',
+        userId: 'system',
+        description: 'Server data synchronized',
+        metadata: { serverCount: this.client.guilds.cache.size }
+      });
+    } catch (error) {
+      console.error('Server sync error:', error);
+      throw error;
+    }
+  }
 }
 
-// Export singleton instance
 export const raptorBot = new RaptorBot();

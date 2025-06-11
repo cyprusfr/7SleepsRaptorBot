@@ -790,14 +790,14 @@ export class RaptorBot {
 
     try {
       const serverData = await storage.getDiscordServerByServerId(guild.id);
-      if (!serverData?.permissions?.backupData) {
+      if (!serverData?.permissions || typeof serverData.permissions !== 'object' || !(serverData.permissions as any).backupData) {
         await interaction.editReply({
           content: '❌ No backup found for this server.',
         });
         return;
       }
 
-      const backupData = serverData.permissions.backupData;
+      const backupData = (serverData.permissions as any).backupData;
 
       const embed = {
         title: '⚠️ Restore Confirmation',
@@ -855,14 +855,14 @@ export class RaptorBot {
       const serverData = await storage.getDiscordServerByServerId(guild.id);
 
       if (action === 'list') {
-        if (!serverData?.permissions?.backupData) {
+        if (!serverData?.permissions || typeof serverData.permissions !== 'object' || !(serverData.permissions as any).backupData) {
           await interaction.editReply({
             content: '📂 No backups found for this server.\n\nUse `/backup` to create your first backup.',
           });
           return;
         }
 
-        const backup = serverData.permissions.backupData;
+        const backup = (serverData.permissions as any).backupData;
         const embed = {
           title: '📋 Server Backups',
           description: `Backup information for ${guild.name}`,
@@ -900,8 +900,8 @@ export class RaptorBot {
           return;
         }
 
-        if (serverData) {
-          const updatedPermissions = { ...serverData.permissions };
+        if (serverData && serverData.permissions && typeof serverData.permissions === 'object') {
+          const updatedPermissions = { ...(serverData.permissions as any) };
           delete updatedPermissions.backupData;
           delete updatedPermissions.lastBackup;
           delete updatedPermissions.backupType;
@@ -959,18 +959,27 @@ export class RaptorBot {
           value: [
             '`/userinfo <user>` - Get detailed user information',
             '`/hwidinfo <hwid>` - Get hardware ID information',
-            '`/backup [type]` - Create server data backup',
             '`/help` - Show this help message',
           ].join('\n'),
           inline: false,
         },
         {
-          name: '💾 Backup Types',
+          name: '💾 Backup Management',
+          value: [
+            '`/backup [type]` - Create server data backup',
+            '`/backups [action]` - List or delete backups',
+            '`/restore <backup_id>` - Restore from backup (view-only)',
+          ].join('\n'),
+          inline: false,
+        },
+        {
+          name: '📋 Backup Types',
           value: [
             '`full` - Complete server backup (default)',
             '`members` - Member data only',
             '`channels` - Channel structure only',
             '`roles` - Role configuration only',
+            '`messages` - Recent messages backup',
           ].join('\n'),
           inline: false,
         },

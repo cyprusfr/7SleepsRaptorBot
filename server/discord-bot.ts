@@ -2709,7 +2709,7 @@ export class RaptorBot {
   // Dashboard Key Management Commands
   private async handleGenerateDashboardKey(interaction: ChatInputCommandInteraction) {
     try {
-      await interaction.deferReply({ flags: [4096] });
+      await interaction.deferReply({ ephemeral: true });
 
       const userId = interaction.user.id;
       const username = interaction.user.username;

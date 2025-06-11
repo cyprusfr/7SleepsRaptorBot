@@ -2,9 +2,10 @@ import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type I
 
 export interface IStorage {
   // Users
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -70,14 +71,29 @@ import { eq } from "drizzle-orm";
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async createUser(insertUser: UpsertUser): Promise<User> {
@@ -309,7 +325,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Dashboard Keys implementation
-  async createDashboardKey(keyData: any): Promise<any> {
+  async createDashboardKey(keyData: InsertDashboardKey): Promise<DashboardKey> {
     const [dashboardKey] = await db
       .insert(dashboardKeys)
       .values(keyData)
@@ -317,7 +333,7 @@ export class DatabaseStorage implements IStorage {
     return dashboardKey;
   }
 
-  async getDashboardKeyByUserId(userId: string): Promise<any> {
+  async getDashboardKeyByUserId(userId: string): Promise<DashboardKey | undefined> {
     const [key] = await db
       .select()
       .from(dashboardKeys)
@@ -325,7 +341,15 @@ export class DatabaseStorage implements IStorage {
     return key;
   }
 
-  async getDashboardKeyByKeyId(keyId: string): Promise<any> {
+  async getDashboardKeyByDiscordUserId(discordUserId: string): Promise<DashboardKey | undefined> {
+    const [key] = await db
+      .select()
+      .from(dashboardKeys)
+      .where(eq(dashboardKeys.discordUserId, discordUserId));
+    return key;
+  }
+
+  async getDashboardKeyByKeyId(keyId: string): Promise<DashboardKey | undefined> {
     const [key] = await db
       .select()
       .from(dashboardKeys)
@@ -333,7 +357,7 @@ export class DatabaseStorage implements IStorage {
     return key;
   }
 
-  async getAllDashboardKeys(): Promise<any[]> {
+  async getAllDashboardKeys(): Promise<DashboardKey[]> {
     return await db.select().from(dashboardKeys);
   }
 

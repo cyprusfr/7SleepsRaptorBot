@@ -463,6 +463,20 @@ export class RaptorBot {
 
     await interaction.deferReply({ ephemeral: true });
 
+    // Initial progress message
+    const progressEmbed = {
+      title: '🔄 Creating Server Backup',
+      description: `Starting ${backupType} backup of ${guild.name}...`,
+      fields: [
+        { name: 'Progress', value: '▓░░░░░░░░░ 10%', inline: false },
+        { name: 'Status', value: 'Initializing backup...', inline: false }
+      ],
+      color: 0x5865F2,
+      timestamp: new Date().toISOString(),
+    };
+
+    await interaction.editReply({ embeds: [progressEmbed] });
+
     try {
       let backupData: any = {
         serverId: guild.id,
@@ -471,6 +485,11 @@ export class RaptorBot {
         timestamp: new Date().toISOString(),
         createdBy: interaction.user.id,
       };
+
+      // Update progress - Server info collection
+      progressEmbed.fields[0].value = '▓▓░░░░░░░░ 20%';
+      progressEmbed.fields[1].value = 'Collecting server information...';
+      await interaction.editReply({ embeds: [progressEmbed] });
 
       // Collect server information
       const serverInfo = {
@@ -493,6 +512,11 @@ export class RaptorBot {
       };
 
       if (backupType === 'full' || backupType === 'channels') {
+        // Update progress - Channels
+        progressEmbed.fields[0].value = '▓▓▓░░░░░░░ 30%';
+        progressEmbed.fields[1].value = 'Backing up channels...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
         // Backup channels
         const channels = await guild.channels.fetch();
         backupData.channels = Array.from(channels.values()).map(channel => ({
@@ -511,6 +535,11 @@ export class RaptorBot {
       }
 
       if (backupType === 'full' || backupType === 'roles') {
+        // Update progress - Roles
+        progressEmbed.fields[0].value = '▓▓▓▓▓░░░░░ 50%';
+        progressEmbed.fields[1].value = 'Backing up roles...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
         // Backup roles
         const roles = await guild.roles.fetch();
         backupData.roles = Array.from(roles.values()).map(role => ({
@@ -527,21 +556,51 @@ export class RaptorBot {
       }
 
       if (backupType === 'full' || backupType === 'members') {
-        // Backup members (limited data for privacy)
-        const members = await guild.members.fetch({ limit: 1000 });
-        backupData.members = Array.from(members.values()).map(member => ({
-          userId: member.user.id,
-          username: member.user.username,
-          discriminator: member.user.discriminator,
-          displayName: member.displayName,
-          nickname: member.nickname,
-          joinedAt: member.joinedAt?.toISOString(),
-          premiumSince: member.premiumSince?.toISOString(),
-          roles: member.roles.cache.map(role => role.id),
-          bot: member.user.bot,
-          createdAt: member.user.createdAt.toISOString(),
-        }));
+        // Update progress - Members
+        progressEmbed.fields[0].value = '▓▓▓▓▓▓▓░░░ 70%';
+        progressEmbed.fields[1].value = 'Backing up members (this may take longer)...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        try {
+          // Backup members with timeout handling
+          const members = await guild.members.fetch({ 
+            limit: 500, // Reduced limit to avoid timeout
+            time: 15000 // 15 second timeout
+          });
+          backupData.members = Array.from(members.values()).map(member => ({
+            userId: member.user.id,
+            username: member.user.username,
+            discriminator: member.user.discriminator,
+            displayName: member.displayName,
+            nickname: member.nickname,
+            joinedAt: member.joinedAt?.toISOString(),
+            premiumSince: member.premiumSince?.toISOString(),
+            roles: member.roles.cache.map(role => role.id),
+            bot: member.user.bot,
+            createdAt: member.user.createdAt.toISOString(),
+          }));
+        } catch (memberError) {
+          console.warn('Member fetch timeout, using cached members:', memberError);
+          // Fall back to cached members if fetch times out
+          backupData.members = Array.from(guild.members.cache.values()).map(member => ({
+            userId: member.user.id,
+            username: member.user.username,
+            discriminator: member.user.discriminator,
+            displayName: member.displayName,
+            nickname: member.nickname,
+            joinedAt: member.joinedAt?.toISOString(),
+            premiumSince: member.premiumSince?.toISOString(),
+            roles: member.roles.cache.map(role => role.id),
+            bot: member.user.bot,
+            createdAt: member.user.createdAt.toISOString(),
+          }));
+        }
       }
+
+      // Update progress - Processing data
+      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓░░ 80%';
+      progressEmbed.fields[1].value = 'Processing backup data...';
+      await interaction.editReply({ embeds: [progressEmbed] });
 
       // Add server info to backup
       backupData.serverInfo = serverInfo;
@@ -564,6 +623,11 @@ export class RaptorBot {
         });
       }
 
+      // Update progress - Finalizing
+      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓▓░ 90%';
+      progressEmbed.fields[1].value = 'Finalizing backup...';
+      await interaction.editReply({ embeds: [progressEmbed] });
+
       // Log the backup activity
       await storage.logActivity({
         type: 'server_backup',
@@ -580,29 +644,33 @@ export class RaptorBot {
         },
       });
 
-      const embed = {
-        title: '✅ Server Backup Created',
-        description: `Successfully created ${backupType} backup of ${guild.name}`,
-        fields: [
-          { name: 'Backup Type', value: backupType.charAt(0).toUpperCase() + backupType.slice(1), inline: true },
-          { name: 'Server', value: guild.name, inline: true },
-          { name: 'Data Size', value: `${Math.round(JSON.stringify(backupData).length / 1024)} KB`, inline: true },
-        ],
-        color: 0x00D4AA,
-        timestamp: new Date().toISOString(),
-      };
+      // Final progress update - Complete
+      progressEmbed.title = '✅ Server Backup Created';
+      progressEmbed.description = `Successfully created ${backupType} backup of ${guild.name}`;
+      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓▓▓ 100%';
+      progressEmbed.fields[1].value = 'Backup completed successfully!';
+      progressEmbed.color = 0x00D4AA;
+
+      // Add backup summary fields
+      const summaryFields = [
+        { name: 'Backup Type', value: backupType.charAt(0).toUpperCase() + backupType.slice(1), inline: true },
+        { name: 'Data Size', value: `${Math.round(JSON.stringify(backupData).length / 1024)} KB`, inline: true },
+        { name: 'Duration', value: `${Math.round((Date.now() - new Date(backupData.timestamp).getTime()) / 1000)}s`, inline: true },
+      ];
 
       if (backupData.channels) {
-        embed.fields.push({ name: 'Channels', value: backupData.channels.length.toString(), inline: true });
+        summaryFields.push({ name: 'Channels', value: backupData.channels.length.toString(), inline: true });
       }
       if (backupData.members) {
-        embed.fields.push({ name: 'Members', value: backupData.members.length.toString(), inline: true });
+        summaryFields.push({ name: 'Members', value: backupData.members.length.toString(), inline: true });
       }
       if (backupData.roles) {
-        embed.fields.push({ name: 'Roles', value: backupData.roles.length.toString(), inline: true });
+        summaryFields.push({ name: 'Roles', value: backupData.roles.length.toString(), inline: true });
       }
 
-      await interaction.editReply({ embeds: [embed] });
+      progressEmbed.fields = [...progressEmbed.fields, ...summaryFields];
+
+      await interaction.editReply({ embeds: [progressEmbed] });
 
     } catch (error) {
       console.error('Error creating backup:', error);
@@ -656,7 +724,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], flags: [4096] }); // EPHEMERAL flag
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private generateKeyId(): string {

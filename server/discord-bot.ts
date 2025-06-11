@@ -1565,8 +1565,13 @@ export class RaptorBot {
   }
 
   private generateKeyId(): string {
-    // Generate MacSploit-style key: 32 character hex string
-    return crypto.randomBytes(16).toString('hex').toUpperCase();
+    // Generate key format: dash_(15 alphanumeric characters)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'dash_';
+    for (let i = 0; i < 15; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   }
 
 

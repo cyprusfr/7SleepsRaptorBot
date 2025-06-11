@@ -452,6 +452,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Dashboard API Endpoints
+  app.get("/api/candy/stats", requireAuth, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllDiscordUsers();
+      const totalCandy = allUsers.reduce((sum, user) => sum + (user.candyBalance || 0), 0);
+      const activeGames = allUsers.filter(user => (user.candyBalance || 0) > 0).length;
+
+      res.json({
+        totalCandy,
+        activeGames,
+        topUsers: allUsers
+          .filter(user => (user.candyBalance || 0) > 0)
+          .sort((a, b) => (b.candyBalance || 0) - (a.candyBalance || 0))
+          .slice(0, 5)
+      });
+    } catch (error) {
+      console.error("Error fetching candy stats:", error);
+      res.status(500).json({ error: "Failed to fetch candy statistics" });
+    }
+  });
+
+  app.post("/api/refresh-stats", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      
+      // Log the refresh action
+      await storage.logActivity({
+        type: 'stats_refresh',
+        userId,
+        description: 'Dashboard statistics refreshed',
+        metadata: {
+          timestamp: new Date().toISOString(),
+          triggeredBy: 'manual',
+        },
+      });
+
+      res.json({ success: true, message: "Statistics refreshed successfully" });
+    } catch (error) {
+      console.error("Error refreshing stats:", error);
+      res.status(500).json({ error: "Failed to refresh statistics" });
+    }
+  });
+
+  // Server Backup API Endpoints
+  app.post("/api/servers/:serverId/backup", requireAuth, requireApproved, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const { backupType } = req.body;
+      const userId = (req as any).user.claims.sub;
+
+      const { raptorBot } = await import('./discord-bot');
+      
+      if (!raptorBot.isOnline()) {
+        return res.status(503).json({ error: "Discord bot is offline" });
+      }
+
+      // Validate backup type
+      const validTypes = ['full', 'channels', 'roles'];
+      if (!validTypes.includes(backupType)) {
+        return res.status(400).json({ error: "Invalid backup type" });
+      }
+
+      // Check if server exists in our database
+      const server = await storage.getDiscordServerByServerId(serverId);
+      if (!server) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+
+      // Create backup using the Discord bot
+      const backupResult = await raptorBot.createBackup(serverId, backupType, userId);
+
+      // Log backup creation
+      await storage.logActivity({
+        type: 'backup_created',
+        userId,
+        targetId: serverId,
+        description: `${backupType} backup created for ${server.serverName}`,
+        metadata: {
+          backupType,
+          serverName: server.serverName,
+          backupId: backupResult.id,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      res.json({
+        success: true,
+        message: `${backupType} backup created successfully`,
+        backupId: backupResult.id,
+        backupType,
+        serverName: server.serverName,
+        createdAt: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.get("/api/servers/:serverId/backups", requireAuth, requireApproved, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      
+      // Get backup history for the server
+      const backupLogs = await storage.getActivityLogsByType('backup_created');
+      const serverBackups = backupLogs
+        .filter(log => log.targetId === serverId)
+        .map(log => ({
+          id: log.metadata?.backupId || log.id,
+          type: log.metadata?.backupType || 'unknown',
+          createdAt: log.timestamp,
+          serverName: log.metadata?.serverName || 'Unknown Server',
+        }))
+        .slice(0, 10); // Latest 10 backups
+
+      res.json(serverBackups);
+    } catch (error) {
+      console.error("Error fetching backups:", error);
+      res.status(500).json({ error: "Failed to fetch backup history" });
+    }
+  });
+
   app.post("/api/settings", async (req, res) => {
     try {
       const { key, value } = req.body;

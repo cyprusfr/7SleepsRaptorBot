@@ -10,7 +10,7 @@ interface StatsCardProps {
     value: string;
     isPositive: boolean;
   };
-  color?: "primary" | "green" | "blue" | "purple";
+  color?: "primary" | "green" | "blue" | "purple" | "yellow" | "red";
 }
 
 const colorClasses = {

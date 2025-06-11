@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Search, Plus, Users as UsersIcon, Download } from "lucide-react";
+import { Search, Plus, Users as UsersIcon, Download, Shield, Activity, Gamepad2, Database, RefreshCw, AlertTriangle, TrendingUp } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import StatsCard from "@/components/stats-card";
 import ActivityFeed from "@/components/activity-feed";
@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Key, CheckCircle, Users, Server } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardStats {
   totalKeys: number;
@@ -19,6 +22,10 @@ interface DashboardStats {
   connectedServers: number;
   botStatus: "online" | "offline";
   lastSync: string;
+  totalCandy?: number;
+  activeGames?: number;
+  systemHealth?: "healthy" | "warning" | "critical";
+  uptime?: number;
 }
 
 interface Server {
@@ -32,21 +39,64 @@ interface Server {
 
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedServer, setSelectedServer] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/stats"],
   });
 
-  const { data: activities = [], isLoading: activitiesLoading } = useQuery({
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<any[]>({
     queryKey: ["/api/activity"],
   });
 
-  const { data: keys = [], isLoading: keysLoading } = useQuery({
+  const { data: keys = [], isLoading: keysLoading } = useQuery<any[]>({
     queryKey: ["/api/keys"],
   });
 
   const { data: servers = [], isLoading: serversLoading } = useQuery<Server[]>({
     queryKey: ["/api/servers"],
+  });
+
+  const { data: candyStats } = useQuery({
+    queryKey: ["/api/candy/stats"],
+  });
+
+  // Backup mutation
+  const createBackup = useMutation({
+    mutationFn: async ({ serverId, backupType }: { serverId: string; backupType: string }) => {
+      return apiRequest(`/api/servers/${serverId}/backup`, "POST", { backupType });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Backup Created",
+        description: "Server backup has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Backup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Refresh stats mutation
+  const refreshStats = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/refresh-stats", "POST");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Stats Refreshed",
+        description: "Dashboard statistics have been updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activity"] });
+    },
   });
 
   const handleGenerateKey = () => {
@@ -132,12 +182,12 @@ export default function Dashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Enhanced Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
             <StatsCard
               title="Total Keys"
               value={stats?.totalKeys || 0}
-              description="Total Keys Generated"
+              description="Keys Generated"
               icon={<Key className="w-6 h-6" />}
               trend={{ value: "+12%", isPositive: true }}
               color="primary"
@@ -166,6 +216,113 @@ export default function Dashboard() {
               trend={{ value: "+2", isPositive: true }}
               color="purple"
             />
+            <StatsCard
+              title="Total Candy"
+              value={candyStats?.totalCandy || 0}
+              description="Currency in Circulation"
+              icon={<Gamepad2 className="w-6 h-6" />}
+              trend={{ value: "+25%", isPositive: true }}
+              color="yellow"
+            />
+            <StatsCard
+              title="System Health"
+              value={stats?.systemHealth === "healthy" ? "Healthy" : stats?.systemHealth === "warning" ? "Warning" : "Critical"}
+              description="Bot Performance"
+              icon={<Activity className="w-6 h-6" />}
+              trend={{ value: stats?.systemHealth === "healthy" ? "Good" : "Issues", isPositive: stats?.systemHealth === "healthy" }}
+              color={stats?.systemHealth === "healthy" ? "green" : stats?.systemHealth === "warning" ? "yellow" : "red"}
+            />
+          </div>
+
+          {/* Server Backup Panel */}
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Server Backup Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-gray-900">Create New Backup</h3>
+                    <select 
+                      className="w-full p-2 border rounded-md"
+                      value={selectedServer}
+                      onChange={(e) => setSelectedServer(e.target.value)}
+                    >
+                      <option value="">Select Server to Backup</option>
+                      {servers.map((server) => (
+                        <option key={server.serverId} value={server.serverId}>
+                          {server.serverName} ({server.memberCount} members)
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button 
+                        onClick={() => selectedServer && createBackup.mutate({ serverId: selectedServer, backupType: 'full' })}
+                        disabled={!selectedServer || createBackup.isPending}
+                        className="w-full"
+                        size="sm"
+                      >
+                        {createBackup.isPending ? 'Creating...' : 'Full Backup'}
+                      </Button>
+                      <Button 
+                        onClick={() => selectedServer && createBackup.mutate({ serverId: selectedServer, backupType: 'channels' })}
+                        disabled={!selectedServer || createBackup.isPending}
+                        variant="outline"
+                        className="w-full"
+                        size="sm"
+                      >
+                        Channels Only
+                      </Button>
+                      <Button 
+                        onClick={() => selectedServer && createBackup.mutate({ serverId: selectedServer, backupType: 'roles' })}
+                        disabled={!selectedServer || createBackup.isPending}
+                        variant="outline"
+                        className="w-full"
+                        size="sm"
+                      >
+                        Roles Only
+                      </Button>
+                    </div>
+                    
+                    {selectedServer && (
+                      <div className="p-3 bg-blue-50 rounded-md">
+                        <p className="text-sm text-blue-700">
+                          <strong>Selected:</strong> {servers.find(s => s.serverId === selectedServer)?.serverName}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Full backup includes channels, roles, permissions, and server settings
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-gray-900">Server Status</h3>
+                    <div className="space-y-2">
+                      {servers.slice(0, 3).map((server) => (
+                        <div key={server.serverId} className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${server.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <div>
+                              <p className="font-medium text-sm">{server.serverName}</p>
+                              <p className="text-xs text-gray-500">{server.memberCount} members</p>
+                            </div>
+                          </div>
+                          <Badge variant={server.isActive ? "default" : "secondary"}>
+                            {server.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Main Dashboard Sections */}

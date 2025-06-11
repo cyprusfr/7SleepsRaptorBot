@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
 import { storage } from './storage';
+import { BackupIntegrityChecker } from './backup-integrity';
 import crypto from 'crypto';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;

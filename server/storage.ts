@@ -1,4 +1,4 @@
-import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey } from "@shared/schema";
+import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey, backupIntegrity, type BackupIntegrity, type InsertBackupIntegrity } from "@shared/schema";
 
 export interface IStorage {
   // Users
@@ -599,6 +599,85 @@ export class DatabaseStorage implements IStorage {
       console.error('Error fetching backups:', error);
       return [];
     }
+  }
+
+  // Backup Integrity Methods
+  async createBackupIntegrityCheck(data: InsertBackupIntegrity): Promise<BackupIntegrity> {
+    const [check] = await db
+      .insert(backupIntegrity)
+      .values(data)
+      .returning();
+    return check;
+  }
+
+  async getBackupIntegrityById(id: number): Promise<BackupIntegrity | undefined> {
+    const [check] = await db
+      .select()
+      .from(backupIntegrity)
+      .where(eq(backupIntegrity.id, id));
+    return check;
+  }
+
+  async getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined> {
+    const [check] = await db
+      .select()
+      .from(backupIntegrity)
+      .where(eq(backupIntegrity.backupId, backupId));
+    return check;
+  }
+
+  async getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]> {
+    return await db.select().from(backupIntegrity);
+  }
+
+  async getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]> {
+    return await db
+      .select()
+      .from(backupIntegrity)
+      .where(eq(backupIntegrity.serverId, serverId));
+  }
+
+  async updateBackupIntegrity(id: number, updates: Partial<BackupIntegrity>): Promise<void> {
+    await db
+      .update(backupIntegrity)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(backupIntegrity.id, id));
+  }
+
+  async deleteBackupIntegrityCheck(id: number): Promise<void> {
+    await db
+      .delete(backupIntegrity)
+      .where(eq(backupIntegrity.id, id));
+  }
+
+  async getHealthScoreStats(): Promise<{
+    averageHealthScore: number;
+    healthyBackups: number;
+    warningBackups: number;
+    criticalBackups: number;
+    corruptedBackups: number;
+    totalChecks: number;
+  }> {
+    const checks = await db.select().from(backupIntegrity);
+    
+    const totalChecks = checks.length;
+    const averageHealthScore = totalChecks > 0 
+      ? Math.round(checks.reduce((sum, check) => sum + check.healthScore, 0) / totalChecks)
+      : 0;
+    
+    const healthyBackups = checks.filter(check => check.integrityStatus === 'healthy').length;
+    const warningBackups = checks.filter(check => check.integrityStatus === 'warning').length;
+    const criticalBackups = checks.filter(check => check.integrityStatus === 'critical').length;
+    const corruptedBackups = checks.filter(check => check.integrityStatus === 'corrupted').length;
+
+    return {
+      averageHealthScore,
+      healthyBackups,
+      warningBackups,
+      criticalBackups,
+      corruptedBackups,
+      totalChecks,
+    };
   }
 }
 

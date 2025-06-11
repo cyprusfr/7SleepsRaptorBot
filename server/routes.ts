@@ -400,6 +400,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Backup integrity endpoints
+  app.get('/api/backup-integrity', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const checks = await storage.getAllBackupIntegrityChecks();
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching integrity checks:", error);
+      res.status(500).json({ error: "Failed to fetch integrity checks" });
+    }
+  });
+
+  app.get('/api/backup-integrity/stats', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const stats = await storage.getHealthScoreStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching health score stats:", error);
+      res.status(500).json({ error: "Failed to fetch health score stats" });
+    }
+  });
+
+  app.get('/api/backup-integrity/:backupId', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { backupId } = req.params;
+      const check = await storage.getBackupIntegrityByBackupId(backupId);
+      if (!check) {
+        return res.status(404).json({ error: "Integrity check not found" });
+      }
+      res.json(check);
+    } catch (error) {
+      console.error("Error fetching integrity check:", error);
+      res.status(500).json({ error: "Failed to fetch integrity check" });
+    }
+  });
+
+  app.post('/api/backup-integrity/:backupId/check', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { backupId } = req.params;
+      const userId = req.user.claims.email || req.user.claims.sub;
+      
+      // Get backup data
+      const backups = await storage.getAllBackups();
+      const backup = backups.find(b => b.id === backupId);
+      
+      if (!backup) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+
+      // Run integrity check
+      const { BackupIntegrityChecker } = await import('./backup-integrity');
+      const result = await BackupIntegrityChecker.performIntegrityCheck(
+        backupId,
+        backup,
+        userId,
+        false
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error running integrity check:", error);
+      res.status(500).json({ error: (error as any).message || "Failed to run integrity check" });
+    }
+  });
+
+  app.get('/api/backup-integrity/server/:serverId', requireAuth, requireApproved, async (req: any, res) => {
+    try {
+      const { serverId } = req.params;
+      const checks = await storage.getIntegrityChecksByServerId(serverId);
+      res.json(checks);
+    } catch (error) {
+      console.error("Error fetching server integrity checks:", error);
+      res.status(500).json({ error: "Failed to fetch server integrity checks" });
+    }
+  });
+
   // Discord servers
   app.get("/api/servers", async (req, res) => {
     try {

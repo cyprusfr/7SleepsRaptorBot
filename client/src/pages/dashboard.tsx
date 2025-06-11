@@ -1,0 +1,289 @@
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Search, Plus, Users as UsersIcon, Download } from "lucide-react";
+import Sidebar from "@/components/sidebar";
+import StatsCard from "@/components/stats-card";
+import ActivityFeed from "@/components/activity-feed";
+import KeyTable from "@/components/key-table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Key, CheckCircle, Users, Server } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+
+interface DashboardStats {
+  totalKeys: number;
+  activeKeys: number;
+  totalUsers: number;
+  connectedServers: number;
+  botStatus: "online" | "offline";
+  lastSync: string;
+}
+
+interface Server {
+  id: number;
+  serverId: string;
+  serverName: string;
+  memberCount: number;
+  isActive: boolean;
+  lastDataSync: string;
+}
+
+export default function Dashboard() {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+    queryKey: ["/api/stats"],
+  });
+
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery({
+    queryKey: ["/api/activity"],
+  });
+
+  const { data: keys = [], isLoading: keysLoading } = useQuery({
+    queryKey: ["/api/keys"],
+  });
+
+  const { data: servers = [], isLoading: serversLoading } = useQuery<Server[]>({
+    queryKey: ["/api/servers"],
+  });
+
+  const handleGenerateKey = () => {
+    // TODO: Open key generation modal
+    console.log("Generate key");
+  };
+
+  const handleLookupUser = () => {
+    // TODO: Open user lookup modal
+    console.log("Lookup user");
+  };
+
+  const handleExportData = () => {
+    // TODO: Export data
+    const link = document.createElement("a");
+    link.href = "/api/export?type=all";
+    link.download = `raptor-export-${Date.now()}.json`;
+    link.click();
+  };
+
+  if (statsLoading) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-64 bg-white border-r">
+          <div className="p-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 p-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="grid grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar
+        botStatus={stats?.botStatus || "offline"}
+        lastSync={stats?.lastSync ? formatDistanceToNow(new Date(stats.lastSync), { addSuffix: true }) : "Never"}
+      />
+
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+              <p className="text-gray-600 mt-1">Monitor your Discord bot's activity and manage keys</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search users, keys..."
+                  className="pl-10 pr-4 py-2 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-discord-primary rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium text-sm">A</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Admin User</p>
+                  <p className="text-xs text-gray-500">Super Admin</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatsCard
+              title="Total Keys"
+              value={stats?.totalKeys || 0}
+              description="Total Keys Generated"
+              icon={<Key className="w-6 h-6" />}
+              trend={{ value: "+12%", isPositive: true }}
+              color="primary"
+            />
+            <StatsCard
+              title="Active Keys"
+              value={stats?.activeKeys || 0}
+              description="Active Whitelisted"
+              icon={<CheckCircle className="w-6 h-6" />}
+              trend={{ value: "+8%", isPositive: true }}
+              color="green"
+            />
+            <StatsCard
+              title="Total Users"
+              value={stats?.totalUsers || 0}
+              description="Registered Users"
+              icon={<Users className="w-6 h-6" />}
+              trend={{ value: "+3%", isPositive: true }}
+              color="blue"
+            />
+            <StatsCard
+              title="Connected Servers"
+              value={stats?.connectedServers || 0}
+              description="Connected Servers"
+              icon={<Server className="w-6 h-6" />}
+              trend={{ value: "+2", isPositive: true }}
+              color="purple"
+            />
+          </div>
+
+          {/* Main Dashboard Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Recent Activity */}
+            <ActivityFeed activities={activities.slice(0, 10)} />
+
+            {/* Quick Actions & Server Status */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    onClick={handleGenerateKey}
+                    className="w-full bg-discord-primary hover:bg-discord-secondary text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Generate New Key
+                  </Button>
+                  <Button
+                    onClick={handleLookupUser}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Lookup User
+                  </Button>
+                  <Button
+                    onClick={handleExportData}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Data
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Server Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    Server Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {serversLoading ? (
+                      <div className="animate-pulse space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                        ))}
+                      </div>
+                    ) : servers.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No servers connected</p>
+                      </div>
+                    ) : (
+                      servers.slice(0, 3).map((server) => (
+                        <div
+                          key={server.id}
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-discord-primary/10 rounded-lg flex items-center justify-center">
+                              <Server className="w-4 h-4 text-discord-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {server.serverName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {server.memberCount.toLocaleString()} members
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                server.isActive ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            />
+                            <Badge
+                              variant="secondary"
+                              className={`text-xs font-medium ${
+                                server.isActive
+                                  ? "text-green-600 bg-green-100"
+                                  : "text-red-600 bg-red-100"
+                              }`}
+                            >
+                              {server.isActive ? "Online" : "Offline"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Key Management Table */}
+          <KeyTable
+            keys={keys.slice(0, 10)}
+            onViewKey={(keyId) => console.log("View key:", keyId)}
+            onRevokeKey={(keyId) => console.log("Revoke key:", keyId)}
+            onRestoreKey={(keyId) => console.log("Restore key:", keyId)}
+            onFilterChange={(filter) => console.log("Filter change:", filter)}
+          />
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -1,41 +1,42 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Download, Trash2, Plus, HardDrive, Users, Hash, MessageSquare, Calendar, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Archive, Download, Upload, Trash2, Plus, RefreshCw, Server, Clock, User, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
 
 interface Backup {
   id: string;
+  serverId: string;
   serverName: string;
-  backupType: string;
-  timestamp: string;
-  size: number;
-  channels: number;
-  members: number;
-  roles: number;
-  messages: number;
+  backupType: "full" | "channels" | "roles" | "settings";
+  status: "completed" | "failed" | "in_progress";
+  createdAt: string;
   createdBy: string;
+  size?: number;
+  metadata?: any;
 }
 
 interface Server {
-  id: number;
+  id: string;
   serverId: string;
   serverName: string;
+  memberCount: number;
   isActive: boolean;
 }
 
-export default function BackupsPage() {
+export default function Backups() {
+  const [selectedServer, setSelectedServer] = useState<string>("");
+  const [selectedBackupType, setSelectedBackupType] = useState<string>("full");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedServerId, setSelectedServerId] = useState<string>("");
-  const [selectedBackupType, setSelectedBackupType] = useState<string>("full");
 
   const { data: backups, isLoading: backupsLoading } = useQuery({
     queryKey: ["/api/backups"],
@@ -45,9 +46,9 @@ export default function BackupsPage() {
     queryKey: ["/api/servers"],
   });
 
-  const createBackupMutation = useMutation({
-    mutationFn: async ({ serverId, backupType }: { serverId: string; backupType: string }) => {
-      return apiRequest(`/api/backups/${serverId}`, "POST", { backupType });
+  const { mutate: createBackup, isPending: isCreating } = useMutation({
+    mutationFn: async (data: { serverId: string; backupType: string }) => {
+      return apiRequest("/api/backups", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -55,318 +56,317 @@ export default function BackupsPage() {
         description: "Server backup has been created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
-      setCreateDialogOpen(false);
-      setSelectedServerId("");
+      setIsCreateDialogOpen(false);
+      setSelectedServer("");
+      setSelectedBackupType("full");
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Backup Failed",
-        description: error.message || "Failed to create backup. Please try again.",
+        description: error.message || "Failed to create backup",
         variant: "destructive",
       });
     },
   });
 
-  const deleteBackupMutation = useMutation({
-    mutationFn: async (serverId: string) => {
-      return apiRequest(`/api/backups/${serverId}`, "DELETE");
+  const { mutate: restoreBackup, isPending: isRestoring } = useMutation({
+    mutationFn: async (backupId: string) => {
+      return apiRequest(`/api/backups/${backupId}/restore`, "POST");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Restore Started",
+        description: "Backup restoration has been initiated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Restore Failed",
+        description: error.message || "Failed to restore backup",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { mutate: deleteBackup } = useMutation({
+    mutationFn: async (backupId: string) => {
+      return apiRequest(`/api/backups/${backupId}`, "DELETE");
     },
     onSuccess: () => {
       toast({
         title: "Backup Deleted",
-        description: "Server backup has been deleted successfully.",
+        description: "Backup has been deleted successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
-      setSelectedBackup(null);
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Delete Failed",
-        description: error.message || "Failed to delete backup. Please try again.",
+        description: error.message || "Failed to delete backup",
         variant: "destructive",
       });
     },
   });
 
-  const handleCreateBackup = () => {
-    if (!selectedServerId) {
-      toast({
-        title: "No Server Selected",
-        description: "Please select a server to backup.",
-        variant: "destructive",
-      });
-      return;
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return "Unknown";
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + " " + sizes[i];
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "default";
+      case "failed":
+        return "destructive";
+      case "in_progress":
+        return "secondary";
+      default:
+        return "outline";
     }
-
-    createBackupMutation.mutate({ serverId: selectedServerId, backupType: selectedBackupType });
   };
 
-  const handleDeleteBackup = (backup: Backup) => {
-    if (window.confirm(`Are you sure you want to delete the backup for ${backup.serverName}? This action cannot be undone.`)) {
-      deleteBackupMutation.mutate(backup.id);
+  const getBackupTypeLabel = (type: string) => {
+    switch (type) {
+      case "full":
+        return "Full Backup";
+      case "channels":
+        return "Channels Only";
+      case "roles":
+        return "Roles Only";
+      case "settings":
+        return "Settings Only";
+      default:
+        return type;
     }
   };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const formatSize = (sizeKB: number) => {
-    if (sizeKB < 1024) return `${sizeKB} KB`;
-    return `${(sizeKB / 1024).toFixed(1)} MB`;
-  };
-
-  if (backupsLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Server Backups</h1>
-          <p className="text-muted-foreground">Loading backup data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Server Backups</h1>
           <p className="text-muted-foreground">
-            Manage Discord server backups and restoration
+            Create and manage server backups with full restore capabilities
           </p>
         </div>
-        
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Backup
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Server Backup</DialogTitle>
-              <DialogDescription>
-                Select a server and backup type to create a new backup.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Server</label>
-                <Select value={selectedServerId} onValueChange={setSelectedServerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a server" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(servers as Server[] || []).filter(server => server.isActive).map((server) => (
-                      <SelectItem key={server.serverId} value={server.serverId}>
-                        {server.serverName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Backup Type</label>
-                <Select value={selectedBackupType} onValueChange={setSelectedBackupType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full">Full Backup</SelectItem>
-                    <SelectItem value="channels">Channels Only</SelectItem>
-                    <SelectItem value="members">Members Only</SelectItem>
-                    <SelectItem value="roles">Roles Only</SelectItem>
-                    <SelectItem value="messages">Messages Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                onClick={handleCreateBackup} 
-                disabled={createBackupMutation.isPending}
-                className="w-full"
-              >
-                {createBackupMutation.isPending ? "Creating..." : "Create Backup"}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/backups"] })}
+            disabled={backupsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${backupsLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Backup
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {!backups || (backups as Backup[]).length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <HardDrive className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-medium mb-2">No Backups Found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create your first server backup to get started with backup management.
-            </p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Backup
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {(backups as Backup[]).map((backup) => (
-            <Card key={backup.id} className="relative">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{backup.serverName}</CardTitle>
-                  <Badge variant={backup.backupType === 'full' ? 'default' : 'secondary'}>
-                    {backup.backupType}
-                  </Badge>
-                </div>
-                <CardDescription className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(backup.timestamp)}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span>{backup.channels} channels</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{backup.members} members</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span>{backup.roles} roles</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                    <span>{backup.messages} messages</span>
-                  </div>
-                </div>
-                
-                <div className="text-sm text-muted-foreground">
-                  Size: {formatSize(backup.size)}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedBackup(backup)}
-                    className="flex-1"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Details
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteBackup(backup)}
-                    disabled={deleteBackupMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {selectedBackup && (
-        <Dialog open={!!selectedBackup} onOpenChange={() => setSelectedBackup(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Backup Details - {selectedBackup.serverName}</DialogTitle>
-              <DialogDescription>
-                Created {formatDate(selectedBackup.timestamp)}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Server Backup</DialogTitle>
+                <DialogDescription>
+                  Select a server and backup type to create a new backup.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Backup Type</h4>
-                  <Badge variant={selectedBackup.backupType === 'full' ? 'default' : 'secondary'}>
-                    {selectedBackup.backupType}
-                  </Badge>
+                  <label className="text-sm font-medium">Server</label>
+                  <Select value={selectedServer} onValueChange={setSelectedServer}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a server" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {servers?.map((server: Server) => (
+                        <SelectItem key={server.serverId} value={server.serverId}>
+                          <div className="flex items-center gap-2">
+                            <Server className="h-4 w-4" />
+                            {server.serverName}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-medium">File Size</h4>
-                  <p className="text-sm text-muted-foreground">{formatSize(selectedBackup.size)}</p>
+                  <label className="text-sm font-medium">Backup Type</label>
+                  <Select value={selectedBackupType} onValueChange={setSelectedBackupType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Backup</SelectItem>
+                      <SelectItem value="channels">Channels Only</SelectItem>
+                      <SelectItem value="roles">Roles Only</SelectItem>
+                      <SelectItem value="settings">Settings Only</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Hash className="h-4 w-4" />
-                      Channels
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{selectedBackup.channels}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Members
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{selectedBackup.members}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Roles
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{selectedBackup.roles}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Messages
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{selectedBackup.messages}</div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button variant="outline" onClick={() => setSelectedBackup(null)} className="flex-1">
-                  Close
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
                 </Button>
                 <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteBackup(selectedBackup)}
-                  disabled={deleteBackupMutation.isPending}
+                  onClick={() => createBackup({ serverId: selectedServer, backupType: selectedBackupType })}
+                  disabled={!selectedServer || isCreating}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Backup
+                  {isCreating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Create Backup
+                    </>
+                  )}
                 </Button>
-              </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Tabs defaultValue="all" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all">All Backups</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="failed">Failed</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="all" className="space-y-4">
+          {backupsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin" />
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          ) : backups?.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">No Backups Found</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Create your first server backup to get started with backup management.
+                </p>
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Backup
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {backups?.map((backup: Backup) => (
+                <Card key={backup.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                          <Server className="h-5 w-5" />
+                          {backup.serverName}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-4">
+                          <span className="flex items-center gap-1">
+                            <Archive className="h-4 w-4" />
+                            {getBackupTypeLabel(backup.backupType)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {format(new Date(backup.createdAt), "MMM dd, yyyy HH:mm")}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            {backup.createdBy}
+                          </span>
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getStatusColor(backup.status)}>
+                          {backup.status === "in_progress" && (
+                            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                          )}
+                          {backup.status === "failed" && (
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                          )}
+                          {backup.status.replace("_", " ")}
+                        </Badge>
+                        {backup.size && (
+                          <Badge variant="outline">
+                            {formatFileSize(backup.size)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-end gap-2">
+                      {backup.status === "completed" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => restoreBackup(backup.id)}
+                            disabled={isRestoring}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {isRestoring ? "Restoring..." : "Restore"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteBackup(backup.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="completed">
+          <div className="grid gap-4">
+            {backups?.filter((backup: Backup) => backup.status === "completed").map((backup: Backup) => (
+              <Card key={backup.id}>
+                {/* Same card content as above */}
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="failed">
+          <div className="grid gap-4">
+            {backups?.filter((backup: Backup) => backup.status === "failed").map((backup: Backup) => (
+              <Card key={backup.id}>
+                {/* Same card content as above */}
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

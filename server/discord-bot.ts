@@ -1800,21 +1800,41 @@ export class RaptorBot {
         settings: 0
       };
 
-      // Restore roles first (if included)
+      // Delete existing roles and restore from backup
       if ((restoreType === 'full' || restoreType === 'roles') && backupData.roles) {
         progressEmbed.fields[0].value = '▓▓░░░░░░░░ 20%';
-        progressEmbed.fields[1].value = 'Restoring roles...';
+        progressEmbed.fields[1].value = 'Deleting existing roles...';
         await interaction.editReply({ embeds: [progressEmbed] });
 
-        for (const roleData of backupData.roles.slice(0, 10)) { // Limit to prevent spam
+        // Delete all existing roles except @everyone and bot roles
+        const existingRoles = guild.roles.cache.filter((role: any) => 
+          role.name !== '@everyone' && !role.managed && role.editable
+        );
+        
+        for (const role of existingRoles.values()) {
           try {
-            if (roleData.name !== '@everyone' && !guild.roles.cache.find((r: any) => r.name === roleData.name)) {
+            await (role as any).delete('Clearing for backup restoration');
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit
+          } catch (error) {
+            console.error(`Failed to delete role ${(role as any).name}:`, error);
+          }
+        }
+
+        progressEmbed.fields[0].value = '▓▓▓░░░░░░░ 25%';
+        progressEmbed.fields[1].value = 'Restoring roles from backup...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        // Restore roles from backup
+        for (const roleData of backupData.roles) {
+          try {
+            if (roleData.name !== '@everyone') {
               await guild.roles.create({
                 name: roleData.name,
                 color: roleData.color,
                 permissions: roleData.permissions,
                 hoist: roleData.hoist,
                 mentionable: roleData.mentionable,
+                position: roleData.position,
                 reason: `Restored from backup by ${interaction.user.username}`
               });
               restored.roles++;
@@ -1826,29 +1846,47 @@ export class RaptorBot {
         }
       }
 
-      // Restore channels (if included)
+      // Delete existing channels and restore from backup
       if ((restoreType === 'full' || restoreType === 'channels') && backupData.channels) {
-        progressEmbed.fields[0].value = '▓▓▓▓▓░░░░░ 50%';
-        progressEmbed.fields[1].value = 'Restoring channels...';
+        progressEmbed.fields[0].value = '▓▓▓░░░░░░░ 30%';
+        progressEmbed.fields[1].value = 'Deleting existing channels...';
         await interaction.editReply({ embeds: [progressEmbed] });
 
-        for (const channelData of backupData.channels.slice(0, 15)) { // Limit channels
+        // Delete all existing channels except system channels
+        const existingChannels = guild.channels.cache.filter((channel: any) => 
+          channel.deletable && !channel.isVoice() && channel.type !== 4 // Don't delete categories for now
+        );
+        
+        for (const channel of existingChannels.values()) {
           try {
-            if (!guild.channels.cache.find((c: any) => c.name === channelData.name)) {
-              const channelOptions: any = {
-                name: channelData.name,
-                type: channelData.type,
-                reason: `Restored from backup by ${interaction.user.username}`
-              };
+            await (channel as any).delete('Clearing for backup restoration');
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit
+          } catch (error) {
+            console.error(`Failed to delete channel ${(channel as any).name}:`, error);
+          }
+        }
 
-              if (channelData.topic) channelOptions.topic = channelData.topic;
-              if (channelData.nsfw !== undefined) channelOptions.nsfw = channelData.nsfw;
-              if (channelData.rateLimitPerUser) channelOptions.rateLimitPerUser = channelData.rateLimitPerUser;
+        progressEmbed.fields[0].value = '▓▓▓▓▓░░░░░ 50%';
+        progressEmbed.fields[1].value = 'Restoring channels from backup...';
+        await interaction.editReply({ embeds: [progressEmbed] });
 
-              await guild.channels.create(channelOptions);
-              restored.channels++;
-              await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limit
-            }
+        // Restore channels from backup
+        for (const channelData of backupData.channels) {
+          try {
+            const channelOptions: any = {
+              name: channelData.name,
+              type: channelData.type,
+              reason: `Restored from backup by ${interaction.user.username}`
+            };
+
+            if (channelData.topic) channelOptions.topic = channelData.topic;
+            if (channelData.nsfw !== undefined) channelOptions.nsfw = channelData.nsfw;
+            if (channelData.rateLimitPerUser) channelOptions.rateLimitPerUser = channelData.rateLimitPerUser;
+            if (channelData.position !== undefined) channelOptions.position = channelData.position;
+
+            await guild.channels.create(channelOptions);
+            restored.channels++;
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limit
           } catch (error) {
             console.error(`Failed to restore channel ${channelData.name}:`, error);
           }

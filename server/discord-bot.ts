@@ -1556,12 +1556,7 @@ export class RaptorBot {
     return crypto.randomBytes(16).toString('hex').toUpperCase();
   }
 
-  private async syncServerData() {
-    const guilds = Array.from(this.client.guilds.cache.values());
-    for (const guild of guilds) {
-      await this.addServer(guild);
-    }
-  }
+
 
   private async addServer(guild: any) {
     const serverData = {
@@ -1800,6 +1795,7 @@ export class RaptorBot {
 
     return this.handleBackup(mockInteraction as any);
   }
+
 
   private async handleWhitelistUser(interaction: ChatInputCommandInteraction) {
     const userId = interaction.options.getString('user_id', true);

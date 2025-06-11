@@ -38,11 +38,11 @@ export default function Backups() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: backups, isLoading: backupsLoading } = useQuery({
+  const { data: backups = [], isLoading: backupsLoading } = useQuery({
     queryKey: ["/api/backups"],
   });
 
-  const { data: servers } = useQuery({
+  const { data: servers = [] } = useQuery({
     queryKey: ["/api/servers"],
   });
 
@@ -184,7 +184,7 @@ export default function Backups() {
                       <SelectValue placeholder="Select a server" />
                     </SelectTrigger>
                     <SelectContent>
-                      {servers?.map((server: Server) => (
+                      {servers.map((server: Server) => (
                         <SelectItem key={server.serverId} value={server.serverId}>
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4" />
@@ -251,7 +251,7 @@ export default function Backups() {
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin" />
             </div>
-          ) : backups?.length === 0 ? (
+          ) : backups.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <Archive className="h-12 w-12 text-muted-foreground mb-4" />

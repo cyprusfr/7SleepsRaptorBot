@@ -89,6 +89,23 @@ export const candyTransactions = pgTable("candy_transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Dashboard access keys
+export const dashboardKeys = pgTable("dashboard_keys", {
+  id: serial("id").primaryKey(),
+  keyId: varchar("key_id", { length: 64 }).unique().notNull(),
+  userId: varchar("user_id", { length: 128 }), // Google user ID when linked
+  linkedEmail: varchar("linked_email", { length: 256 }), // Google email when linked
+  discordUserId: varchar("discord_user_id", { length: 32 }).notNull(), // Discord user who generated the key
+  discordUsername: varchar("discord_username", { length: 100 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("active"), // 'active', 'revoked', 'expired'
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  lastAccessAt: timestamp("last_access_at"),
+  expiresAt: timestamp("expires_at"), // Optional expiry
+  revokedBy: varchar("revoked_by", { length: 100 }),
+  revokedAt: timestamp("revoked_at"),
+  metadata: jsonb("metadata"),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,
@@ -123,6 +140,13 @@ export const insertCandyTransactionSchema = createInsertSchema(candyTransactions
   createdAt: true,
 });
 
+export const insertDashboardKeySchema = createInsertSchema(dashboardKeys).omit({
+  id: true,
+  generatedAt: true,
+  lastAccessAt: true,
+  revokedAt: true,
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
@@ -150,3 +174,6 @@ export type BotSetting = typeof botSettings.$inferSelect;
 
 export type InsertCandyTransaction = z.infer<typeof insertCandyTransactionSchema>;
 export type CandyTransaction = typeof candyTransactions.$inferSelect;
+
+export type InsertDashboardKey = z.infer<typeof insertDashboardKeySchema>;
+export type DashboardKey = typeof dashboardKeys.$inferSelect;

@@ -5,17 +5,31 @@ import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
 import { z } from "zod";
 
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   
-  // Check for secret phrase in session
-  if (!req.session.secretPhraseEntered) {
-    return res.status(401).json({ error: "Unauthorized - Access phrase required" });
-  }
+  // Check for valid dashboard key linked to user's Google account
+  const userId = req.user.claims.sub;
+  const userEmail = req.user.claims.email;
   
-  next();
+  try {
+    const dashboardKey = await storage.getDashboardKeyByUserId(userId);
+    if (!dashboardKey || dashboardKey.status !== 'active' || dashboardKey.linkedEmail !== userEmail) {
+      return res.status(401).json({ 
+        error: "Dashboard access denied", 
+        message: "You need a valid dashboard key. Use /generate-dashboard-key in Discord to get access." 
+      });
+    }
+    
+    // Update last access time
+    await storage.updateDashboardKeyLastAccess(dashboardKey.keyId);
+    next();
+  } catch (error) {
+    console.error("Error checking dashboard key:", error);
+    return res.status(500).json({ error: "Failed to verify dashboard access" });
+  }
 }
 
 function requireApproved(req: any, res: any, next: any) {

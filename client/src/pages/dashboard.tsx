@@ -447,9 +447,5 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-  return (
-    <PhraseAuth>
-      <DashboardContent />
-    </PhraseAuth>
-  );
+  return <DashboardContent />;
 }

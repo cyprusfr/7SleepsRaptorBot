@@ -48,6 +48,8 @@ function requireAdmin(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply general API rate limiting to all routes
+  app.use('/api/', rateLimits.api.middleware.bind(rateLimits.api));
   // Setup Google OAuth authentication
   setupAuth(app);
 
@@ -491,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Backup management endpoints
-  app.get('/api/backups', requireAuth, requireApproved, async (req: any, res) => {
+  app.get('/api/backups', rateLimits.api.middleware.bind(rateLimits.api), requireAuth, requireApproved, async (req: any, res) => {
     try {
       const backups = await raptorBot.getAllBackups();
       res.json(backups);
@@ -501,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/backups', requireAuth, requireApproved, async (req: any, res) => {
+  app.post('/api/backups', rateLimits.backups.middleware.bind(rateLimits.backups), requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { serverId, backupType } = req.body;
       const userId = req.user.claims.sub;
@@ -519,7 +521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/backups/:id/restore', requireAuth, requireApproved, async (req: any, res) => {
+  app.post('/api/backups/:id/restore', rateLimits.backups.middleware.bind(rateLimits.backups), requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { id } = req.params;
       const userId = req.user.claims.sub;
@@ -533,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/backups/:id', requireAuth, requireApproved, async (req: any, res) => {
+  app.delete('/api/backups/:id', rateLimits.backups.middleware.bind(rateLimits.backups), requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { id } = req.params;
       await raptorBot.deleteBackup(id);

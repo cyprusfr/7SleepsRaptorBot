@@ -48,6 +48,7 @@ export const discordUsers = pgTable("discord_users", {
   lastSeen: timestamp("last_seen").defaultNow().notNull(),
   roles: jsonb("roles").default([]),
   metadata: jsonb("metadata").default({}),
+  candyBalance: integer("candy_balance").default(0).notNull(),
 });
 
 export const discordServers = pgTable("discord_servers", {
@@ -76,6 +77,16 @@ export const botSettings = pgTable("bot_settings", {
   key: text("key").notNull().unique(),
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const candyTransactions = pgTable("candy_transactions", {
+  id: serial("id").primaryKey(),
+  fromUserId: text("from_user_id"), // null for system rewards
+  toUserId: text("to_user_id").notNull(),
+  amount: integer("amount").notNull(),
+  type: text("type").notNull(), // 'daily', 'transfer', 'reward', 'purchase'
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Insert schemas
@@ -107,6 +118,11 @@ export const insertBotSettingSchema = createInsertSchema(botSettings).omit({
   updatedAt: true,
 });
 
+export const insertCandyTransactionSchema = createInsertSchema(candyTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
@@ -131,3 +147,6 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 
 export type InsertBotSetting = z.infer<typeof insertBotSettingSchema>;
 export type BotSetting = typeof botSettings.$inferSelect;
+
+export type InsertCandyTransaction = z.infer<typeof insertCandyTransactionSchema>;
+export type CandyTransaction = typeof candyTransactions.$inferSelect;

@@ -1,4 +1,4 @@
-import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting } from "@shared/schema";
+import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, candyTransactions, type CandyTransaction, type InsertCandyTransaction } from "@shared/schema";
 
 export interface IStorage {
   // Users - Google OAuth Authentication
@@ -47,6 +47,15 @@ export interface IStorage {
   // Rate Limiting
   getRateLimit(key: string): Promise<number>;
   setRateLimit(key: string, count: number, ttl: number): Promise<void>;
+
+  // Candy System
+  getCandyBalance(discordId: string): Promise<number>;
+  updateCandyBalance(discordId: string, amount: number): Promise<void>;
+  transferCandy(fromDiscordId: string, toDiscordId: string, amount: number): Promise<void>;
+  addCandyTransaction(transaction: InsertCandyTransaction): Promise<CandyTransaction>;
+  getCandyTransactions(discordId: string, limit?: number): Promise<CandyTransaction[]>;
+  checkDailyCandy(discordId: string): Promise<boolean>;
+  claimDailyCandy(discordId: string): Promise<number>;
 
   // Dashboard Stats
   getStats(): Promise<{
@@ -393,6 +402,98 @@ export class DatabaseStorage implements IStorage {
 
   async setRateLimit(key: string, count: number, ttl: number): Promise<void> {
     // Simplified rate limiting
+  }
+
+  // Candy System Implementation
+  async getCandyBalance(discordId: string): Promise<number> {
+    const [user] = await db.select().from(discordUsers).where(eq(discordUsers.discordId, discordId));
+    return user?.candyBalance || 0;
+  }
+
+  async updateCandyBalance(discordId: string, amount: number): Promise<void> {
+    await db
+      .update(discordUsers)
+      .set({ candyBalance: amount })
+      .where(eq(discordUsers.discordId, discordId));
+  }
+
+  async transferCandy(fromDiscordId: string, toDiscordId: string, amount: number): Promise<void> {
+    const fromBalance = await this.getCandyBalance(fromDiscordId);
+    const toBalance = await this.getCandyBalance(toDiscordId);
+
+    if (fromBalance < amount) {
+      throw new Error("Insufficient candy balance");
+    }
+
+    await this.updateCandyBalance(fromDiscordId, fromBalance - amount);
+    await this.updateCandyBalance(toDiscordId, toBalance + amount);
+
+    // Record the transaction
+    await this.addCandyTransaction({
+      fromUserId: fromDiscordId,
+      toUserId: toDiscordId,
+      amount,
+      type: 'transfer',
+      description: `Transfer from ${fromDiscordId} to ${toDiscordId}`,
+    });
+  }
+
+  async addCandyTransaction(transaction: InsertCandyTransaction): Promise<CandyTransaction> {
+    const [newTransaction] = await db
+      .insert(candyTransactions)
+      .values(transaction)
+      .returning();
+    return newTransaction;
+  }
+
+  async getCandyTransactions(discordId: string, limit: number = 10): Promise<CandyTransaction[]> {
+    return await db
+      .select()
+      .from(candyTransactions)
+      .where(eq(candyTransactions.toUserId, discordId))
+      .orderBy(candyTransactions.createdAt)
+      .limit(limit);
+  }
+
+  async checkDailyCandy(discordId: string): Promise<boolean> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [lastClaim] = await db
+      .select()
+      .from(candyTransactions)
+      .where(eq(candyTransactions.toUserId, discordId))
+      .where(eq(candyTransactions.type, 'daily'))
+      .orderBy(candyTransactions.createdAt)
+      .limit(1);
+
+    if (!lastClaim) return true;
+
+    const lastClaimDate = new Date(lastClaim.createdAt);
+    lastClaimDate.setHours(0, 0, 0, 0);
+
+    return lastClaimDate.getTime() < today.getTime();
+  }
+
+  async claimDailyCandy(discordId: string): Promise<number> {
+    const canClaim = await this.checkDailyCandy(discordId);
+    if (!canClaim) {
+      throw new Error("Daily candy already claimed today");
+    }
+
+    const dailyAmount = 50; // 50 candy per day
+    const currentBalance = await this.getCandyBalance(discordId);
+    await this.updateCandyBalance(discordId, currentBalance + dailyAmount);
+
+    await this.addCandyTransaction({
+      fromUserId: null, // System reward
+      toUserId: discordId,
+      amount: dailyAmount,
+      type: 'daily',
+      description: 'Daily candy reward',
+    });
+
+    return dailyAmount;
   }
 
   async getStats(): Promise<{

@@ -84,6 +84,49 @@ export class DatabaseStorage implements IStorage {
     await this.setBotSetting('key_length', '16');
     await this.setBotSetting('auto_expire_keys', 'false');
     await this.setBotSetting('key_expiry_days', '30');
+
+    // Demo MacSploit-style keys
+    await this.createDiscordKey({
+      keyId: '25BB27323D9B63F9FBF120DB5DE92708',
+      userId: '123456789012345678',
+      discordUsername: 'user1#1234',
+      hwid: 'HWID-ABC123',
+      status: 'active'
+    });
+
+    await this.createDiscordKey({
+      keyId: 'A7F3E2D1C5B9876543210FEDCBA09876',
+      userId: '987654321098765432',
+      discordUsername: 'user2#5678',
+      hwid: 'HWID-XYZ789',
+      status: 'active'
+    });
+
+    await this.createDiscordKey({
+      keyId: 'F1E2D3C4B5A6978563241FEDCBA09871',
+      status: 'revoked',
+      revokedBy: 'admin',
+      revokedAt: new Date()
+    });
+
+    // Demo users
+    await this.upsertDiscordUser({
+      discordId: '123456789012345678',
+      username: 'user1',
+      discriminator: '1234',
+      avatarUrl: 'https://cdn.discordapp.com/avatars/123456789012345678/avatar.png',
+      roles: ['@everyone', 'Member'],
+      metadata: { totalKeys: 1, firstSeen: new Date().toISOString() }
+    });
+
+    await this.upsertDiscordUser({
+      discordId: '987654321098765432',
+      username: 'user2',
+      discriminator: '5678',
+      avatarUrl: 'https://cdn.discordapp.com/avatars/987654321098765432/avatar.png',
+      roles: ['@everyone', 'VIP'],
+      metadata: { totalKeys: 1, firstSeen: new Date().toISOString() }
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {

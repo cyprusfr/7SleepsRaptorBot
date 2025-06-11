@@ -407,6 +407,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize demo data endpoint
+  app.post("/api/init-demo", async (req, res) => {
+    try {
+      await (storage as any).initializeDemoData();
+      res.json({ success: true, message: "Demo data initialized" });
+    } catch (error) {
+      console.error("Error initializing demo data:", error);
+      res.status(500).json({ error: "Failed to initialize demo data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

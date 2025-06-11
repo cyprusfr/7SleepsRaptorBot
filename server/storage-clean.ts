@@ -4,7 +4,7 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -47,10 +47,11 @@ export interface IStorage {
   setRateLimit(key: string, count: number, ttl: number): Promise<void>;
 
   // Dashboard Keys
-  createDashboardKey(key: any): Promise<any>;
-  getDashboardKeyByUserId(userId: string): Promise<any>;
-  getDashboardKeyByKeyId(keyId: string): Promise<any>;
-  getAllDashboardKeys(): Promise<any[]>;
+  createDashboardKey(key: InsertDashboardKey): Promise<DashboardKey>;
+  getDashboardKeyByUserId(userId: string): Promise<DashboardKey | undefined>;
+  getDashboardKeyByDiscordUserId(discordUserId: string): Promise<DashboardKey | undefined>;
+  getDashboardKeyByKeyId(keyId: string): Promise<DashboardKey | undefined>;
+  getAllDashboardKeys(): Promise<DashboardKey[]>;
   revokeDashboardKey(keyId: string, revokedBy: string): Promise<void>;
   updateDashboardKeyLastAccess(keyId: string): Promise<void>;
   linkDashboardKeyToGoogle(keyId: string, userId: string, email: string): Promise<void>;
@@ -79,7 +80,7 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(insertUser)

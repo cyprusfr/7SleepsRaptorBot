@@ -344,6 +344,19 @@ export class RaptorBot {
             .setMaxValue(100)
         ),
 
+      // Dashboard Key Management Commands
+      new SlashCommandBuilder()
+        .setName('generate-dashboard-key')
+        .setDescription('Generate a new dashboard access key'),
+
+      new SlashCommandBuilder()
+        .setName('revoke-dashboard-key')
+        .setDescription('Revoke your dashboard access key'),
+
+      new SlashCommandBuilder()
+        .setName('dashboard-key-info')
+        .setDescription('View information about your dashboard key'),
+
       // Troll Commands
       new SlashCommandBuilder()
         .setName('say')
@@ -546,6 +559,15 @@ export class RaptorBot {
           break;
         case 'slot-machine':
           await this.handleSlotMachine(interaction);
+          break;
+        case 'generate-dashboard-key':
+          await this.handleGenerateDashboardKey(interaction);
+          break;
+        case 'revoke-dashboard-key':
+          await this.handleRevokeDashboardKey(interaction);
+          break;
+        case 'dashboard-key-info':
+          await this.handleDashboardKeyInfo(interaction);
           break;
         case 'say':
           await this.handleSay(interaction);
@@ -2680,6 +2702,178 @@ export class RaptorBot {
       await interaction.reply({
         content: '❌ Failed to play slot machine.',
         flags: [4096],
+      });
+    }
+  }
+
+  // Dashboard Key Management Commands
+  private async handleGenerateDashboardKey(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.deferReply({ flags: [4096] });
+
+      const userId = interaction.user.id;
+      const username = interaction.user.username;
+
+      // Check if user already has an active key
+      const existingKey = await storage.getDashboardKeyByDiscordUserId(userId);
+      if (existingKey && existingKey.status === 'active') {
+        await interaction.editReply({
+          content: `❌ You already have an active dashboard key. Use \`/dashboard-key-info\` to view it or \`/revoke-dashboard-key\` to revoke it first.`,
+        });
+        return;
+      }
+
+      // Generate new key
+      const keyId = this.generateKeyId();
+      const dashboardKey = {
+        keyId,
+        discordUserId: userId,
+        discordUsername: username,
+        status: 'active' as const,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      };
+
+      await storage.createDashboardKey(dashboardKey);
+
+      const embed = {
+        title: '🔑 Dashboard Key Generated',
+        description: `Your dashboard access key has been generated successfully!`,
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: false },
+          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Expires', value: `<t:${Math.floor(dashboardKey.expiresAt.getTime() / 1000)}:R>`, inline: true },
+          { name: 'Next Steps', value: 'Visit the dashboard and link this key to your Google account for secure access.', inline: false },
+        ],
+        color: 0x00ff00,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.editReply({ embeds: [embed] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'dashboard_key_generated',
+        userId: userId,
+        description: `${username} generated a new dashboard key`,
+        metadata: { keyId, expiresAt: dashboardKey.expiresAt.toISOString() },
+      });
+
+    } catch (error) {
+      console.error('Error generating dashboard key:', error);
+      await interaction.editReply({
+        content: '❌ Failed to generate dashboard key. Please try again.',
+      });
+    }
+  }
+
+  private async handleRevokeDashboardKey(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.deferReply({ flags: [4096] });
+
+      const userId = interaction.user.id;
+      const username = interaction.user.username;
+
+      // Check if user has an active key
+      const existingKey = await storage.getDashboardKeyByDiscordUserId(userId);
+      if (!existingKey || existingKey.status !== 'active') {
+        await interaction.editReply({
+          content: '❌ You do not have an active dashboard key to revoke.',
+        });
+        return;
+      }
+
+      // Revoke the key
+      await storage.revokeDashboardKey(existingKey.keyId, username);
+
+      const embed = {
+        title: '🔑 Dashboard Key Revoked',
+        description: `Your dashboard access key has been revoked successfully.`,
+        fields: [
+          { name: 'Key ID', value: `\`${existingKey.keyId}\``, inline: false },
+          { name: 'Status', value: 'Revoked', inline: true },
+          { name: 'Revoked By', value: username, inline: true },
+        ],
+        color: 0xff0000,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.editReply({ embeds: [embed] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'dashboard_key_revoked',
+        userId: userId,
+        description: `${username} revoked their dashboard key`,
+        metadata: { keyId: existingKey.keyId },
+      });
+
+    } catch (error) {
+      console.error('Error revoking dashboard key:', error);
+      await interaction.editReply({
+        content: '❌ Failed to revoke dashboard key. Please try again.',
+      });
+    }
+  }
+
+  private async handleDashboardKeyInfo(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.deferReply({ flags: [4096] });
+
+      const userId = interaction.user.id;
+
+      // Get user's dashboard key
+      const dashboardKey = await storage.getDashboardKeyByDiscordUserId(userId);
+      if (!dashboardKey) {
+        await interaction.editReply({
+          content: '❌ You do not have a dashboard key. Use `/generate-dashboard-key` to create one.',
+        });
+        return;
+      }
+
+      const statusColor = dashboardKey.status === 'active' ? 0x00ff00 : 0xff0000;
+      const statusEmoji = dashboardKey.status === 'active' ? '✅' : '❌';
+
+      const embed = {
+        title: '🔑 Dashboard Key Information',
+        fields: [
+          { name: 'Key ID', value: `\`${dashboardKey.keyId}\``, inline: false },
+          { name: 'Status', value: `${statusEmoji} ${dashboardKey.status.charAt(0).toUpperCase() + dashboardKey.status.slice(1)}`, inline: true },
+          { name: 'Generated', value: `<t:${Math.floor(new Date(dashboardKey.generatedAt).getTime() / 1000)}:R>`, inline: true },
+        ],
+        color: statusColor,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (dashboardKey.expiresAt) {
+        embed.fields.push({
+          name: 'Expires',
+          value: `<t:${Math.floor(new Date(dashboardKey.expiresAt).getTime() / 1000)}:R>`,
+          inline: true,
+        });
+      }
+
+      if (dashboardKey.linkedEmail) {
+        embed.fields.push({
+          name: 'Linked Account',
+          value: `${dashboardKey.linkedEmail}`,
+          inline: false,
+        });
+      }
+
+      if (dashboardKey.lastAccessAt) {
+        embed.fields.push({
+          name: 'Last Access',
+          value: `<t:${Math.floor(new Date(dashboardKey.lastAccessAt).getTime() / 1000)}:R>`,
+          inline: true,
+        });
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error getting dashboard key info:', error);
+      await interaction.editReply({
+        content: '❌ Failed to retrieve dashboard key information. Please try again.',
       });
     }
   }

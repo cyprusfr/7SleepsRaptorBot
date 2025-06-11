@@ -38,7 +38,7 @@ interface Server {
   lastDataSync: string;
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedServer, setSelectedServer] = useState<string>("");
   const { toast } = useToast();
@@ -443,5 +443,13 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <PhraseAuth>
+      <DashboardContent />
+    </PhraseAuth>
   );
 }

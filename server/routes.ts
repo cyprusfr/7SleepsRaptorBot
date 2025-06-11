@@ -177,22 +177,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/settings", async (req, res) => {
     try {
       const { key, value } = req.body;
-      if (!key || !value) {
+      if (!key || value === undefined || value === null) {
         return res.status(400).json({ error: "Key and value are required" });
       }
       
-      await storage.setBotSetting(key, value);
+      await storage.setBotSetting(key, String(value));
       
-      // Apply bot settings in real-time
-      if (key === "required_role") {
-        process.env.REQUIRED_ROLE = value;
-      } else if (key === "key_system_role") {
-        process.env.KEY_SYSTEM_ROLE = value;
-      } else if (key === "rate_limit_enabled") {
-        process.env.RATE_LIMIT_ENABLED = value;
-      } else if (key === "backup_retention_days") {
-        process.env.BACKUP_RETENTION_DAYS = value;
-      }
+      // Refresh bot settings in real-time
+      const { raptorBot } = await import('./discord-bot');
+      await raptorBot.refreshSettings();
       
       res.json({ success: true });
     } catch (error) {

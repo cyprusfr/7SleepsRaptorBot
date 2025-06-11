@@ -322,16 +322,18 @@ export class RaptorBot {
     if (!memberRoles) return false;
 
     // Check if user has required role
+    const requiredRole = this.getSetting('required_role', 'Raptor Admin');
     const hasRequiredRole = Array.isArray(memberRoles) 
-      ? memberRoles.some(role => role === REQUIRED_ROLE)
-      : memberRoles.cache?.some(role => role.name === REQUIRED_ROLE);
+      ? memberRoles.some(role => role === requiredRole)
+      : memberRoles.cache?.some(role => role.name === requiredRole);
 
     // For key system commands, check for special role
     const keySystemCommands = ['whitelist', 'dewhitelist'];
     if (keySystemCommands.includes(interaction.commandName)) {
+      const keySystemRole = this.getSetting('key_system_role', 'Key System');
       const hasKeySystemRole = Array.isArray(memberRoles)
-        ? memberRoles.some(role => role === KEY_SYSTEM_ROLE)
-        : memberRoles.cache?.some(role => role.name === KEY_SYSTEM_ROLE);
+        ? memberRoles.some(role => role === keySystemRole)
+        : memberRoles.cache?.some(role => role.name === keySystemRole);
       
       return hasKeySystemRole || hasRequiredRole;
     }
@@ -340,6 +342,12 @@ export class RaptorBot {
   }
 
   private async isRateLimited(userId: string): Promise<boolean> {
+    // Check if rate limiting is enabled
+    const rateLimitEnabled = this.getSetting('rate_limit_enabled', 'true') === 'true';
+    if (!rateLimitEnabled) {
+      return false;
+    }
+
     // Simple rate limiting - 5 commands per minute
     const key = `ratelimit:${userId}`;
     const count = await storage.getRateLimit(key);
@@ -1152,7 +1160,7 @@ export class RaptorBot {
         },
         {
           name: '⚠️ Permissions',
-          value: `Commands require the "${REQUIRED_ROLE}" role.\nKey management commands require the "${KEY_SYSTEM_ROLE}" role.`,
+          value: `Commands require the "${this.getSetting('required_role', 'Raptor Admin')}" role.\nKey management commands require the "${this.getSetting('key_system_role', 'Key System')}" role.`,
           inline: false,
         },
       ],

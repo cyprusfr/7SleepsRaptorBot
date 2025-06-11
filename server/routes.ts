@@ -505,6 +505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Note: Vite middleware handles client-side routing in development mode
+
   const httpServer = createServer(app);
   return httpServer;
 }

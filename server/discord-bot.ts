@@ -15,7 +15,6 @@ export class RaptorBot {
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
       ],
     });
 

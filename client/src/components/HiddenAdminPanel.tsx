@@ -28,30 +28,25 @@ export function HiddenAdminPanel() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Create a global function for the secret command
-    (window as any).checkAdminAccess = (phrase: string) => {
-      if (phrase === 'omg im so cool') {
-        setIsAuthenticated(true);
-        setIsOpen(true);
-        toast({
-          title: "Admin Access Granted",
-          description: "Secret admin panel unlocked!",
-        });
-        return "Admin panel activated!";
-      } else {
-        toast({
-          title: "Not Authorized",
-          description: "Access denied to admin panel.",
-          variant: "destructive",
-        });
-        return "Access denied.";
-      }
+    // Create the exact phrase as a global variable that evaluates to true
+    (window as any)['omg im so cool'] = () => {
+      setIsAuthenticated(true);
+      setIsOpen(true);
+      toast({
+        title: "Admin Access Granted",
+        description: "Secret admin panel unlocked!",
+      });
+      return "Admin panel activated!";
     };
 
-    // Also override console.log to detect the secret phrase
+    // Store original console methods
     const originalLog = console.log;
-    console.log = (...args) => {
-      const message = args.join(' ').toLowerCase();
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    // Override console methods to catch when someone types the phrase
+    const checkPhrase = (...args: any[]) => {
+      const message = args.join(' ').toLowerCase().trim();
       if (message === 'omg im so cool') {
         setIsAuthenticated(true);
         setIsOpen(true);
@@ -60,16 +55,45 @@ export function HiddenAdminPanel() {
           description: "Secret admin panel unlocked!",
         });
       }
+    };
+
+    console.log = (...args) => {
+      checkPhrase(...args);
       originalLog.apply(console, args);
     };
 
-    // Add instruction to console
-    console.info("🔧 Developer Console Active");
-    console.info("💡 Try: console.log('omg im so cool')");
+    // Also catch if they try other console methods
+    console.error = (...args) => {
+      checkPhrase(...args);
+      originalError.apply(console, args);
+    };
+
+    console.warn = (...args) => {
+      checkPhrase(...args);
+      originalWarn.apply(console, args);
+    };
+
+    // Listen for the phrase being typed directly in console
+    const originalEval = window.eval;
+    window.eval = (code: string) => {
+      if (typeof code === 'string' && code.trim().toLowerCase() === 'omg im so cool') {
+        setIsAuthenticated(true);
+        setIsOpen(true);
+        toast({
+          title: "Admin Access Granted",
+          description: "Secret admin panel unlocked!",
+        });
+        return "Admin panel activated!";
+      }
+      return originalEval.call(window, code);
+    };
 
     return () => {
       console.log = originalLog;
-      delete (window as any).checkAdminAccess;
+      console.error = originalError;
+      console.warn = originalWarn;
+      window.eval = originalEval;
+      delete (window as any)['omg im so cool'];
     };
   }, [toast]);
 

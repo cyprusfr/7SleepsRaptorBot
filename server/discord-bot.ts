@@ -156,7 +156,7 @@ export class RaptorBot {
       if (!this.hasRequiredPermissions(interaction)) {
         await interaction.reply({
           content: '❌ You do not have permission to use this command.',
-          ephemeral: true,
+          flags: [4096],
         });
         return;
       }
@@ -165,7 +165,7 @@ export class RaptorBot {
       if (await this.isRateLimited(user.id)) {
         await interaction.reply({
           content: '⏰ You are being rate limited. Please wait before using commands again.',
-          ephemeral: true,
+          flags: [4096],
         });
         return;
       }
@@ -198,7 +198,7 @@ export class RaptorBot {
         default:
           await interaction.reply({
             content: '❌ Unknown command.',
-            ephemeral: true,
+            flags: [4096],
           });
       }
 
@@ -222,7 +222,7 @@ export class RaptorBot {
       if (!interaction.replied) {
         await interaction.reply({
           content: `❌ An error occurred: ${errorMessage}`,
-          ephemeral: true,
+          flags: [4096],
         });
       }
     }
@@ -318,7 +318,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private async handleDewhitelist(interaction: ChatInputCommandInteraction) {
@@ -328,7 +328,7 @@ export class RaptorBot {
     if (!key) {
       await interaction.reply({
         content: '❌ Key not found.',
-        ephemeral: true,
+        flags: [4096],
       });
       return;
     }
@@ -336,7 +336,7 @@ export class RaptorBot {
     if (key.status === 'revoked') {
       await interaction.reply({
         content: '❌ Key is already revoked.',
-        ephemeral: true,
+        flags: [4096],
       });
       return;
     }
@@ -354,7 +354,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private async handleUserInfo(interaction: ChatInputCommandInteraction) {
@@ -379,7 +379,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private async handleHwidInfo(interaction: ChatInputCommandInteraction) {
@@ -390,7 +390,7 @@ export class RaptorBot {
     if (keys.length === 0) {
       await interaction.reply({
         content: '❌ No keys found for this HWID.',
-        ephemeral: true,
+        flags: [4096],
       });
       return;
     }
@@ -416,7 +416,7 @@ export class RaptorBot {
       });
     });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private async handleLink(interaction: ChatInputCommandInteraction) {
@@ -427,7 +427,7 @@ export class RaptorBot {
     if (!key) {
       await interaction.reply({
         content: '❌ Key not found.',
-        ephemeral: true,
+        flags: [4096],
       });
       return;
     }
@@ -446,7 +446,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] });
   }
 
   private async handleBackup(interaction: ChatInputCommandInteraction) {
@@ -461,7 +461,7 @@ export class RaptorBot {
       return;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: [4096] });
 
     // Initial progress message
     const progressEmbed = {

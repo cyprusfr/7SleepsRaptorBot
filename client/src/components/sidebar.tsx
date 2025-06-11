@@ -59,6 +59,14 @@ export default function Sidebar({ botStatus, lastSync }: SidebarProps) {
         })}
       </nav>
 
+      {/* User Profile */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">Signed in as</div>
+          <UserProfile />
+        </div>
+      </div>
+
       {/* Bot Status */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">

@@ -11,19 +11,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+
+interface AuthUser {
+  id: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+}
 
 export function UserProfile() {
   const { user } = useAuth();
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("/api/auth/logout", { method: "POST" }),
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      return response.json();
+    },
     onSuccess: () => {
       window.location.href = "/";
     },
   });
 
   if (!user) return null;
+
+  const authUser = user as AuthUser;
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -34,9 +45,9 @@ export function UserProfile() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.picture || ""} alt={user.name || ""} />
+            <AvatarImage src={authUser.picture || ""} alt={authUser.name || ""} />
             <AvatarFallback>
-              {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "U"}
+              {authUser.name?.charAt(0)?.toUpperCase() || authUser.email?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -44,9 +55,9 @@ export function UserProfile() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{authUser.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {authUser.email}
             </p>
           </div>
         </DropdownMenuLabel>

@@ -1284,9 +1284,8 @@ export class RaptorBot {
   }
 
   private generateKeyId(): string {
-    const prefix = 'RAP_';
-    const suffix = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `${prefix}${suffix}`;
+    // Generate MacSploit-style key: 32 character hex string
+    return crypto.randomBytes(16).toString('hex').toUpperCase();
   }
 
   private async syncServerData() {

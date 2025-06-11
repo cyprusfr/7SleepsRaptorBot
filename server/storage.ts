@@ -1,4 +1,6 @@
 import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey, backupIntegrity, type BackupIntegrity, type InsertBackupIntegrity } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -96,30 +98,7 @@ export interface IStorage {
   checkDailyCandy(userId: string): Promise<boolean>;
   claimDailyCandy(userId: string): Promise<number>;
   transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
-
-  // Backup System
-  getAllBackups(): Promise<any[]>;
-  
-  // Backup Integrity System
-  createBackupIntegrityCheck(data: InsertBackupIntegrity): Promise<BackupIntegrity>;
-  getBackupIntegrityById(id: number): Promise<BackupIntegrity | undefined>;
-  getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined>;
-  getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]>;
-  getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]>;
-  updateBackupIntegrity(id: number, updates: Partial<BackupIntegrity>): Promise<void>;
-  deleteBackupIntegrityCheck(id: number): Promise<void>;
-  getHealthScoreStats(): Promise<{
-    averageHealthScore: number;
-    healthyBackups: number;
-    warningBackups: number;
-    criticalBackups: number;
-    corruptedBackups: number;
-    totalChecks: number;
-  }>;
 }
-
-import { db } from "./db";
-import { eq, avg, count } from "drizzle-orm";
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {

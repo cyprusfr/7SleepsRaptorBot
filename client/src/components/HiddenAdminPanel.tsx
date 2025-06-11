@@ -28,7 +28,27 @@ export function HiddenAdminPanel() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Override console.log to detect the secret phrase
+    // Create a global function for the secret command
+    (window as any).checkAdminAccess = (phrase: string) => {
+      if (phrase === 'omg im so cool') {
+        setIsAuthenticated(true);
+        setIsOpen(true);
+        toast({
+          title: "Admin Access Granted",
+          description: "Secret admin panel unlocked!",
+        });
+        return "Admin panel activated!";
+      } else {
+        toast({
+          title: "Not Authorized",
+          description: "Access denied to admin panel.",
+          variant: "destructive",
+        });
+        return "Access denied.";
+      }
+    };
+
+    // Also override console.log to detect the secret phrase
     const originalLog = console.log;
     console.log = (...args) => {
       const message = args.join(' ').toLowerCase();
@@ -39,20 +59,19 @@ export function HiddenAdminPanel() {
           title: "Admin Access Granted",
           description: "Secret admin panel unlocked!",
         });
-      } else if (isOpen && !isAuthenticated) {
-        toast({
-          title: "Not Authorized",
-          description: "Access denied to admin panel.",
-          variant: "destructive",
-        });
       }
       originalLog.apply(console, args);
     };
 
+    // Add instruction to console
+    console.info("🔧 Developer Console Active");
+    console.info("💡 Try: console.log('omg im so cool')");
+
     return () => {
       console.log = originalLog;
+      delete (window as any).checkAdminAccess;
     };
-  }, [isOpen, isAuthenticated, toast]);
+  }, [toast]);
 
   const { data: adminStats } = useQuery({
     queryKey: ["/api/admin/stats"],

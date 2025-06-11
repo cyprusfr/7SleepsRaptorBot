@@ -406,6 +406,221 @@ export class DatabaseStorage implements IStorage {
       connectedServers: allServers.filter(s => s.isActive).length,
     };
   }
+
+  // Backup Management - Placeholder methods
+  async getAllBackups(): Promise<any[]> {
+    return [];
+  }
+
+  async createBackupIntegrityCheck(): Promise<any> {
+    return {};
+  }
+
+  async getAllBackupIntegrityChecks(): Promise<any[]> {
+    return [];
+  }
+
+  async getBackupIntegrityByBackupId(): Promise<any> {
+    return undefined;
+  }
+
+  async getIntegrityChecksByServerId(): Promise<any[]> {
+    return [];
+  }
+
+  async getHealthScoreStats(): Promise<any> {
+    return {
+      averageHealthScore: 0,
+      healthyBackups: 0,
+      warningBackups: 0,
+      criticalBackups: 0,
+      corruptedBackups: 0,
+      totalChecks: 0,
+    };
+  }
+
+  // User Management
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserApproval(userId: string, isApproved: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isApproved, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async makeUserAdmin(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ role: 'admin', updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  getRolePermissions(role: string): any {
+    const permissions = {
+      owner: {
+        canManageUsers: true,
+        canManageKeys: true,
+        canViewActivity: true,
+        canManageServers: true,
+        canAccessAdmin: true,
+        canManageBackups: true,
+        canViewHealth: true,
+        maxSlots: 1
+      },
+      'server-management': {
+        canManageUsers: true,
+        canManageKeys: true,
+        canViewActivity: true,
+        canManageServers: true,
+        canAccessAdmin: false,
+        canManageBackups: true,
+        canViewHealth: true,
+        maxSlots: 3
+      },
+      'head-admin': {
+        canManageUsers: false,
+        canManageKeys: true,
+        canViewActivity: true,
+        canManageServers: false,
+        canAccessAdmin: false,
+        canManageBackups: true,
+        canViewHealth: true,
+        maxSlots: 2
+      },
+      admin: {
+        canManageUsers: false,
+        canManageKeys: false,
+        canViewActivity: true,
+        canManageServers: false,
+        canAccessAdmin: false,
+        canManageBackups: false,
+        canViewHealth: true,
+        maxSlots: -1 // unlimited
+      },
+      user: {
+        canManageUsers: false,
+        canManageKeys: false,
+        canViewActivity: false,
+        canManageServers: false,
+        canAccessAdmin: false,
+        canManageBackups: false,
+        canViewHealth: false,
+        maxSlots: 0
+      }
+    };
+
+    return permissions[role] || permissions.user;
+  }
+
+  // Candy System Methods
+  async getCandyBalance(userId: string): Promise<number> {
+    try {
+      const [balance] = await db
+        .select()
+        .from(candyBalances)
+        .where(eq(candyBalances.userId, userId));
+      return balance?.balance || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async updateCandyBalance(userId: string, newBalance: number): Promise<void> {
+    await db
+      .insert(candyBalances)
+      .values({ userId, balance: newBalance })
+      .onConflictDoUpdate({
+        target: candyBalances.userId,
+        set: { balance: newBalance, updatedAt: new Date() }
+      });
+  }
+
+  async addCandyTransaction(transaction: InsertCandyTransaction): Promise<void> {
+    await db.insert(candyTransactions).values(transaction);
+  }
+
+  async getCandyTransactions(userId: string, limit: number = 50): Promise<CandyTransaction[]> {
+    return await db
+      .select()
+      .from(candyTransactions)
+      .where(eq(candyTransactions.userId, userId))
+      .orderBy(desc(candyTransactions.createdAt))
+      .limit(limit);
+  }
+
+  async getCandyLeaderboard(limit: number = 10): Promise<any[]> {
+    const balances = await db
+      .select()
+      .from(candyBalances)
+      .orderBy(desc(candyBalances.balance))
+      .limit(limit);
+    
+    return balances.map((balance, index) => ({
+      rank: index + 1,
+      userId: balance.userId,
+      balance: balance.balance
+    }));
+  }
+
+  async checkDailyCandy(userId: string): Promise<boolean> {
+    const today = new Date().toISOString().split('T')[0];
+    const [transaction] = await db
+      .select()
+      .from(candyTransactions)
+      .where(eq(candyTransactions.userId, userId))
+      .where(eq(candyTransactions.type, 'daily'))
+      .where(sql`DATE(${candyTransactions.createdAt}) = ${today}`)
+      .limit(1);
+    
+    return !transaction;
+  }
+
+  async claimDailyCandy(userId: string): Promise<number> {
+    const amount = Math.floor(Math.random() * 50) + 10; // 10-59 candy
+    const currentBalance = await this.getCandyBalance(userId);
+    
+    await this.updateCandyBalance(userId, currentBalance + amount);
+    await this.addCandyTransaction({
+      userId,
+      type: 'daily',
+      amount,
+      description: 'Daily candy claim',
+      metadata: { claimed: true }
+    });
+    
+    return amount;
+  }
+
+  async transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void> {
+    const fromBalance = await this.getCandyBalance(fromUserId);
+    const toBalance = await this.getCandyBalance(toUserId);
+    
+    if (fromBalance < amount) {
+      throw new Error('Insufficient candy balance');
+    }
+    
+    await this.updateCandyBalance(fromUserId, fromBalance - amount);
+    await this.updateCandyBalance(toUserId, toBalance + amount);
+    
+    await this.addCandyTransaction({
+      userId: fromUserId,
+      type: 'transfer_out',
+      amount: -amount,
+      description: `Transfer to ${toUserId}`,
+      metadata: { recipientId: toUserId }
+    });
+    
+    await this.addCandyTransaction({
+      userId: toUserId,
+      type: 'transfer_in',
+      amount,
+      description: `Transfer from ${fromUserId}`,
+      metadata: { senderId: fromUserId }
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -112,6 +112,21 @@ export class RaptorBot {
         ),
 
       new SlashCommandBuilder()
+        .setName('backup')
+        .setDescription('Backup server data and members')
+        .addStringOption(option =>
+          option.setName('type')
+            .setDescription('Type of backup to create')
+            .setRequired(false)
+            .addChoices(
+              { name: 'Full Backup', value: 'full' },
+              { name: 'Members Only', value: 'members' },
+              { name: 'Channels Only', value: 'channels' },
+              { name: 'Roles Only', value: 'roles' }
+            )
+        ),
+
+      new SlashCommandBuilder()
         .setName('help')
         .setDescription('Show available commands and usage'),
     ];
@@ -172,6 +187,9 @@ export class RaptorBot {
           break;
         case 'link':
           await this.handleLink(interaction);
+          break;
+        case 'backup':
+          await this.handleBackup(interaction);
           break;
         case 'help':
           await this.handleHelp(interaction);
@@ -423,6 +441,169 @@ export class RaptorBot {
     await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
+  private async handleBackup(interaction: ChatInputCommandInteraction) {
+    const backupType = interaction.options.getString('type') || 'full';
+    const guild = interaction.guild;
+
+    if (!guild) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        flags: [4096], // EPHEMERAL flag
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      let backupData: any = {
+        serverId: guild.id,
+        serverName: guild.name,
+        backupType,
+        timestamp: new Date().toISOString(),
+        createdBy: interaction.user.id,
+      };
+
+      // Collect server information
+      const serverInfo = {
+        id: guild.id,
+        name: guild.name,
+        description: guild.description,
+        memberCount: guild.memberCount,
+        ownerId: guild.ownerId,
+        createdAt: guild.createdAt.toISOString(),
+        iconURL: guild.iconURL(),
+        bannerURL: guild.bannerURL(),
+        features: guild.features,
+        premiumTier: guild.premiumTier,
+        premiumSubscriptionCount: guild.premiumSubscriptionCount,
+        verificationLevel: guild.verificationLevel,
+        defaultMessageNotifications: guild.defaultMessageNotifications,
+        explicitContentFilter: guild.explicitContentFilter,
+        mfaLevel: guild.mfaLevel,
+        nsfwLevel: guild.nsfwLevel,
+      };
+
+      if (backupType === 'full' || backupType === 'channels') {
+        // Backup channels
+        const channels = await guild.channels.fetch();
+        backupData.channels = Array.from(channels.values()).map(channel => ({
+          id: channel?.id,
+          name: channel?.name,
+          type: channel?.type,
+          position: channel?.position,
+          parentId: channel?.parentId,
+          topic: channel?.isTextBased() ? (channel as any).topic : null,
+          nsfw: channel?.isTextBased() ? (channel as any).nsfw : false,
+          rateLimitPerUser: channel?.isTextBased() ? (channel as any).rateLimitPerUser : null,
+          bitrate: channel?.isVoiceBased() ? (channel as any).bitrate : null,
+          userLimit: channel?.isVoiceBased() ? (channel as any).userLimit : null,
+          createdAt: channel?.createdAt?.toISOString(),
+        }));
+      }
+
+      if (backupType === 'full' || backupType === 'roles') {
+        // Backup roles
+        const roles = await guild.roles.fetch();
+        backupData.roles = Array.from(roles.values()).map(role => ({
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          hoist: role.hoist,
+          position: role.position,
+          permissions: role.permissions.bitfield.toString(),
+          managed: role.managed,
+          mentionable: role.mentionable,
+          createdAt: role.createdAt.toISOString(),
+        }));
+      }
+
+      if (backupType === 'full' || backupType === 'members') {
+        // Backup members (limited data for privacy)
+        const members = await guild.members.fetch({ limit: 1000 });
+        backupData.members = Array.from(members.values()).map(member => ({
+          userId: member.user.id,
+          username: member.user.username,
+          discriminator: member.user.discriminator,
+          displayName: member.displayName,
+          nickname: member.nickname,
+          joinedAt: member.joinedAt?.toISOString(),
+          premiumSince: member.premiumSince?.toISOString(),
+          roles: member.roles.cache.map(role => role.id),
+          bot: member.user.bot,
+          createdAt: member.user.createdAt.toISOString(),
+        }));
+      }
+
+      // Add server info to backup
+      backupData.serverInfo = serverInfo;
+
+      // Store backup in server data with metadata
+      const serverData = await storage.getDiscordServerByServerId(guild.id);
+      if (serverData) {
+        const currentPermissions = typeof serverData.permissions === 'object' ? serverData.permissions : {};
+        const updatedMetadata = {
+          ...(currentPermissions as any),
+          lastBackup: new Date().toISOString(),
+          backupType,
+          backupData,
+          backupSize: JSON.stringify(backupData).length,
+        };
+
+        await storage.updateDiscordServer(serverData.id, {
+          permissions: updatedMetadata,
+          lastDataSync: new Date(),
+        });
+      }
+
+      // Log the backup activity
+      await storage.logActivity({
+        type: 'server_backup',
+        userId: interaction.user.id,
+        targetId: guild.id,
+        description: `Server backup created: ${backupType} backup of ${guild.name}`,
+        metadata: {
+          backupType,
+          serverName: guild.name,
+          dataSize: JSON.stringify(backupData).length,
+          channelCount: backupData.channels?.length || 0,
+          memberCount: backupData.members?.length || 0,
+          roleCount: backupData.roles?.length || 0,
+        },
+      });
+
+      const embed = {
+        title: '✅ Server Backup Created',
+        description: `Successfully created ${backupType} backup of ${guild.name}`,
+        fields: [
+          { name: 'Backup Type', value: backupType.charAt(0).toUpperCase() + backupType.slice(1), inline: true },
+          { name: 'Server', value: guild.name, inline: true },
+          { name: 'Data Size', value: `${Math.round(JSON.stringify(backupData).length / 1024)} KB`, inline: true },
+        ],
+        color: 0x00D4AA,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (backupData.channels) {
+        embed.fields.push({ name: 'Channels', value: backupData.channels.length.toString(), inline: true });
+      }
+      if (backupData.members) {
+        embed.fields.push({ name: 'Members', value: backupData.members.length.toString(), inline: true });
+      }
+      if (backupData.roles) {
+        embed.fields.push({ name: 'Roles', value: backupData.roles.length.toString(), inline: true });
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      await interaction.editReply({
+        content: '❌ Failed to create backup. Please check bot permissions and try again.',
+      });
+    }
+  }
+
   private async handleHelp(interaction: ChatInputCommandInteraction) {
     const embed = {
       title: '🤖 Raptor Bot - Help',
@@ -442,7 +623,18 @@ export class RaptorBot {
           value: [
             '`/userinfo <user>` - Get detailed user information',
             '`/hwidinfo <hwid>` - Get hardware ID information',
+            '`/backup [type]` - Create server data backup',
             '`/help` - Show this help message',
+          ].join('\n'),
+          inline: false,
+        },
+        {
+          name: '💾 Backup Types',
+          value: [
+            '`full` - Complete server backup (default)',
+            '`members` - Member data only',
+            '`channels` - Channel structure only',
+            '`roles` - Role configuration only',
           ].join('\n'),
           inline: false,
         },
@@ -456,7 +648,7 @@ export class RaptorBot {
       timestamp: new Date().toISOString(),
     };
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: [4096] }); // EPHEMERAL flag
   }
 
   private generateKeyId(): string {

@@ -46,7 +46,7 @@ export const discordServers = pgTable("discord_servers", {
 
 export const activityLogs = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // key_generated, key_revoked, user_linked, user_info, hwid_info
+  type: text("type").notNull(), // key_generated, key_revoked, user_linked, user_info, hwid_info, server_backup
   userId: text("user_id"),
   targetId: text("target_id"),
   description: text("description").notNull(),

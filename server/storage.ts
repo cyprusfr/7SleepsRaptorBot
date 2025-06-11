@@ -49,6 +49,7 @@ export interface IStorage {
   getDiscordServerByServerId(serverId: string): Promise<DiscordServer | undefined>;
   getAllDiscordServers(): Promise<DiscordServer[]>;
   updateServerStatus(serverId: string, isActive: boolean): Promise<void>;
+  updateDiscordServer(id: number, updates: Partial<DiscordServer>): Promise<void>;
 
   // Activity Logs
   logActivity(activity: InsertActivityLog): Promise<ActivityLog>;
@@ -308,6 +309,13 @@ export class MemStorage implements IStorage {
     if (server) {
       server.isActive = isActive;
       server.lastDataSync = new Date();
+    }
+  }
+
+  async updateDiscordServer(id: number, updates: Partial<DiscordServer>): Promise<void> {
+    const server = this.discordServers.get(id);
+    if (server) {
+      Object.assign(server, updates, { lastDataSync: new Date() });
     }
   }
 

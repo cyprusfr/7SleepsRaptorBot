@@ -425,7 +425,7 @@ export default function Backups() {
         
         <TabsContent value="failed">
           <div className="grid gap-4">
-            {backups.filter((backup: Backup) => backup.status === "failed").map((backup: Backup) => (
+            {(backups as any[])?.filter((backup: any) => backup.status === "failed").map((backup: any) => (
               <Card key={backup.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">

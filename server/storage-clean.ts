@@ -1,4 +1,6 @@
 import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -65,9 +67,6 @@ export interface IStorage {
     connectedServers: number;
   }>;
 }
-
-import { db } from "./db";
-import { eq } from "drizzle-orm";
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {

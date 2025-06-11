@@ -152,7 +152,7 @@ export function SidebarNav({ className }: SidebarNavProps) {
                 <span className="text-xs text-muted-foreground truncate">
                   {(user as any).email}
                 </span>
-                {(permissions as any)?.all && (
+                {permissions && (permissions as any)?.canAccessAdmin && (
                   <Shield className="h-3 w-3 text-orange-500" />
                 )}
               </div>

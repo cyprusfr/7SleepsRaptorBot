@@ -262,6 +262,88 @@ export class RaptorBot {
         .setName('candy-history')
         .setDescription('View your recent candy transactions'),
 
+      // Candy Games
+      new SlashCommandBuilder()
+        .setName('coin-flip')
+        .setDescription('Flip a coin and bet candy on heads or tails')
+        .addStringOption(option =>
+          option.setName('choice')
+            .setDescription('Choose heads or tails')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Heads', value: 'heads' },
+              { name: 'Tails', value: 'tails' }
+            )
+        )
+        .addIntegerOption(option =>
+          option.setName('bet')
+            .setDescription('Amount of candy to bet (1-100)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(100)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('dice-roll')
+        .setDescription('Roll dice and win candy based on your roll')
+        .addIntegerOption(option =>
+          option.setName('bet')
+            .setDescription('Amount of candy to bet (1-50)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(50)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('rock-paper-scissors')
+        .setDescription('Play rock paper scissors against the bot for candy')
+        .addStringOption(option =>
+          option.setName('choice')
+            .setDescription('Your choice')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Rock', value: 'rock' },
+              { name: 'Paper', value: 'paper' },
+              { name: 'Scissors', value: 'scissors' }
+            )
+        )
+        .addIntegerOption(option =>
+          option.setName('bet')
+            .setDescription('Amount of candy to bet (1-75)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(75)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('number-guess')
+        .setDescription('Guess a number between 1-10 to win candy')
+        .addIntegerOption(option =>
+          option.setName('guess')
+            .setDescription('Your guess (1-10)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(10)
+        )
+        .addIntegerOption(option =>
+          option.setName('bet')
+            .setDescription('Amount of candy to bet (1-200)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(200)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('slot-machine')
+        .setDescription('Play the candy slot machine')
+        .addIntegerOption(option =>
+          option.setName('bet')
+            .setDescription('Amount of candy to bet (5-100)')
+            .setRequired(true)
+            .setMinValue(5)
+            .setMaxValue(100)
+        ),
+
       // Troll Commands
       new SlashCommandBuilder()
         .setName('say')
@@ -449,6 +531,21 @@ export class RaptorBot {
           break;
         case 'candy-history':
           await this.handleCandyHistory(interaction);
+          break;
+        case 'coin-flip':
+          await this.handleCoinFlip(interaction);
+          break;
+        case 'dice-roll':
+          await this.handleDiceRoll(interaction);
+          break;
+        case 'rock-paper-scissors':
+          await this.handleRockPaperScissors(interaction);
+          break;
+        case 'number-guess':
+          await this.handleNumberGuess(interaction);
+          break;
+        case 'slot-machine':
+          await this.handleSlotMachine(interaction);
           break;
         case 'say':
           await this.handleSay(interaction);
@@ -2240,6 +2337,348 @@ export class RaptorBot {
       console.error('Error fetching candy history:', error);
       await interaction.reply({
         content: '❌ Failed to fetch candy history.',
+        flags: [4096],
+      });
+    }
+  }
+
+  // Candy Game Handlers
+  private async handleCoinFlip(interaction: ChatInputCommandInteraction) {
+    try {
+      const choice = interaction.options.getString('choice', true);
+      const bet = interaction.options.getInteger('bet', true);
+
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+      
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance < bet) {
+        await interaction.reply({
+          content: `❌ You don't have enough candy! You only have **${balance}** candy.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      const coinResult = Math.random() < 0.5 ? 'heads' : 'tails';
+      const won = choice === coinResult;
+      const winAmount = won ? bet * 2 : 0;
+      const netChange = won ? bet : -bet;
+
+      await storage.updateCandyBalance(interaction.user.id, balance + netChange);
+
+      await storage.addCandyTransaction({
+        fromUserId: won ? null : interaction.user.id,
+        toUserId: interaction.user.id,
+        amount: won ? winAmount : bet,
+        type: 'game',
+        description: `Coin flip game - ${won ? 'won' : 'lost'}`,
+      });
+
+      const embed = {
+        title: '🪙 Coin Flip Results',
+        description: `The coin landed on **${coinResult}**!`,
+        fields: [
+          { name: 'Your Choice', value: choice.charAt(0).toUpperCase() + choice.slice(1), inline: true },
+          { name: 'Result', value: won ? '🎉 You won!' : '💸 You lost!', inline: true },
+          { name: 'Candy Change', value: won ? `+${bet}` : `-${bet}`, inline: true },
+          { name: 'New Balance', value: `${balance + netChange} candy`, inline: false },
+        ],
+        color: won ? 0x00FF00 : 0xFF0000,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error playing coin flip:', error);
+      await interaction.reply({
+        content: '❌ Failed to play coin flip.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleDiceRoll(interaction: ChatInputCommandInteraction) {
+    try {
+      const bet = interaction.options.getInteger('bet', true);
+
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+      
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance < bet) {
+        await interaction.reply({
+          content: `❌ You don't have enough candy! You only have **${balance}** candy.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      const dice1 = Math.floor(Math.random() * 6) + 1;
+      const dice2 = Math.floor(Math.random() * 6) + 1;
+      const total = dice1 + dice2;
+
+      let multiplier = 0;
+      let result = '';
+
+      if (total === 12) {
+        multiplier = 10; // Snake eyes (double 6s) - 10x payout
+        result = '🎯 Double 6s! JACKPOT!';
+      } else if (total === 2) {
+        multiplier = 8; // Snake eyes (double 1s) - 8x payout
+        result = '🐍 Snake Eyes! Big win!';
+      } else if (dice1 === dice2) {
+        multiplier = 4; // Any doubles - 4x payout
+        result = '🎲 Doubles! Nice win!';
+      } else if (total >= 10) {
+        multiplier = 2; // High roll - 2x payout
+        result = '📈 High roll! You win!';
+      } else if (total === 7) {
+        multiplier = 1; // Lucky 7 - break even
+        result = '🍀 Lucky 7! Break even!';
+      } else {
+        multiplier = 0; // Loss
+        result = '💸 Too low! You lose!';
+      }
+
+      const winAmount = bet * multiplier;
+      const netChange = winAmount - bet;
+
+      await storage.updateCandyBalance(interaction.user.id, balance + netChange);
+
+      await storage.addCandyTransaction({
+        fromUserId: netChange > 0 ? null : interaction.user.id,
+        toUserId: interaction.user.id,
+        amount: Math.abs(netChange),
+        type: 'game',
+        description: `Dice roll game - rolled ${total}`,
+      });
+
+      const embed = {
+        title: '🎲 Dice Roll Results',
+        description: `You rolled: ${dice1} + ${dice2} = **${total}**\n${result}`,
+        fields: [
+          { name: 'Multiplier', value: `${multiplier}x`, inline: true },
+          { name: 'Candy Change', value: netChange > 0 ? `+${netChange}` : netChange === 0 ? '±0' : `${netChange}`, inline: true },
+          { name: 'New Balance', value: `${balance + netChange} candy`, inline: true },
+        ],
+        color: netChange > 0 ? 0x00FF00 : netChange === 0 ? 0xFFFF00 : 0xFF0000,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error playing dice roll:', error);
+      await interaction.reply({
+        content: '❌ Failed to play dice roll.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleRockPaperScissors(interaction: ChatInputCommandInteraction) {
+    try {
+      const userChoice = interaction.options.getString('choice', true);
+      const bet = interaction.options.getInteger('bet', true);
+
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+      
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance < bet) {
+        await interaction.reply({
+          content: `❌ You don't have enough candy! You only have **${balance}** candy.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      const choices = ['rock', 'paper', 'scissors'];
+      const botChoice = choices[Math.floor(Math.random() * choices.length)];
+
+      let result = '';
+      let netChange = 0;
+
+      if (userChoice === botChoice) {
+        result = '🤝 It\'s a tie!';
+        netChange = 0;
+      } else if (
+        (userChoice === 'rock' && botChoice === 'scissors') ||
+        (userChoice === 'paper' && botChoice === 'rock') ||
+        (userChoice === 'scissors' && botChoice === 'paper')
+      ) {
+        result = '🎉 You win!';
+        netChange = Math.floor(bet * 1.5); // 1.5x payout
+      } else {
+        result = '💸 You lose!';
+        netChange = -bet;
+      }
+
+      await storage.updateCandyBalance(interaction.user.id, balance + netChange);
+
+      if (netChange !== 0) {
+        await storage.addCandyTransaction({
+          fromUserId: netChange > 0 ? null : interaction.user.id,
+          toUserId: interaction.user.id,
+          amount: Math.abs(netChange),
+          type: 'game',
+          description: `Rock Paper Scissors - ${userChoice} vs ${botChoice}`,
+        });
+      }
+
+      const emojis = { rock: '🪨', paper: '📄', scissors: '✂️' };
+
+      const embed = {
+        title: '🪨📄✂️ Rock Paper Scissors',
+        description: `${emojis[userChoice as keyof typeof emojis]} vs ${emojis[botChoice as keyof typeof emojis]}\n${result}`,
+        fields: [
+          { name: 'Your Choice', value: userChoice.charAt(0).toUpperCase() + userChoice.slice(1), inline: true },
+          { name: 'Bot Choice', value: botChoice.charAt(0).toUpperCase() + botChoice.slice(1), inline: true },
+          { name: 'Candy Change', value: netChange > 0 ? `+${netChange}` : netChange === 0 ? '±0' : `${netChange}`, inline: true },
+          { name: 'New Balance', value: `${balance + netChange} candy`, inline: false },
+        ],
+        color: netChange > 0 ? 0x00FF00 : netChange === 0 ? 0xFFFF00 : 0xFF0000,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error playing rock paper scissors:', error);
+      await interaction.reply({
+        content: '❌ Failed to play rock paper scissors.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleNumberGuess(interaction: ChatInputCommandInteraction) {
+    try {
+      const guess = interaction.options.getInteger('guess', true);
+      const bet = interaction.options.getInteger('bet', true);
+
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+      
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance < bet) {
+        await interaction.reply({
+          content: `❌ You don't have enough candy! You only have **${balance}** candy.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      const winningNumber = Math.floor(Math.random() * 10) + 1;
+      const won = guess === winningNumber;
+      const netChange = won ? bet * 9 : -bet; // 10x payout (9x profit)
+
+      await storage.updateCandyBalance(interaction.user.id, balance + netChange);
+
+      await storage.addCandyTransaction({
+        fromUserId: won ? null : interaction.user.id,
+        toUserId: interaction.user.id,
+        amount: Math.abs(netChange),
+        type: 'game',
+        description: `Number guess - guessed ${guess}, answer was ${winningNumber}`,
+      });
+
+      const embed = {
+        title: '🔢 Number Guessing Game',
+        description: `The winning number was **${winningNumber}**!`,
+        fields: [
+          { name: 'Your Guess', value: guess.toString(), inline: true },
+          { name: 'Result', value: won ? '🎯 Perfect guess!' : '❌ Wrong number!', inline: true },
+          { name: 'Candy Change', value: won ? `+${bet * 9}` : `-${bet}`, inline: true },
+          { name: 'New Balance', value: `${balance + netChange} candy`, inline: false },
+        ],
+        color: won ? 0x00FF00 : 0xFF0000,
+        footer: {
+          text: won ? 'Amazing luck! 10% chance of winning!' : 'Try again! You have a 10% chance to win 10x your bet!',
+        },
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error playing number guess:', error);
+      await interaction.reply({
+        content: '❌ Failed to play number guessing game.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSlotMachine(interaction: ChatInputCommandInteraction) {
+    try {
+      const bet = interaction.options.getInteger('bet', true);
+
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+      
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance < bet) {
+        await interaction.reply({
+          content: `❌ You don't have enough candy! You only have **${balance}** candy.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      const symbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎'];
+      const slot1 = symbols[Math.floor(Math.random() * symbols.length)];
+      const slot2 = symbols[Math.floor(Math.random() * symbols.length)];
+      const slot3 = symbols[Math.floor(Math.random() * symbols.length)];
+
+      let multiplier = 0;
+      let result = '';
+
+      if (slot1 === slot2 && slot2 === slot3) {
+        if (slot1 === '💎') {
+          multiplier = 50; // Triple diamonds - mega jackpot!
+          result = '💎💎💎 MEGA JACKPOT! 💎💎💎';
+        } else if (slot1 === '⭐') {
+          multiplier = 25; // Triple stars - big jackpot!
+          result = '⭐⭐⭐ BIG JACKPOT! ⭐⭐⭐';
+        } else {
+          multiplier = 10; // Any triple - good win
+          result = '🎰 TRIPLE MATCH! 🎰';
+        }
+      } else if (slot1 === slot2 || slot2 === slot3 || slot1 === slot3) {
+        multiplier = 2; // Any pair - small win
+        result = '🎯 Pair! Small win!';
+      } else if (slot1 === '🍒' || slot2 === '🍒' || slot3 === '🍒') {
+        multiplier = 1; // Cherry - break even
+        result = '🍒 Cherry! Break even!';
+      } else {
+        multiplier = 0; // No match - loss
+        result = '💸 No match! Try again!';
+      }
+
+      const winAmount = bet * multiplier;
+      const netChange = winAmount - bet;
+
+      await storage.updateCandyBalance(interaction.user.id, balance + netChange);
+
+      await storage.addCandyTransaction({
+        fromUserId: netChange > 0 ? null : interaction.user.id,
+        toUserId: interaction.user.id,
+        amount: Math.abs(netChange),
+        type: 'game',
+        description: `Slot machine - ${slot1}${slot2}${slot3}`,
+      });
+
+      const embed = {
+        title: '🎰 Candy Slot Machine',
+        description: `**${slot1} | ${slot2} | ${slot3}**\n\n${result}`,
+        fields: [
+          { name: 'Multiplier', value: `${multiplier}x`, inline: true },
+          { name: 'Candy Change', value: netChange > 0 ? `+${netChange}` : netChange === 0 ? '±0' : `${netChange}`, inline: true },
+          { name: 'New Balance', value: `${balance + netChange} candy`, inline: true },
+        ],
+        color: netChange > bet * 5 ? 0xFFD700 : netChange > 0 ? 0x00FF00 : netChange === 0 ? 0xFFFF00 : 0xFF0000,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error playing slot machine:', error);
+      await interaction.reply({
+        content: '❌ Failed to play slot machine.',
         flags: [4096],
       });
     }

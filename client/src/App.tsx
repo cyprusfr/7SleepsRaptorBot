@@ -12,6 +12,7 @@ import ActivityLogs from "@/pages/activity-logs";
 import Settings from "@/pages/settings";
 import BackupManagement from "@/pages/backup-management";
 import BackupHistory from "@/pages/backup-history";
+import AdminPanel from "@/pages/admin";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/backup-history" component={BackupHistory} />
           <Route path="/activity" component={ActivityLogs} />
           <Route path="/settings" component={Settings} />
+          <Route path="/admin" component={AdminPanel} />
           <Route component={NotFound} />
         </>
       )}

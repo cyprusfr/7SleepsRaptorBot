@@ -161,11 +161,28 @@ export function SidebarNav({ className }: SidebarNavProps) {
         )}
         
         <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-sm font-medium text-green-700 dark:text-green-400">
-              Bot Online
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                Bot Online
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => syncData()}
+              disabled={isSyncing}
+              className="h-6 w-6 p-0 hover:bg-green-100 dark:hover:bg-green-800"
+            >
+              <svg className="w-3 h-3 text-green-700 dark:text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10,9 9,9 8,9"/>
+              </svg>
+            </Button>
           </div>
           <p className="text-xs text-green-600 dark:text-green-500 mt-1">
             Last sync: 3 minutes ago

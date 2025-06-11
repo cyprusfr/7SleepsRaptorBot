@@ -244,11 +244,11 @@ export default function Backups() {
       <BackupHealthScore />
 
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Backups</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="failed">Failed</TabsTrigger>
-          <TabsTrigger value="health">Health Analysis</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
+          <TabsTrigger value="all" className="text-sm">All Backups</TabsTrigger>
+          <TabsTrigger value="completed" className="text-sm">Completed</TabsTrigger>
+          <TabsTrigger value="failed" className="text-sm">Failed</TabsTrigger>
+          <TabsTrigger value="health" className="text-sm">Health Analysis</TabsTrigger>
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">

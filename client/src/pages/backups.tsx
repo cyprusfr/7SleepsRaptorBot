@@ -185,7 +185,7 @@ export default function Backups() {
                       <SelectValue placeholder="Select a server" />
                     </SelectTrigger>
                     <SelectContent>
-                      {servers.map((server: Server) => (
+                      {(servers as any[])?.map((server: any) => (
                         <SelectItem key={server.serverId} value={server.serverId}>
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4" />
@@ -256,7 +256,7 @@ export default function Backups() {
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin" />
             </div>
-          ) : backups.length === 0 ? (
+          ) : (backups as any[])?.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <Archive className="h-12 w-12 text-muted-foreground mb-4" />
@@ -272,7 +272,7 @@ export default function Backups() {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {backups.map((backup: Backup) => (
+              {(backups as any[])?.map((backup: any) => (
                 <Card key={backup.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -354,7 +354,7 @@ export default function Backups() {
         
         <TabsContent value="completed">
           <div className="grid gap-4">
-            {backups.filter((backup: Backup) => backup.status === "completed").map((backup: Backup) => (
+            {(backups as any[])?.filter((backup: any) => backup.status === "completed").map((backup: any) => (
               <Card key={backup.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">

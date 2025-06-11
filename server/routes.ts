@@ -1,10 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Google OAuth authentication
+  setupAuth(app);
+
   // Start Discord bot
   try {
     await raptorBot.start();
@@ -415,6 +419,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error initializing demo data:", error);
       res.status(500).json({ error: "Failed to initialize demo data" });
+    }
+  });
+
+  // Backup download endpoint
+  app.get("/api/backups/:backupId/download", async (req, res) => {
+    try {
+      const { backupId } = req.params;
+      
+      // Retrieve backup data from storage
+      const backupData = await storage.getBotSetting(`backup_${backupId}`);
+      if (!backupData) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+
+      const backup = JSON.parse(backupData);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${backup.serverName}_${backup.type}_${backupId}.json"`);
+      res.json(backup);
+    } catch (error) {
+      console.error("Error downloading backup:", error);
+      res.status(500).json({ error: "Failed to download backup" });
+    }
+  });
+
+  // Backup deletion endpoint
+  app.delete("/api/backups/:backupId", async (req, res) => {
+    try {
+      const { backupId } = req.params;
+      
+      // Check if backup exists
+      const backupData = await storage.getBotSetting(`backup_${backupId}`);
+      if (!backupData) {
+        return res.status(404).json({ error: "Backup not found" });
+      }
+
+      const backup = JSON.parse(backupData);
+      
+      // Delete backup data
+      await storage.setBotSetting(`backup_${backupId}`, '');
+      
+      // Log deletion activity
+      await storage.logActivity({
+        type: 'backup_deleted',
+        userId: 'dashboard',
+        targetId: backup.serverId,
+        description: `Backup deleted: ${backup.type} backup of ${backup.serverName}`,
+        metadata: {
+          backupId,
+          backupType: backup.type,
+          serverName: backup.serverName,
+        },
+      });
+
+      res.json({ success: true, message: "Backup deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting backup:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
     }
   });
 

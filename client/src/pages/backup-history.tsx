@@ -1,9 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
-import { Clock, Database, Download, Trash2, Server, Users, MessageSquare, Shield } from "lucide-react";
+import { Clock, Database, Download, Trash2, Server, Users, MessageSquare, Shield, MoreVertical, FileDown, Copy } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface BackupItem {
   id: string;
@@ -21,9 +25,86 @@ interface BackupItem {
 }
 
 export default function BackupHistory() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const { data: backups = [], isLoading } = useQuery<BackupItem[]>({
     queryKey: ['/api/backups/history'],
   });
+
+  const createBackupMutation = useMutation({
+    mutationFn: async ({ serverId, type }: { serverId: string; type: string }) => {
+      return apiRequest(`/api/servers/${serverId}/backup`, 'POST', { type });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/backups/history'] });
+      toast({
+        title: "Backup Created",
+        description: "Server backup has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Backup Failed", 
+        description: "Failed to create backup. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteBackupMutation = useMutation({
+    mutationFn: async (backupId: string) => {
+      return apiRequest(`/api/backups/${backupId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/backups/history'] });
+      toast({
+        title: "Backup Deleted",
+        description: "Backup has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete backup. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateBackup = (serverId: string, type: string) => {
+    createBackupMutation.mutate({ serverId, type });
+  };
+
+  const handleDeleteBackup = (backupId: string) => {
+    deleteBackupMutation.mutate(backupId);
+  };
+
+  const handleDownloadBackup = async (backup: BackupItem) => {
+    try {
+      const response = await fetch(`/api/backups/${backup.id}/download`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${backup.serverName}_${backup.type}_${backup.id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Download Started",
+        description: "Backup file download has started.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download backup file.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const formatSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -153,14 +234,64 @@ export default function BackupHistory() {
                   </p>
                   
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Download className="h-3 w-3" />
-                      Download
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleCreateBackup(backup.serverId, 'full')}
+                      disabled={createBackupMutation.isPending}
+                      className="flex items-center gap-1"
+                    >
+                      <Database className="h-3 w-3" />
+                      Backup
                     </Button>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1 text-red-600 hover:text-red-700">
-                      <Trash2 className="h-3 w-3" />
-                      Delete
-                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1">
+                          <MoreVertical className="h-3 w-3" />
+                          Options
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleDownloadBackup(backup)}>
+                          <FileDown className="h-4 w-4 mr-2" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(backup.id)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy ID
+                        </DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Backup</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this backup? This action cannot be undone.
+                                <br /><br />
+                                <strong>Backup:</strong> {backup.serverName} ({backup.type})
+                                <br />
+                                <strong>Created:</strong> {formatDistanceToNow(new Date(backup.createdAt), { addSuffix: true })}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteBackup(backup.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete Backup
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>

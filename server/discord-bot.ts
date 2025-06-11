@@ -202,6 +202,100 @@ export class RaptorBot {
       new SlashCommandBuilder()
         .setName('help')
         .setDescription('Show available commands and usage'),
+
+      // Troll Commands
+      new SlashCommandBuilder()
+        .setName('say')
+        .setDescription('Make the bot say something')
+        .addStringOption(option =>
+          option.setName('message')
+            .setDescription('Message for the bot to say')
+            .setRequired(true)
+        )
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Channel to send the message to (optional)')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('dm')
+        .setDescription('Send a DM to a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to send DM to')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('message')
+            .setDescription('Message to send')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('nickname')
+        .setDescription('Change someone\'s nickname')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to change nickname')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('nickname')
+            .setDescription('New nickname')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('purge')
+        .setDescription('Delete messages in bulk')
+        .addIntegerOption(option =>
+          option.setName('amount')
+            .setDescription('Number of messages to delete (1-100)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(100)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('timeout')
+        .setDescription('Timeout a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to timeout')
+            .setRequired(true)
+        )
+        .addIntegerOption(option =>
+          option.setName('minutes')
+            .setDescription('Timeout duration in minutes')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(1440)
+        )
+        .addStringOption(option =>
+          option.setName('reason')
+            .setDescription('Reason for timeout')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('announce')
+        .setDescription('Send an announcement with embeds')
+        .addStringOption(option =>
+          option.setName('title')
+            .setDescription('Announcement title')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('message')
+            .setDescription('Announcement message')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('color')
+            .setDescription('Embed color (hex)')
+            .setRequired(false)
+        ),
     ];
 
     const rest = new REST().setToken(DISCORD_TOKEN!);
@@ -272,6 +366,24 @@ export class RaptorBot {
           break;
         case 'help':
           await this.handleHelp(interaction);
+          break;
+        case 'say':
+          await this.handleSay(interaction);
+          break;
+        case 'dm':
+          await this.handleDM(interaction);
+          break;
+        case 'nickname':
+          await this.handleNickname(interaction);
+          break;
+        case 'purge':
+          await this.handlePurge(interaction);
+          break;
+        case 'timeout':
+          await this.handleTimeout(interaction);
+          break;
+        case 'announce':
+          await this.handleAnnounce(interaction);
           break;
         default:
           await interaction.reply({

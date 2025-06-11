@@ -107,6 +107,31 @@ export const dashboardKeys = pgTable("dashboard_keys", {
   metadata: jsonb("metadata"),
 });
 
+// Backup integrity tracking table
+export const backupIntegrity = pgTable("backup_integrity", {
+  id: serial("id").primaryKey(),
+  backupId: varchar("backup_id", { length: 64 }).notNull(),
+  serverId: varchar("server_id", { length: 32 }).notNull(),
+  serverName: varchar("server_name", { length: 100 }).notNull(),
+  backupType: varchar("backup_type", { length: 20 }).notNull(),
+  healthScore: integer("health_score").notNull(), // 0-100
+  integrityStatus: varchar("integrity_status", { length: 20 }).notNull(), // "healthy", "warning", "critical", "corrupted"
+  dataCompleteness: integer("data_completeness").notNull(), // 0-100 percentage
+  checksumValid: boolean("checksum_valid").default(true),
+  totalElements: integer("total_elements").notNull(),
+  validElements: integer("valid_elements").notNull(),
+  corruptedElements: jsonb("corrupted_elements"), // List of corrupted data elements
+  missingElements: jsonb("missing_elements"), // List of missing required elements
+  validationErrors: jsonb("validation_errors"), // Detailed validation error list
+  performanceMetrics: jsonb("performance_metrics"), // Backup size, creation time, etc.
+  lastChecked: timestamp("last_checked").defaultNow().notNull(),
+  checkedBy: varchar("checked_by", { length: 100 }), // User or system that ran the check
+  autoCheck: boolean("auto_check").default(false), // Whether this was an automated check
+  metadata: jsonb("metadata"), // Additional check metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,
@@ -148,6 +173,13 @@ export const insertDashboardKeySchema = createInsertSchema(dashboardKeys).omit({
   revokedAt: true,
 });
 
+export const insertBackupIntegritySchema = createInsertSchema(backupIntegrity).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastChecked: true,
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
@@ -178,3 +210,6 @@ export type CandyTransaction = typeof candyTransactions.$inferSelect;
 
 export type InsertDashboardKey = z.infer<typeof insertDashboardKeySchema>;
 export type DashboardKey = typeof dashboardKeys.$inferSelect;
+
+export type InsertBackupIntegrity = z.infer<typeof insertBackupIntegritySchema>;
+export type BackupIntegrity = typeof backupIntegrity.$inferSelect;

@@ -82,10 +82,27 @@ export interface IStorage {
 
   // Backup System
   getAllBackups(): Promise<any[]>;
+  
+  // Backup Integrity System
+  createBackupIntegrityCheck(data: InsertBackupIntegrity): Promise<BackupIntegrity>;
+  getBackupIntegrityById(id: number): Promise<BackupIntegrity | undefined>;
+  getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined>;
+  getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]>;
+  getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]>;
+  updateBackupIntegrity(id: number, updates: Partial<BackupIntegrity>): Promise<void>;
+  deleteBackupIntegrityCheck(id: number): Promise<void>;
+  getHealthScoreStats(): Promise<{
+    averageHealthScore: number;
+    healthyBackups: number;
+    warningBackups: number;
+    criticalBackups: number;
+    corruptedBackups: number;
+    totalChecks: number;
+  }>;
 }
 
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, avg, count } from "drizzle-orm";
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {

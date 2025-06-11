@@ -6,6 +6,11 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(userId: string, role: string): Promise<void>;
+  updateUserApproval(userId: string, isApproved: boolean): Promise<void>;
+  makeUserAdmin(userId: string): Promise<void>;
+  getRolePermissions(role: string): any;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -71,6 +76,9 @@ export interface IStorage {
   addCandyTransaction(transaction: any): Promise<void>;
   getCandyTransactions(userId: string, limit?: number): Promise<any[]>;
   getCandyLeaderboard(limit?: number): Promise<any[]>;
+  checkDailyCandy(userId: string): Promise<boolean>;
+  claimDailyCandy(userId: string): Promise<number>;
+  transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
 }
 
 import { db } from "./db";
@@ -386,6 +394,89 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // User Management
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserApproval(userId: string, isApproved: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isApproved, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async makeUserAdmin(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ role: 'admin', isApproved: true, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  getRolePermissions(role: string): any {
+    const permissions: Record<string, any> = {
+      owner: {
+        all: true,
+        dashboard: true,
+        users: true,
+        servers: true,
+        backups: true,
+        settings: true,
+        logs: true,
+        keys: true,
+        admin: true
+      },
+      server_management: {
+        dashboard: true,
+        servers: true,
+        backups: true,
+        logs: true,
+        keys: true,
+        users: false,
+        settings: false,
+        admin: false
+      },
+      head_admin: {
+        dashboard: true,
+        servers: true,
+        backups: true,
+        logs: true,
+        keys: true,
+        users: false,
+        settings: false,
+        admin: false
+      },
+      admin: {
+        dashboard: true,
+        servers: false,
+        backups: false,
+        logs: true,
+        keys: true,
+        users: false,
+        settings: false,
+        admin: false
+      },
+      pending: {
+        dashboard: false,
+        servers: false,
+        backups: false,
+        logs: false,
+        keys: false,
+        users: false,
+        settings: false,
+        admin: false
+      }
+    };
+    return permissions[role] || permissions.pending;
+  }
+
   // Candy System
   async getCandyBalance(userId: string): Promise<number> {
     const user = await this.getDiscordUserByDiscordId(userId);
@@ -404,6 +495,52 @@ export class DatabaseStorage implements IStorage {
           },
         })
         .where(eq(discordUsers.discordId, userId));
+    }
+  }
+
+  async checkDailyCandy(userId: string): Promise<boolean> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    const metadata = user?.metadata as any;
+    const lastClaim = metadata?.lastDailyClaim;
+    if (!lastClaim) return true;
+    
+    const now = new Date();
+    const lastClaimDate = new Date(lastClaim);
+    const timeDiff = now.getTime() - lastClaimDate.getTime();
+    const hoursDiff = timeDiff / (1000 * 3600);
+    
+    return hoursDiff >= 24;
+  }
+
+  async claimDailyCandy(userId: string): Promise<number> {
+    const reward = 100;
+    const currentBalance = await this.getCandyBalance(userId);
+    const newBalance = currentBalance + reward;
+    
+    const user = await this.getDiscordUserByDiscordId(userId);
+    if (user) {
+      await db
+        .update(discordUsers)
+        .set({
+          metadata: {
+            ...user.metadata as any,
+            candyBalance: newBalance,
+            lastDailyClaim: new Date().toISOString(),
+          },
+        })
+        .where(eq(discordUsers.discordId, userId));
+    }
+    
+    return reward;
+  }
+
+  async transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void> {
+    const fromBalance = await this.getCandyBalance(fromUserId);
+    const toBalance = await this.getCandyBalance(toUserId);
+    
+    if (fromBalance >= amount) {
+      await this.updateCandyBalance(fromUserId, fromBalance - amount);
+      await this.updateCandyBalance(toUserId, toBalance + amount);
     }
   }
 

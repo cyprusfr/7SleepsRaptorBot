@@ -15,17 +15,21 @@ export default function PhraseAuth({ children }: PhraseAuthProps) {
   const [error, setError] = useState("");
 
   // Check if phrase is already entered
-  const { data: phraseStatus, refetch } = useQuery({
+  const { data: phraseStatus, refetch } = useQuery<{ phraseEntered: boolean; authenticated: boolean }>({
     queryKey: ["/api/auth/phrase-status"],
     retry: false,
   });
 
   const validatePhrase = useMutation({
     mutationFn: async (phrase: string) => {
-      return apiRequest("/api/auth/validate-phrase", {
+      const response = await fetch("/api/auth/validate-phrase", {
         method: "POST",
-        body: { phrase },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phrase }),
+        credentials: "include",
       });
+      if (!response.ok) throw new Error("Invalid phrase");
+      return response.json();
     },
     onSuccess: () => {
       setError("");

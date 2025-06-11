@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (phrase === "omg im so cool") {
-        req.session.secretPhraseEntered = true;
+        (req.session as any).secretPhraseEntered = true;
         res.json({ success: true, message: "Access granted" });
       } else {
         res.status(401).json({ error: "Invalid phrase" });
@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ 
-        phraseEntered: !!req.session.secretPhraseEntered,
+        phraseEntered: !!(req.session as any).secretPhraseEntered,
         authenticated: req.isAuthenticated()
       });
     } catch (error) {

@@ -699,31 +699,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Backup Integrity Methods
-  async createBackupIntegrityCheck(data: InsertBackupIntegrity): Promise<BackupIntegrity> {
-    const [check] = await db
-      .insert(backupIntegrity)
-      .values(data)
-      .returning();
-    return check;
-  }
-
-  async getBackupIntegrityById(id: number): Promise<BackupIntegrity | undefined> {
-    const [check] = await db
-      .select()
-      .from(backupIntegrity)
-      .where(eq(backupIntegrity.id, id));
-    return check;
-  }
-
-  async getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined> {
-    const [check] = await db
-      .select()
-      .from(backupIntegrity)
-      .where(eq(backupIntegrity.backupId, backupId));
-    return check;
-  }
-
   async getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]> {
     return await db.select().from(backupIntegrity);
   }

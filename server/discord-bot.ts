@@ -123,8 +123,46 @@ export class RaptorBot {
               { name: 'Full Backup', value: 'full' },
               { name: 'Members Only', value: 'members' },
               { name: 'Channels Only', value: 'channels' },
+              { name: 'Roles Only', value: 'roles' },
+              { name: 'Messages Only', value: 'messages' }
+            )
+        ),
+
+      new SlashCommandBuilder()
+        .setName('restore')
+        .setDescription('Restore server data from backup')
+        .addStringOption(option =>
+          option.setName('backup_id')
+            .setDescription('ID of the backup to restore')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('type')
+            .setDescription('What to restore from backup')
+            .setRequired(false)
+            .addChoices(
+              { name: 'Everything', value: 'full' },
+              { name: 'Channels Only', value: 'channels' },
               { name: 'Roles Only', value: 'roles' }
             )
+        ),
+
+      new SlashCommandBuilder()
+        .setName('backups')
+        .setDescription('List available backups')
+        .addStringOption(option =>
+          option.setName('action')
+            .setDescription('Action to perform')
+            .setRequired(false)
+            .addChoices(
+              { name: 'List Backups', value: 'list' },
+              { name: 'Delete Backup', value: 'delete' }
+            )
+        )
+        .addStringOption(option =>
+          option.setName('backup_id')
+            .setDescription('Backup ID for delete action')
+            .setRequired(false)
         ),
 
       new SlashCommandBuilder()
@@ -191,6 +229,12 @@ export class RaptorBot {
           break;
         case 'backup':
           await this.handleBackup(interaction);
+          break;
+        case 'restore':
+          await this.handleRestore(interaction);
+          break;
+        case 'backups':
+          await this.handleBackups(interaction);
           break;
         case 'help':
           await this.handleHelp(interaction);
@@ -461,7 +505,7 @@ export class RaptorBot {
       return;
     }
 
-    await interaction.deferReply({ flags: [4096] });
+    await interaction.deferReply({ ephemeral: true });
 
     // Initial progress message
     const progressEmbed = {
@@ -597,8 +641,54 @@ export class RaptorBot {
         }
       }
 
+      if (backupType === 'full' || backupType === 'messages') {
+        // Update progress - Messages
+        progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓░░ 80%';
+        progressEmbed.fields[1].value = 'Backing up messages...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        try {
+          const channels = await guild.channels.fetch();
+          const textChannels = Array.from(channels.values()).filter(channel => 
+            channel?.isTextBased() && channel.type === 0 // Guild text channels
+          );
+
+          backupData.messages = [];
+          
+          for (const channel of textChannels.slice(0, 5)) { // Limit to 5 channels to avoid timeout
+            try {
+              const messages = await (channel as any).messages.fetch({ limit: 50 });
+              const channelMessages = Array.from(messages.values()).map((msg: any) => ({
+                id: msg.id,
+                channelId: msg.channelId,
+                channelName: channel?.name,
+                content: msg.content,
+                authorId: msg.author.id,
+                authorUsername: msg.author.username,
+                timestamp: msg.createdAt.toISOString(),
+                attachments: msg.attachments.map((att: any) => ({
+                  id: att.id,
+                  name: att.name,
+                  url: att.url,
+                  size: att.size
+                })),
+                embeds: msg.embeds.length,
+                reactions: msg.reactions.cache.size
+              }));
+              
+              backupData.messages.push(...channelMessages);
+            } catch (channelError) {
+              console.warn(`Failed to backup messages from ${channel?.name}:`, channelError);
+            }
+          }
+        } catch (messageError) {
+          console.warn('Message backup failed, skipping:', messageError);
+          backupData.messages = [];
+        }
+      }
+
       // Update progress - Processing data
-      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓░░ 80%';
+      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓▓░ 90%';
       progressEmbed.fields[1].value = 'Processing backup data...';
       await interaction.editReply({ embeds: [progressEmbed] });
 
@@ -667,6 +757,9 @@ export class RaptorBot {
       if (backupData.roles) {
         summaryFields.push({ name: 'Roles', value: backupData.roles.length.toString(), inline: true });
       }
+      if (backupData.messages) {
+        summaryFields.push({ name: 'Messages', value: backupData.messages.length.toString(), inline: true });
+      }
 
       progressEmbed.fields = [...progressEmbed.fields, ...summaryFields];
 
@@ -676,6 +769,173 @@ export class RaptorBot {
       console.error('Error creating backup:', error);
       await interaction.editReply({
         content: '❌ Failed to create backup. Please check bot permissions and try again.',
+      });
+    }
+  }
+
+  private async handleRestore(interaction: ChatInputCommandInteraction) {
+    const backupId = interaction.options.getString('backup_id', true);
+    const restoreType = interaction.options.getString('type') || 'full';
+    const guild = interaction.guild;
+
+    if (!guild) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const serverData = await storage.getDiscordServerByServerId(guild.id);
+      if (!serverData?.permissions?.backupData) {
+        await interaction.editReply({
+          content: '❌ No backup found for this server.',
+        });
+        return;
+      }
+
+      const backupData = serverData.permissions.backupData;
+
+      const embed = {
+        title: '⚠️ Restore Confirmation',
+        description: `Are you sure you want to restore ${restoreType} from backup?\n\n**Warning:** This action cannot be undone and may overwrite existing server configuration.`,
+        fields: [
+          { name: 'Backup Type', value: backupData.backupType || 'Unknown', inline: true },
+          { name: 'Backup Date', value: new Date(backupData.timestamp).toLocaleString(), inline: true },
+          { name: 'Restore Type', value: restoreType.charAt(0).toUpperCase() + restoreType.slice(1), inline: true },
+        ],
+        color: 0xFF6B35,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.editReply({
+        content: '🚧 **Restore functionality is currently view-only for safety.**\n\nThis command would restore server data but is disabled to prevent accidental changes.',
+        embeds: [embed],
+      });
+
+      await storage.logActivity({
+        type: 'restore_attempt',
+        userId: interaction.user.id,
+        targetId: guild.id,
+        description: `Restore attempt: ${restoreType} restore of ${guild.name}`,
+        metadata: {
+          backupId,
+          restoreType,
+          serverName: guild.name,
+        },
+      });
+
+    } catch (error) {
+      console.error('Error during restore:', error);
+      await interaction.editReply({
+        content: '❌ Failed to access backup data.',
+      });
+    }
+  }
+
+  private async handleBackups(interaction: ChatInputCommandInteraction) {
+    const action = interaction.options.getString('action') || 'list';
+    const backupId = interaction.options.getString('backup_id');
+    const guild = interaction.guild;
+
+    if (!guild) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const serverData = await storage.getDiscordServerByServerId(guild.id);
+
+      if (action === 'list') {
+        if (!serverData?.permissions?.backupData) {
+          await interaction.editReply({
+            content: '📂 No backups found for this server.\n\nUse `/backup` to create your first backup.',
+          });
+          return;
+        }
+
+        const backup = serverData.permissions.backupData;
+        const embed = {
+          title: '📋 Server Backups',
+          description: `Backup information for ${guild.name}`,
+          fields: [
+            { name: 'Backup Type', value: backup.backupType || 'Full', inline: true },
+            { name: 'Created', value: new Date(backup.timestamp).toLocaleString(), inline: true },
+            { name: 'Size', value: `${Math.round(JSON.stringify(backup).length / 1024)} KB`, inline: true },
+            { name: 'Created By', value: `<@${backup.createdBy}>`, inline: true },
+            { name: 'Backup ID', value: `\`${backup.serverId}\``, inline: true },
+          ],
+          color: 0x5865F2,
+          timestamp: new Date().toISOString(),
+        };
+
+        if (backup.channels) {
+          embed.fields.push({ name: 'Channels', value: backup.channels.length.toString(), inline: true });
+        }
+        if (backup.members) {
+          embed.fields.push({ name: 'Members', value: backup.members.length.toString(), inline: true });
+        }
+        if (backup.roles) {
+          embed.fields.push({ name: 'Roles', value: backup.roles.length.toString(), inline: true });
+        }
+        if (backup.messages) {
+          embed.fields.push({ name: 'Messages', value: backup.messages.length.toString(), inline: true });
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+
+      } else if (action === 'delete') {
+        if (!backupId) {
+          await interaction.editReply({
+            content: '❌ Please provide a backup ID to delete.',
+          });
+          return;
+        }
+
+        if (serverData) {
+          const updatedPermissions = { ...serverData.permissions };
+          delete updatedPermissions.backupData;
+          delete updatedPermissions.lastBackup;
+          delete updatedPermissions.backupType;
+          delete updatedPermissions.backupSize;
+
+          await storage.updateDiscordServer(serverData.id, {
+            permissions: updatedPermissions,
+          });
+
+          await storage.logActivity({
+            type: 'backup_deleted',
+            userId: interaction.user.id,
+            targetId: guild.id,
+            description: `Backup deleted for ${guild.name}`,
+            metadata: {
+              backupId,
+              serverName: guild.name,
+            },
+          });
+
+          await interaction.editReply({
+            content: '✅ Backup deleted successfully.',
+          });
+        } else {
+          await interaction.editReply({
+            content: '❌ No backup found to delete.',
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('Error managing backups:', error);
+      await interaction.editReply({
+        content: '❌ Failed to manage backups.',
       });
     }
   }

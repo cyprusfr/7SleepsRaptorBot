@@ -67,7 +67,7 @@ export interface IStorage {
 }
 
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc, and, gte } from "drizzle-orm";
 
 // Database Storage Implementation
 export class DatabaseStorage implements IStorage {
@@ -451,7 +451,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(candyTransactions)
       .where(eq(candyTransactions.toUserId, discordId))
-      .orderBy(candyTransactions.createdAt)
+      .orderBy(desc(candyTransactions.createdAt))
       .limit(limit);
   }
 
@@ -462,9 +462,11 @@ export class DatabaseStorage implements IStorage {
     const [lastClaim] = await db
       .select()
       .from(candyTransactions)
-      .where(eq(candyTransactions.toUserId, discordId))
-      .where(eq(candyTransactions.type, 'daily'))
-      .orderBy(candyTransactions.createdAt)
+      .where(and(
+        eq(candyTransactions.toUserId, discordId),
+        eq(candyTransactions.type, 'daily')
+      ))
+      .orderBy(desc(candyTransactions.createdAt))
       .limit(1);
 
     if (!lastClaim) return true;

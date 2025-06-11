@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import Sidebar from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Server, Users, Calendar, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Server, Users, Calendar, Activity, Database, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface DiscordServer {

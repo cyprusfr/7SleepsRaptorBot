@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Key, UserPlus, UserMinus, Info, Circle } from "lucide-react";
+import { Key, UserPlus, UserMinus, Info, Circle, Database } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Activity {
@@ -24,6 +24,7 @@ const activityIcons = {
   key_revoked: UserMinus,
   user_info: Info,
   hwid_info: Info,
+  server_backup: Database,
   default: Circle,
 };
 
@@ -33,6 +34,7 @@ const activityColors = {
   key_revoked: "bg-red-100 text-red-600",
   user_info: "bg-purple-100 text-purple-600",
   hwid_info: "bg-purple-100 text-purple-600",
+  server_backup: "bg-orange-100 text-orange-600",
   default: "bg-gray-100 text-gray-600",
 };
 
@@ -42,6 +44,7 @@ const activityBadges = {
   key_revoked: { label: "REVOKE", color: "bg-red-100 text-red-600" },
   user_info: { label: "INFO", color: "bg-purple-100 text-purple-600" },
   hwid_info: { label: "INFO", color: "bg-purple-100 text-purple-600" },
+  server_backup: { label: "BACKUP", color: "bg-orange-100 text-orange-600" },
   default: { label: "ACTIVITY", color: "bg-gray-100 text-gray-600" },
 };
 

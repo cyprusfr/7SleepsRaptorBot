@@ -10,6 +10,9 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'raptor-bot-secret-key';
 
 export function setupAuth(app: Express) {
+  // Trust proxy for HTTPS detection
+  app.set('trust proxy', 1);
+  
   // Session configuration
   const pgSession = connectPg(session);
   app.use(session({
@@ -22,7 +25,7 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always use secure cookies on Replit
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },

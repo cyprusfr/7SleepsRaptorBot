@@ -39,8 +39,7 @@ function Router() {
           <Route path="/keys" component={KeyManagement} />
           <Route path="/users" component={Users} />
           <Route path="/servers" component={Servers} />
-          <Route path="/backups" component={BackupManagement} />
-          <Route path="/backup-history" component={BackupHistory} />
+          <Route path="/backups" component={BackupsPage} />
           <Route path="/activity" component={ActivityLogs} />
           <Route path="/settings" component={Settings} />
           <Route path="/admin" component={AdminPanel} />

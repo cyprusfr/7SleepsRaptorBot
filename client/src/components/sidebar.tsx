@@ -8,8 +8,7 @@ const navigation = [
   { name: "Key Management", href: "/keys", icon: Key },
   { name: "User Management", href: "/users", icon: Users },
   { name: "Server Data", href: "/servers", icon: Server },
-  { name: "Backup Management", href: "/backups", icon: Database },
-  { name: "Backup History", href: "/backup-history", icon: Clock },
+  { name: "Server Backups", href: "/backups", icon: Database },
   { name: "Activity Logs", href: "/activity", icon: ClipboardList },
   { name: "Bot Settings", href: "/settings", icon: Settings },
 ];

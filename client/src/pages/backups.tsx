@@ -47,10 +47,7 @@ export default function BackupsPage() {
 
   const createBackupMutation = useMutation({
     mutationFn: async ({ serverId, backupType }: { serverId: string; backupType: string }) => {
-      return apiRequest(`/api/backups/${serverId}`, {
-        method: "POST",
-        body: JSON.stringify({ backupType }),
-      });
+      return apiRequest(`/api/backups/${serverId}`, "POST", { backupType });
     },
     onSuccess: () => {
       toast({
@@ -72,9 +69,7 @@ export default function BackupsPage() {
 
   const deleteBackupMutation = useMutation({
     mutationFn: async (serverId: string) => {
-      return apiRequest(`/api/backups/${serverId}`, {
-        method: "DELETE",
-      });
+      return apiRequest(`/api/backups/${serverId}`, "DELETE");
     },
     onSuccess: () => {
       toast({

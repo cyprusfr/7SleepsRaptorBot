@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Bot, ChartLine, Key, Users, Server, ClipboardList, Settings, Database, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserProfile } from "@/components/UserProfile";
 
 const navigation = [
   { name: "Overview", href: "/", icon: ChartLine },

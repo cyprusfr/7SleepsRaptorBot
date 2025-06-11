@@ -39,11 +39,16 @@ export default function BackupManagement() {
   const [selectedBackupType, setSelectedBackupType] = useState<string>("full");
   const queryClient = useQueryClient();
 
-  const { data: servers = [], isLoading } = useQuery({
+  const { data: servers = [], isLoading } = useQuery<Server[]>({
     queryKey: ['/api/servers'],
   });
 
-  const { data: stats = {} } = useQuery({
+  const { data: stats = { totalKeys: 0, activeKeys: 0, totalUsers: 0, connectedServers: 0 } } = useQuery<{
+    totalKeys: number;
+    activeKeys: number;
+    totalUsers: number;
+    connectedServers: number;
+  }>({
     queryKey: ['/api/stats'],
   });
 
@@ -175,7 +180,7 @@ export default function BackupManagement() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar botStatus={stats.botStatus || "offline"} lastSync={stats.lastSync || "Never"} />
+      <Sidebar botStatus="offline" lastSync="Never" />
       
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -263,7 +268,7 @@ export default function BackupManagement() {
                       <SelectValue placeholder="Choose a server" />
                     </SelectTrigger>
                     <SelectContent>
-                      {servers.map((server: Server) => (
+                      {(servers as Server[]).map((server: Server) => (
                         <SelectItem key={server.serverId} value={server.serverId}>
                           {server.serverName}
                         </SelectItem>

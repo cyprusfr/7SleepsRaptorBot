@@ -19,7 +19,7 @@ interface DiscordServer {
 }
 
 export default function Servers() {
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<any>({
     queryKey: ["/api/stats"],
   });
 

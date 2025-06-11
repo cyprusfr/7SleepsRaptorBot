@@ -40,9 +40,9 @@ export default function Sidebar({ botStatus, lastSync }: SidebarProps) {
           const isActive = location === item.href;
           return (
             <Link key={item.name} href={item.href}>
-              <a
+              <div
                 className={cn(
-                  "flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors",
+                  "flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer",
                   isActive
                     ? "text-discord-primary bg-discord-primary/10"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -50,7 +50,7 @@ export default function Sidebar({ botStatus, lastSync }: SidebarProps) {
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.name}</span>
-              </a>
+              </div>
             </Link>
           );
         })}

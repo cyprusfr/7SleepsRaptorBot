@@ -15,9 +15,7 @@ export class RaptorBot {
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent,
       ],
     });
 
@@ -469,7 +467,8 @@ export class RaptorBot {
   }
 
   private async syncServerData() {
-    for (const guild of this.client.guilds.cache.values()) {
+    const guilds = Array.from(this.client.guilds.cache.values());
+    for (const guild of guilds) {
       await this.addServer(guild);
     }
   }

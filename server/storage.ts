@@ -131,8 +131,12 @@ export class MemStorage implements IStorage {
     const id = this.currentDiscordKeyId++;
     const now = new Date();
     const key: DiscordKey = {
-      ...insertKey,
       id,
+      keyId: insertKey.keyId,
+      userId: insertKey.userId || null,
+      discordUsername: insertKey.discordUsername || null,
+      hwid: insertKey.hwid || null,
+      status: insertKey.status || 'active',
       createdAt: now,
       updatedAt: now,
       revokedAt: null,
@@ -227,10 +231,15 @@ export class MemStorage implements IStorage {
     const id = this.currentDiscordUserId++;
     const now = new Date();
     const user: DiscordUser = {
-      ...insertUser,
       id,
+      discordId: insertUser.discordId,
+      username: insertUser.username,
+      discriminator: insertUser.discriminator || null,
+      avatarUrl: insertUser.avatarUrl || null,
       joinedAt: now,
       lastSeen: now,
+      roles: insertUser.roles || [],
+      metadata: insertUser.metadata || {},
     };
     this.discordUsers.set(id, user);
     return user;
@@ -269,10 +278,14 @@ export class MemStorage implements IStorage {
     const id = this.currentDiscordServerId++;
     const now = new Date();
     const server: DiscordServer = {
-      ...insertServer,
       id,
+      serverId: insertServer.serverId,
+      serverName: insertServer.serverName,
+      memberCount: insertServer.memberCount || 0,
       botJoinedAt: now,
       lastDataSync: now,
+      permissions: insertServer.permissions || {},
+      isActive: insertServer.isActive !== undefined ? insertServer.isActive : true,
     };
     this.discordServers.set(id, server);
     return server;
@@ -302,8 +315,12 @@ export class MemStorage implements IStorage {
   async logActivity(insertActivity: InsertActivityLog): Promise<ActivityLog> {
     const id = this.currentActivityLogId++;
     const activity: ActivityLog = {
-      ...insertActivity,
       id,
+      type: insertActivity.type,
+      userId: insertActivity.userId || null,
+      targetId: insertActivity.targetId || null,
+      description: insertActivity.description,
+      metadata: insertActivity.metadata || {},
       timestamp: new Date(),
     };
     this.activityLogs.set(id, activity);

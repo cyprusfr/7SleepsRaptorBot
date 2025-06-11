@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting } from "@shared/schema";
+import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey } from "@shared/schema";
 
 export interface IStorage {
   // Users
@@ -45,6 +45,15 @@ export interface IStorage {
   // Rate Limiting
   getRateLimit(key: string): Promise<number>;
   setRateLimit(key: string, count: number, ttl: number): Promise<void>;
+
+  // Dashboard Keys
+  createDashboardKey(key: any): Promise<any>;
+  getDashboardKeyByUserId(userId: string): Promise<any>;
+  getDashboardKeyByKeyId(keyId: string): Promise<any>;
+  getAllDashboardKeys(): Promise<any[]>;
+  revokeDashboardKey(keyId: string, revokedBy: string): Promise<void>;
+  updateDashboardKeyLastAccess(keyId: string): Promise<void>;
+  linkDashboardKeyToGoogle(keyId: string, userId: string, email: string): Promise<void>;
 
   // Dashboard Stats
   getStats(): Promise<{
@@ -296,6 +305,63 @@ export class DatabaseStorage implements IStorage {
   async setRateLimit(key: string, count: number, ttl: number): Promise<void> {
     // For simplicity, using memory-based rate limiting
     // In production, you might want to use Redis or database
+  }
+
+  // Dashboard Keys implementation
+  async createDashboardKey(keyData: any): Promise<any> {
+    const [dashboardKey] = await db
+      .insert(dashboardKeys)
+      .values(keyData)
+      .returning();
+    return dashboardKey;
+  }
+
+  async getDashboardKeyByUserId(userId: string): Promise<any> {
+    const [key] = await db
+      .select()
+      .from(dashboardKeys)
+      .where(eq(dashboardKeys.userId, userId));
+    return key;
+  }
+
+  async getDashboardKeyByKeyId(keyId: string): Promise<any> {
+    const [key] = await db
+      .select()
+      .from(dashboardKeys)
+      .where(eq(dashboardKeys.keyId, keyId));
+    return key;
+  }
+
+  async getAllDashboardKeys(): Promise<any[]> {
+    return await db.select().from(dashboardKeys);
+  }
+
+  async revokeDashboardKey(keyId: string, revokedBy: string): Promise<void> {
+    await db
+      .update(dashboardKeys)
+      .set({
+        status: 'revoked',
+        revokedBy,
+        revokedAt: new Date(),
+      })
+      .where(eq(dashboardKeys.keyId, keyId));
+  }
+
+  async updateDashboardKeyLastAccess(keyId: string): Promise<void> {
+    await db
+      .update(dashboardKeys)
+      .set({ lastAccessAt: new Date() })
+      .where(eq(dashboardKeys.keyId, keyId));
+  }
+
+  async linkDashboardKeyToGoogle(keyId: string, userId: string, email: string): Promise<void> {
+    await db
+      .update(dashboardKeys)
+      .set({
+        userId,
+        linkedEmail: email,
+      })
+      .where(eq(dashboardKeys.keyId, keyId));
   }
 
   async getStats(): Promise<{

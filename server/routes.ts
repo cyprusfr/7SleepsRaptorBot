@@ -371,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(backup);
     } catch (error) {
       console.error("Error creating backup:", error);
-      res.status(500).json({ error: error.message || "Failed to create backup" });
+      res.status(500).json({ error: (error as any).message || "Failed to create backup" });
     }
   });
 
@@ -385,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("Error restoring backup:", error);
-      res.status(500).json({ error: error.message || "Failed to restore backup" });
+      res.status(500).json({ error: (error as any).message || "Failed to restore backup" });
     }
   });
 

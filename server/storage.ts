@@ -79,6 +79,9 @@ export interface IStorage {
   checkDailyCandy(userId: string): Promise<boolean>;
   claimDailyCandy(userId: string): Promise<number>;
   transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
+
+  // Backup System
+  getAllBackups(): Promise<any[]>;
 }
 
 import { db } from "./db";
@@ -557,6 +560,28 @@ export class DatabaseStorage implements IStorage {
   async getCandyLeaderboard(limit: number = 10): Promise<any[]> {
     // Implementation for candy leaderboard
     return [];
+  }
+
+  async getAllBackups(): Promise<any[]> {
+    try {
+      const settings = await this.getAllBotSettings();
+      const backups = settings
+        .filter(setting => setting.key.startsWith('backup_'))
+        .map(setting => {
+          try {
+            return JSON.parse(setting.value);
+          } catch {
+            return null;
+          }
+        })
+        .filter(backup => backup !== null)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      return backups;
+    } catch (error) {
+      console.error('Error fetching backups:', error);
+      return [];
+    }
   }
 }
 

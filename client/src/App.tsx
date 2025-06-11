@@ -11,6 +11,7 @@ import ActivityLogs from "@/pages/activity-logs";
 import Settings from "@/pages/settings";
 import BackupManagement from "@/pages/backup-management";
 import BackupHistory from "@/pages/backup-history";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/backup-history" component={BackupHistory} />
       <Route path="/activity" component={ActivityLogs} />
       <Route path="/settings" component={Settings} />
+      <Route path="/login" component={Login} />
       <Route component={NotFound} />
     </Switch>
   );

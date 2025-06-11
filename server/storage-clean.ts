@@ -419,11 +419,11 @@ export class DatabaseStorage implements IStorage {
     return [];
   }
 
-  async getBackupIntegrityByBackupId(): Promise<any> {
+  async getBackupIntegrityByBackupId(backupId: string): Promise<any> {
     return undefined;
   }
 
-  async getIntegrityChecksByServerId(): Promise<any[]> {
+  async getIntegrityChecksByServerId(serverId: string): Promise<any[]> {
     return [];
   }
 

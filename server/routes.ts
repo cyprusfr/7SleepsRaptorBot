@@ -50,6 +50,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Google OAuth authentication
   setupAuth(app);
 
+  // Handle favicon requests
+  app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+  });
+
   // Start Discord bot
   try {
     await raptorBot.start();
@@ -424,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/backup-integrity/:backupId', requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { backupId } = req.params;
-      const check = await storage.getBackupIntegrityByBackupId();
+      const check = await storage.getBackupIntegrityByBackupId(backupId);
       if (!check) {
         return res.status(404).json({ error: "Integrity check not found" });
       }
@@ -467,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/backup-integrity/server/:serverId', requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { serverId } = req.params;
-      const checks = await storage.getIntegrityChecksByServerId();
+      const checks = await storage.getIntegrityChecksByServerId(serverId);
       res.json(checks);
     } catch (error) {
       console.error("Error fetching server integrity checks:", error);

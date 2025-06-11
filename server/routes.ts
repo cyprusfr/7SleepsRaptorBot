@@ -424,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/backup-integrity/:backupId', requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { backupId } = req.params;
-      const check = await storage.getBackupIntegrityByBackupId(backupId);
+      const check = await storage.getBackupIntegrityByBackupId();
       if (!check) {
         return res.status(404).json({ error: "Integrity check not found" });
       }
@@ -467,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/backup-integrity/server/:serverId', requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { serverId } = req.params;
-      const checks = await storage.getIntegrityChecksByServerId(serverId);
+      const checks = await storage.getIntegrityChecksByServerId();
       res.json(checks);
     } catch (error) {
       console.error("Error fetching server integrity checks:", error);

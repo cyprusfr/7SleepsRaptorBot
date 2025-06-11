@@ -248,6 +248,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Backup management
+  app.get("/api/backups", requireAuth, requireApproved, async (req, res) => {
+    try {
+      const servers = await storage.getAllDiscordServers();
+      const backups = servers
+        .filter(server => server.permissions && typeof server.permissions === 'object' && (server.permissions as any).backupData)
+        .map(server => {
+          const backupData = (server.permissions as any).backupData;
+          return {
+            id: server.serverId,
+            serverName: server.serverName,
+            backupType: backupData.backupType || 'Full',
+            timestamp: backupData.timestamp,
+            size: Math.round(JSON.stringify(backupData).length / 1024),
+            channels: backupData.channels?.length || 0,
+            members: backupData.members?.length || 0,
+            roles: backupData.roles?.length || 0,
+            messages: backupData.messages?.length || 0,
+            createdBy: backupData.createdBy,
+          };
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      res.json(backups);
+    } catch (error) {
+      console.error("Error fetching backups:", error);
+      res.status(500).json({ error: "Failed to fetch backups" });
+    }
+  });
+
+  app.post("/api/backups/:serverId", requireAuth, requireApproved, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const { backupType = 'full' } = req.body;
+      const userId = (req as any).user.claims.sub;
+
+      // Get bot instance and trigger backup
+      const { raptorBot } = await import('./discord-bot');
+      
+      if (!raptorBot.isOnline()) {
+        return res.status(503).json({ error: "Discord bot is not online" });
+      }
+
+      // Trigger backup creation using the public interface
+      await raptorBot.createBackup(serverId, backupType, userId);
+
+      res.json({ 
+        success: true, 
+        message: "Backup created successfully",
+        serverId,
+        backupType
+      });
+
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.delete("/api/backups/:serverId", requireAuth, requireApproved, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const userId = (req as any).user.claims.sub;
+
+      const server = await storage.getDiscordServerByServerId(serverId);
+      if (!server) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+
+      if (!server.permissions || typeof server.permissions !== 'object' || !(server.permissions as any).backupData) {
+        return res.status(404).json({ error: "No backup found for this server" });
+      }
+
+      // Remove backup data
+      const updatedPermissions = { ...(server.permissions as any) };
+      delete updatedPermissions.backupData;
+      delete updatedPermissions.lastBackup;
+      delete updatedPermissions.backupType;
+      delete updatedPermissions.backupSize;
+
+      await storage.updateDiscordServer(server.id, {
+        permissions: updatedPermissions,
+      });
+
+      await storage.logActivity({
+        type: 'backup_deleted',
+        userId,
+        targetId: serverId,
+        description: `Backup deleted for ${server.serverName}`,
+        metadata: {
+          serverId,
+          serverName: server.serverName,
+          deletedBy: 'Dashboard User',
+        },
+      });
+
+      res.json({ success: true, message: "Backup deleted successfully" });
+
+    } catch (error) {
+      console.error("Error deleting backup:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
+    }
+  });
+
   app.post("/api/settings", async (req, res) => {
     try {
       const { key, value } = req.body;

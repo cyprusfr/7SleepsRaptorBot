@@ -1140,10 +1140,70 @@ export class RaptorBot {
         timestamp: new Date().toISOString(),
       };
 
-      await interaction.editReply({
-        content: '🚧 **Restore functionality is currently view-only for safety.**\n\nThis command would restore server data but is disabled to prevent accidental changes.',
+      // Create confirmation buttons
+      const confirmButton = {
+        type: 2,
+        style: 4, // Danger style (red)
+        label: 'Confirm Restore',
+        custom_id: 'confirm_restore',
+      };
+
+      const cancelButton = {
+        type: 2,
+        style: 2, // Secondary style (gray)
+        label: 'Cancel',
+        custom_id: 'cancel_restore',
+      };
+
+      const actionRow = {
+        type: 1,
+        components: [confirmButton, cancelButton],
+      };
+
+      const confirmationReply = await interaction.editReply({
+        content: '⚠️ **DANGER: Server Restore Operation**\n\nThis will restore your server configuration. This action is **IRREVERSIBLE**.',
         embeds: [embed],
+        components: [actionRow],
       });
+
+      // Wait for button interaction
+      const filter = (buttonInteraction: any) => {
+        return buttonInteraction.user.id === interaction.user.id;
+      };
+
+      try {
+        const buttonInteraction = await confirmationReply.awaitMessageComponent({ 
+          filter, 
+          time: 30000 
+        });
+
+        if (buttonInteraction.customId === 'cancel_restore') {
+          await buttonInteraction.update({
+            content: '✅ Restore operation cancelled.',
+            embeds: [],
+            components: [],
+          });
+          return;
+        }
+
+        if (buttonInteraction.customId === 'confirm_restore') {
+          await buttonInteraction.update({
+            content: '🔄 Starting restore process...',
+            embeds: [],
+            components: [],
+          });
+
+          // Perform actual restore based on type
+          await this.performRestore(guild, backupData, restoreType, buttonInteraction);
+        }
+
+      } catch (error) {
+        await interaction.editReply({
+          content: '⏰ Restore confirmation timed out. Operation cancelled.',
+          embeds: [],
+          components: [],
+        });
+      }
 
       await storage.logActivity({
         type: 'restore_attempt',
@@ -1550,6 +1610,31 @@ export class RaptorBot {
     };
   }
 
+  public get clientGuilds() {
+    return this.client.guilds;
+  }
+
+  public async createBackup(serverId: string, backupType: string = 'full', userId: string = 'dashboard') {
+    const guild = this.client.guilds.cache.get(serverId);
+    if (!guild) {
+      throw new Error('Server not found or bot not in server');
+    }
+
+    // Create a mock interaction object for backup creation
+    const mockInteraction = {
+      user: { id: userId, username: 'Dashboard User' },
+      guild,
+      options: {
+        getString: (key: string) => key === 'type' ? backupType : null
+      },
+      deferReply: async () => {},
+      editReply: async () => {},
+      reply: async () => {}
+    };
+
+    return this.handleBackup(mockInteraction as any);
+  }
+
   private async handleWhitelistUser(interaction: ChatInputCommandInteraction) {
     const userId = interaction.options.getString('user_id', true);
     const username = interaction.options.getString('username') || 'Unknown User';
@@ -1690,6 +1775,167 @@ export class RaptorBot {
       await interaction.reply({
         content: '❌ Failed to retrieve whitelist. Please try again.',
         flags: [4096],
+      });
+    }
+  }
+
+  private async performRestore(guild: any, backupData: any, restoreType: string, interaction: any) {
+    try {
+      const progressEmbed = {
+        title: '🔄 Restoring Server',
+        description: `Restoring ${restoreType} backup for ${guild.name}`,
+        fields: [
+          { name: 'Progress', value: '▓░░░░░░░░░ 10%', inline: false },
+          { name: 'Current Step', value: 'Starting restoration...', inline: false }
+        ],
+        color: 0xFF6B35,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.followUp({ embeds: [progressEmbed] });
+
+      let restored = {
+        channels: 0,
+        roles: 0,
+        settings: 0
+      };
+
+      // Restore roles first (if included)
+      if ((restoreType === 'full' || restoreType === 'roles') && backupData.roles) {
+        progressEmbed.fields[0].value = '▓▓░░░░░░░░ 20%';
+        progressEmbed.fields[1].value = 'Restoring roles...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        for (const roleData of backupData.roles.slice(0, 10)) { // Limit to prevent spam
+          try {
+            if (roleData.name !== '@everyone' && !guild.roles.cache.find((r: any) => r.name === roleData.name)) {
+              await guild.roles.create({
+                name: roleData.name,
+                color: roleData.color,
+                permissions: roleData.permissions,
+                hoist: roleData.hoist,
+                mentionable: roleData.mentionable,
+                reason: `Restored from backup by ${interaction.user.username}`
+              });
+              restored.roles++;
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit
+            }
+          } catch (error) {
+            console.error(`Failed to restore role ${roleData.name}:`, error);
+          }
+        }
+      }
+
+      // Restore channels (if included)
+      if ((restoreType === 'full' || restoreType === 'channels') && backupData.channels) {
+        progressEmbed.fields[0].value = '▓▓▓▓▓░░░░░ 50%';
+        progressEmbed.fields[1].value = 'Restoring channels...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        for (const channelData of backupData.channels.slice(0, 15)) { // Limit channels
+          try {
+            if (!guild.channels.cache.find((c: any) => c.name === channelData.name)) {
+              const channelOptions: any = {
+                name: channelData.name,
+                type: channelData.type,
+                reason: `Restored from backup by ${interaction.user.username}`
+              };
+
+              if (channelData.topic) channelOptions.topic = channelData.topic;
+              if (channelData.nsfw !== undefined) channelOptions.nsfw = channelData.nsfw;
+              if (channelData.rateLimitPerUser) channelOptions.rateLimitPerUser = channelData.rateLimitPerUser;
+
+              await guild.channels.create(channelOptions);
+              restored.channels++;
+              await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limit
+            }
+          } catch (error) {
+            console.error(`Failed to restore channel ${channelData.name}:`, error);
+          }
+        }
+      }
+
+      // Restore server settings (if full restore)
+      if (restoreType === 'full' && backupData.guild) {
+        progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓░░ 80%';
+        progressEmbed.fields[1].value = 'Restoring server settings...';
+        await interaction.editReply({ embeds: [progressEmbed] });
+
+        try {
+          const guildData = backupData.guild;
+          const editOptions: any = {};
+
+          if (guildData.name && guildData.name !== guild.name) {
+            editOptions.name = guildData.name;
+          }
+          if (guildData.description) {
+            editOptions.description = guildData.description;
+          }
+          if (guildData.verificationLevel !== undefined) {
+            editOptions.verificationLevel = guildData.verificationLevel;
+          }
+
+          if (Object.keys(editOptions).length > 0) {
+            await guild.edit(editOptions);
+            restored.settings++;
+          }
+        } catch (error) {
+          console.error('Failed to restore server settings:', error);
+        }
+      }
+
+      // Complete
+      progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓▓▓ 100%';
+      progressEmbed.fields[1].value = 'Restoration complete!';
+      progressEmbed.color = 0x00FF00;
+      
+      const resultsEmbed = {
+        title: '✅ Restoration Complete',
+        description: `Successfully restored server from backup`,
+        fields: [
+          { name: 'Channels Restored', value: restored.channels.toString(), inline: true },
+          { name: 'Roles Restored', value: restored.roles.toString(), inline: true },
+          { name: 'Settings Restored', value: restored.settings.toString(), inline: true },
+        ],
+        color: 0x00FF00,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.editReply({ embeds: [progressEmbed] });
+      await interaction.followUp({ embeds: [resultsEmbed] });
+
+      // Log successful restore
+      await storage.logActivity({
+        type: 'restore_completed',
+        userId: interaction.user.id,
+        targetId: guild.id,
+        description: `Successfully restored ${restoreType} backup for ${guild.name}`,
+        metadata: {
+          restoreType,
+          channelsRestored: restored.channels,
+          rolesRestored: restored.roles,
+          settingsRestored: restored.settings,
+        },
+      });
+
+    } catch (error) {
+      console.error('Error during restore process:', error);
+      
+      const errorEmbed = {
+        title: '❌ Restoration Failed',
+        description: 'An error occurred during the restoration process.',
+        color: 0xFF0000,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.followUp({ embeds: [errorEmbed] });
+
+      await storage.logActivity({
+        type: 'restore_failed',
+        userId: interaction.user.id,
+        targetId: guild.id,
+        description: `Failed to restore backup for ${guild.name}: ${error}`,
+        metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
       });
     }
   }

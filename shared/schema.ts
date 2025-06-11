@@ -1,11 +1,26 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for authentication
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Updated users table for Google OAuth
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  id: varchar("id").primaryKey().notNull(), // Google user ID
+  email: varchar("email").unique(),
+  name: varchar("name"),
+  picture: varchar("picture"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const discordKeys = pgTable("discord_keys", {
@@ -90,8 +105,14 @@ export const insertBotSettingSchema = createInsertSchema(botSettings).omit({
   updatedAt: true,
 });
 
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
 export type InsertDiscordKey = z.infer<typeof insertDiscordKeySchema>;
@@ -108,8 +129,3 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 
 export type InsertBotSetting = z.infer<typeof insertBotSettingSchema>;
 export type BotSetting = typeof botSettings.$inferSelect;
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});

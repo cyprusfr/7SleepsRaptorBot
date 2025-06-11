@@ -267,7 +267,7 @@ export default function Backups() {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {backups?.map((backup: Backup) => (
+              {backups.map((backup: Backup) => (
                 <Card key={backup.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -349,9 +349,70 @@ export default function Backups() {
         
         <TabsContent value="completed">
           <div className="grid gap-4">
-            {backups?.filter((backup: Backup) => backup.status === "completed").map((backup: Backup) => (
+            {backups.filter((backup: Backup) => backup.status === "completed").map((backup: Backup) => (
               <Card key={backup.id}>
-                {/* Same card content as above */}
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Server className="h-5 w-5" />
+                        {backup.serverName}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Archive className="h-4 w-4" />
+                          {getBackupTypeLabel(backup.backupType)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {format(new Date(backup.createdAt), "MMM dd, yyyy HH:mm")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <User className="h-4 w-4" />
+                          {backup.createdBy}
+                        </span>
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusColor(backup.status)}>
+                        {backup.status.replace("_", " ")}
+                      </Badge>
+                      {backup.size && (
+                        <Badge variant="outline">
+                          {formatFileSize(backup.size)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => restoreBackup(backup.id)}
+                      disabled={isRestoring}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {isRestoring ? "Restoring..." : "Restore"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteBackup(backup.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>
@@ -359,9 +420,55 @@ export default function Backups() {
         
         <TabsContent value="failed">
           <div className="grid gap-4">
-            {backups?.filter((backup: Backup) => backup.status === "failed").map((backup: Backup) => (
+            {backups.filter((backup: Backup) => backup.status === "failed").map((backup: Backup) => (
               <Card key={backup.id}>
-                {/* Same card content as above */}
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <Server className="h-5 w-5" />
+                        {backup.serverName}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Archive className="h-4 w-4" />
+                          {getBackupTypeLabel(backup.backupType)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {format(new Date(backup.createdAt), "MMM dd, yyyy HH:mm")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <User className="h-4 w-4" />
+                          {backup.createdBy}
+                        </span>
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusColor(backup.status)}>
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {backup.status.replace("_", " ")}
+                      </Badge>
+                      {backup.size && (
+                        <Badge variant="outline">
+                          {formatFileSize(backup.size)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteBackup(backup.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>

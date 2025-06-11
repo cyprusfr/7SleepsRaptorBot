@@ -66,6 +66,14 @@ export interface IStorage {
     totalUsers: number;
     connectedServers: number;
   }>;
+
+  // Backup Integrity
+  getAllBackupIntegrityChecks(): Promise<any[]>;
+  getBackupIntegrityByBackupId(backupId: string): Promise<any>;
+  getIntegrityChecksByServerId(serverId: string): Promise<any[]>;
+  getHealthScoreStats(): Promise<any>;
+  getAllBackups(): Promise<any[]>;
+  createBackupIntegrityCheck(): Promise<any>;
 }
 
 // Database Storage Implementation
@@ -420,7 +428,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBackupIntegrityByBackupId(backupId: string): Promise<any> {
-    return undefined;
+    return null;
   }
 
   async getIntegrityChecksByServerId(serverId: string): Promise<any[]> {
@@ -436,6 +444,14 @@ export class DatabaseStorage implements IStorage {
       corruptedBackups: 0,
       totalChecks: 0,
     };
+  }
+
+  async getAllBackups(): Promise<any[]> {
+    return [];
+  }
+
+  async createBackupIntegrityCheck(): Promise<any> {
+    return null;
   }
 
   // User Management

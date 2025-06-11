@@ -6,6 +6,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID;
 const REQUIRED_ROLE = process.env.REQUIRED_ROLE || 'Raptor Admin';
 const KEY_SYSTEM_ROLE = process.env.KEY_SYSTEM_ROLE || 'Key System';
+const AUTHORIZED_USER_IDS = ['1131426483404026019']; // Users who can bypass role requirements
 
 export class RaptorBot {
   private client: Client;
@@ -228,6 +229,13 @@ export class RaptorBot {
   }
 
   private hasRequiredPermissions(interaction: ChatInputCommandInteraction): boolean {
+    const userId = interaction.user.id;
+    
+    // Check if user is in authorized list (bypass role requirements)
+    if (AUTHORIZED_USER_IDS.includes(userId)) {
+      return true;
+    }
+
     const member = interaction.member;
     if (!member || !('roles' in member)) return false;
 

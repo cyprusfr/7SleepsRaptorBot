@@ -148,6 +148,12 @@ export default function Servers() {
                               <span className="text-xs text-gray-500">
                                 Last sync {formatDistanceToNow(new Date(server.lastDataSync), { addSuffix: true })}
                               </span>
+                              {server.permissions?.lastBackup && (
+                                <span className="text-xs text-orange-600 flex items-center">
+                                  <Database className="w-3 h-3 mr-1" />
+                                  Backup {formatDistanceToNow(new Date(server.permissions.lastBackup), { addSuffix: true })}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -159,6 +165,113 @@ export default function Servers() {
                             </div>
                             <div className="text-xs text-gray-500">members</div>
                           </div>
+                          {server.permissions?.lastBackup && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="outline">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Backup
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                  <DialogTitle>Backup Details - {server.serverName}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-blue-50 p-4 rounded-lg">
+                                      <p className="text-sm font-medium text-blue-900">Backup Type</p>
+                                      <p className="text-lg font-bold text-blue-600 capitalize">
+                                        {server.permissions.backupType || 'Full'}
+                                      </p>
+                                    </div>
+                                    <div className="bg-green-50 p-4 rounded-lg">
+                                      <p className="text-sm font-medium text-green-900">Data Size</p>
+                                      <p className="text-lg font-bold text-green-600">
+                                        {server.permissions.backupSize 
+                                          ? `${Math.round(server.permissions.backupSize / 1024)} KB`
+                                          : 'Unknown'
+                                        }
+                                      </p>
+                                    </div>
+                                    <div className="bg-orange-50 p-4 rounded-lg">
+                                      <p className="text-sm font-medium text-orange-900">Created</p>
+                                      <p className="text-lg font-bold text-orange-600">
+                                        {formatDistanceToNow(new Date(server.permissions.lastBackup))} ago
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {server.permissions.backupData && (
+                                    <div className="space-y-4">
+                                      <h4 className="font-medium text-lg">Backup Contents</h4>
+                                      <div className="grid grid-cols-3 gap-4">
+                                        {server.permissions.backupData.channels && (
+                                          <div className="text-center p-4 bg-blue-50 rounded-lg border">
+                                            <p className="text-3xl font-bold text-blue-600">
+                                              {server.permissions.backupData.channels.length}
+                                            </p>
+                                            <p className="text-sm font-medium text-blue-600">Channels</p>
+                                          </div>
+                                        )}
+                                        {server.permissions.backupData.members && (
+                                          <div className="text-center p-4 bg-green-50 rounded-lg border">
+                                            <p className="text-3xl font-bold text-green-600">
+                                              {server.permissions.backupData.members.length}
+                                            </p>
+                                            <p className="text-sm font-medium text-green-600">Members</p>
+                                          </div>
+                                        )}
+                                        {server.permissions.backupData.roles && (
+                                          <div className="text-center p-4 bg-purple-50 rounded-lg border">
+                                            <p className="text-3xl font-bold text-purple-600">
+                                              {server.permissions.backupData.roles.length}
+                                            </p>
+                                            <p className="text-sm font-medium text-purple-600">Roles</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {server.permissions.backupData.serverInfo && (
+                                        <div className="bg-gray-50 p-4 rounded-lg">
+                                          <p className="text-sm font-medium mb-3">Server Information</p>
+                                          <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">Owner ID:</span> 
+                                              <span className="text-gray-600">{server.permissions.backupData.serverInfo.ownerId}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">Created:</span> 
+                                              <span className="text-gray-600">
+                                                {server.permissions.backupData.serverInfo.createdAt ? 
+                                                  formatDistanceToNow(new Date(server.permissions.backupData.serverInfo.createdAt)) + ' ago' : 'Unknown'}
+                                              </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">Premium Tier:</span> 
+                                              <span className="text-gray-600">{server.permissions.backupData.serverInfo.premiumTier || 'None'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">Features:</span> 
+                                              <span className="text-gray-600">{server.permissions.backupData.serverInfo.features?.length || 0} features</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">Verification Level:</span> 
+                                              <span className="text-gray-600">{server.permissions.backupData.serverInfo.verificationLevel || 'None'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span className="font-medium">MFA Level:</span> 
+                                              <span className="text-gray-600">{server.permissions.backupData.serverInfo.mfaLevel || 'None'}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
                           <div className="flex items-center space-x-2">
                             <div
                               className={`w-3 h-3 rounded-full ${

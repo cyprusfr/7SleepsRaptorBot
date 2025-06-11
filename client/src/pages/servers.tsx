@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Server, Users, Calendar, Activity, Database, Eye } from "lucide-react";
+import { Server, Users, Calendar, Activity, Database, Eye, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useLocation } from "wouter";
 
 interface DiscordServer {
   id: number;
@@ -19,6 +20,8 @@ interface DiscordServer {
 }
 
 export default function Servers() {
+  const [, setLocation] = useLocation();
+  
   const { data: stats } = useQuery<any>({
     queryKey: ["/api/stats"],
   });
@@ -29,6 +32,10 @@ export default function Servers() {
 
   const activeServers = servers.filter(s => s.isActive);
   const totalMembers = servers.reduce((sum, s) => sum + s.memberCount, 0);
+
+  const handleServerClick = (server: DiscordServer) => {
+    setLocation('/backup-history');
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -127,7 +134,11 @@ export default function Servers() {
               ) : (
                 <div className="divide-y divide-gray-200">
                   {servers.map((server) => (
-                    <div key={server.id} className="p-6 hover:bg-gray-50">
+                    <div 
+                      key={server.id} 
+                      className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => handleServerClick(server)}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 bg-discord-primary/10 rounded-lg flex items-center justify-center">

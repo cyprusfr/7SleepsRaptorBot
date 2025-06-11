@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bot, ChartLine, Key, Users, Server, ClipboardList, Settings, Database } from "lucide-react";
+import { Bot, ChartLine, Key, Users, Server, ClipboardList, Settings, Database, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -8,6 +8,7 @@ const navigation = [
   { name: "User Management", href: "/users", icon: Users },
   { name: "Server Data", href: "/servers", icon: Server },
   { name: "Backup Management", href: "/backups", icon: Database },
+  { name: "Backup History", href: "/backup-history", icon: Clock },
   { name: "Activity Logs", href: "/activity", icon: ClipboardList },
   { name: "Bot Settings", href: "/settings", icon: Settings },
 ];

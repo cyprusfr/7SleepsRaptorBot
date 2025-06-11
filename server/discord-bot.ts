@@ -1326,9 +1326,12 @@ export class RaptorBot {
   // Troll command handlers
   private async handleSay(interaction: ChatInputCommandInteraction) {
     const message = interaction.options.getString('message', true);
-    const channel = interaction.options.getChannel('channel') || interaction.channel;
+    const targetChannel = interaction.options.getChannel('channel');
+    
+    // Use the target channel if specified, otherwise use current channel
+    const channel = targetChannel ? await interaction.guild?.channels.fetch(targetChannel.id) : interaction.channel;
 
-    if (!channel || !channel.isTextBased()) {
+    if (!channel || !('send' in channel)) {
       await interaction.reply({
         content: '❌ Invalid channel specified.',
         flags: [4096],
@@ -1398,9 +1401,18 @@ export class RaptorBot {
   private async handlePurge(interaction: ChatInputCommandInteraction) {
     const amount = interaction.options.getInteger('amount', true);
 
-    if (!interaction.guild || !interaction.channel || !interaction.channel.isTextBased()) {
+    if (!interaction.guild || !interaction.channel) {
       await interaction.reply({
         content: '❌ This command can only be used in a server text channel.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    // Type guard to ensure we have a text channel with bulkDelete capability
+    if (!('bulkDelete' in interaction.channel)) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a text channel.',
         flags: [4096],
       });
       return;

@@ -182,10 +182,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.setBotSetting(key, value);
+      
+      // Apply bot settings in real-time
+      if (key === "required_role") {
+        process.env.REQUIRED_ROLE = value;
+      } else if (key === "key_system_role") {
+        process.env.KEY_SYSTEM_ROLE = value;
+      } else if (key === "rate_limit_enabled") {
+        process.env.RATE_LIMIT_ENABLED = value;
+      } else if (key === "backup_retention_days") {
+        process.env.BACKUP_RETENTION_DAYS = value;
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error updating setting:", error);
       res.status(500).json({ error: "Failed to update setting" });
+    }
+  });
+
+  // Backup management endpoints
+  app.post("/api/servers/:serverId/backup", async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const { type = "full" } = req.body;
+      
+      const server = await storage.getDiscordServerByServerId(serverId);
+      if (!server) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+
+      // Create backup data structure
+      const backupData = {
+        serverId,
+        serverName: server.serverName,
+        backupType: type,
+        timestamp: new Date().toISOString(),
+        createdBy: "dashboard",
+        status: "completed"
+      };
+
+      const currentPermissions = typeof server.permissions === 'object' ? server.permissions : {};
+      const updatedMetadata = {
+        ...(currentPermissions as any),
+        lastBackup: new Date().toISOString(),
+        backupType: type,
+        backupData,
+        backupSize: JSON.stringify(backupData).length,
+      };
+
+      await storage.updateDiscordServer(server.id, {
+        permissions: updatedMetadata,
+        lastDataSync: new Date(),
+      });
+
+      await storage.logActivity({
+        type: 'server_backup',
+        userId: 'dashboard',
+        targetId: serverId,
+        description: `Dashboard backup created: ${type} backup of ${server.serverName}`,
+        metadata: {
+          backupType: type,
+          serverName: server.serverName,
+          dataSize: JSON.stringify(backupData).length,
+        },
+      });
+
+      res.json({ success: true, backup: backupData });
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.delete("/api/servers/:serverId/backup", async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      
+      const server = await storage.getDiscordServerByServerId(serverId);
+      if (!server) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+
+      if (server.permissions && typeof server.permissions === 'object') {
+        const updatedPermissions = { ...(server.permissions as any) };
+        delete updatedPermissions.backupData;
+        delete updatedPermissions.lastBackup;
+        delete updatedPermissions.backupType;
+        delete updatedPermissions.backupSize;
+
+        await storage.updateDiscordServer(server.id, {
+          permissions: updatedPermissions,
+        });
+
+        await storage.logActivity({
+          type: 'backup_deleted',
+          userId: 'dashboard',
+          targetId: serverId,
+          description: `Backup deleted for ${server.serverName}`,
+          metadata: {
+            serverName: server.serverName,
+          },
+        });
+
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "No backup found" });
+      }
+    } catch (error) {
+      console.error("Error deleting backup:", error);
+      res.status(500).json({ error: "Failed to delete backup" });
     }
   });
 

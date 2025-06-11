@@ -49,10 +49,13 @@ export default function BackupManagement() {
 
   const createBackupMutation = useMutation({
     mutationFn: async ({ serverId, type }: { serverId: string; type: string }) => {
-      return apiRequest(`/api/servers/${serverId}/backup`, {
+      const response = await fetch(`/api/servers/${serverId}/backup`, {
         method: 'POST',
-        body: { type }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
       });
+      if (!response.ok) throw new Error('Failed to create backup');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/servers'] });
@@ -62,9 +65,11 @@ export default function BackupManagement() {
 
   const deleteBackupMutation = useMutation({
     mutationFn: async (serverId: string) => {
-      return apiRequest(`/api/servers/${serverId}/backup`, {
+      const response = await fetch(`/api/servers/${serverId}/backup`, {
         method: 'DELETE'
       });
+      if (!response.ok) throw new Error('Failed to delete backup');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/servers'] });
@@ -72,7 +77,7 @@ export default function BackupManagement() {
     }
   });
 
-  const serversWithBackups = servers.filter((server: Server) => 
+  const serversWithBackups = (servers as Server[]).filter((server: Server) => 
     server.permissions?.backupData
   );
 

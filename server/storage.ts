@@ -70,6 +70,23 @@ export interface IStorage {
     connectedServers: number;
   }>;
 
+  // Backup Integrity
+  createBackupIntegrityCheck(check: InsertBackupIntegrity): Promise<BackupIntegrity>;
+  getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]>;
+  getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined>;
+  getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]>;
+  getHealthScoreStats(): Promise<{
+    averageHealthScore: number;
+    healthyBackups: number;
+    warningBackups: number;
+    criticalBackups: number;
+    corruptedBackups: number;
+    totalChecks: number;
+  }>;
+
+  // Backup Management
+  getAllBackups(): Promise<any[]>;
+
   // Candy System
   getCandyBalance(userId: string): Promise<number>;
   updateCandyBalance(userId: string, newBalance: number): Promise<void>;
@@ -412,6 +429,108 @@ export class DatabaseStorage implements IStorage {
       totalUsers: allUsers.length,
       connectedServers: allServers.filter(s => s.isActive).length,
     };
+  }
+
+  // Backup Integrity Methods
+  async createBackupIntegrityCheck(checkData: InsertBackupIntegrity): Promise<BackupIntegrity> {
+    const [check] = await db
+      .insert(backupIntegrity)
+      .values(checkData)
+      .returning();
+    return check;
+  }
+
+  async getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]> {
+    return await db
+      .select()
+      .from(backupIntegrity)
+      .orderBy(desc(backupIntegrity.lastChecked));
+  }
+
+  async getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined> {
+    const [check] = await db
+      .select()
+      .from(backupIntegrity)
+      .where(eq(backupIntegrity.backupId, backupId))
+      .orderBy(desc(backupIntegrity.lastChecked))
+      .limit(1);
+    return check;
+  }
+
+  async getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]> {
+    return await db
+      .select()
+      .from(backupIntegrity)
+      .where(eq(backupIntegrity.serverId, serverId))
+      .orderBy(desc(backupIntegrity.lastChecked));
+  }
+
+  async getHealthScoreStats(): Promise<{
+    averageHealthScore: number;
+    healthyBackups: number;
+    warningBackups: number;
+    criticalBackups: number;
+    corruptedBackups: number;
+    totalChecks: number;
+  }> {
+    const checks = await this.getAllBackupIntegrityChecks();
+    
+    if (checks.length === 0) {
+      return {
+        averageHealthScore: 0,
+        healthyBackups: 0,
+        warningBackups: 0,
+        criticalBackups: 0,
+        corruptedBackups: 0,
+        totalChecks: 0,
+      };
+    }
+
+    const totalScore = checks.reduce((sum, check) => sum + check.healthScore, 0);
+    const averageHealthScore = Math.round(totalScore / checks.length);
+
+    const healthyBackups = checks.filter(c => c.integrityStatus === 'healthy').length;
+    const warningBackups = checks.filter(c => c.integrityStatus === 'warning').length;
+    const criticalBackups = checks.filter(c => c.integrityStatus === 'critical').length;
+    const corruptedBackups = checks.filter(c => c.integrityStatus === 'corrupted').length;
+
+    return {
+      averageHealthScore,
+      healthyBackups,
+      warningBackups,
+      criticalBackups,
+      corruptedBackups,
+      totalChecks: checks.length,
+    };
+  }
+
+  async getAllBackups(): Promise<any[]> {
+    // Get backups from server metadata
+    const servers = await this.getAllDiscordServers();
+    const backups: any[] = [];
+
+    for (const server of servers) {
+      if (server.permissions && typeof server.permissions === 'object') {
+        const serverPerms = server.permissions as any;
+        
+        if (serverPerms.backupData) {
+          backups.push({
+            id: serverPerms.backupData.id || `backup_${server.serverId}_${Date.now()}`,
+            serverId: server.serverId,
+            serverName: server.serverName,
+            backupType: serverPerms.backupType || 'full',
+            status: 'completed',
+            createdAt: serverPerms.lastBackup || server.lastDataSync,
+            createdBy: 'system',
+            size: serverPerms.backupSize,
+            metadata: serverPerms.backupData,
+            ...serverPerms.backupData
+          });
+        }
+      }
+    }
+
+    return backups;
   }
 
   // User Management

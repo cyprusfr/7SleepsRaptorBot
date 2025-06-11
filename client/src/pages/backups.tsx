@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Archive, Download, Upload, Trash2, Plus, RefreshCw, Server, Clock, User, AlertCircle } from "lucide-react";
+import { Archive, Download, Upload, Trash2, Plus, RefreshCw, Server, Clock, User, AlertCircle, Shield } from "lucide-react";
 import { format } from "date-fns";
+import { BackupHealthScore } from "@/components/BackupHealthScore";
 
 interface Backup {
   id: string;
@@ -239,11 +240,15 @@ export default function Backups() {
         </div>
       </div>
 
+      {/* Backup Health Score Dashboard */}
+      <BackupHealthScore />
+
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All Backups</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="failed">Failed</TabsTrigger>
+          <TabsTrigger value="health">Health Analysis</TabsTrigger>
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">
@@ -472,6 +477,23 @@ export default function Backups() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="health">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Backup Health Analysis
+              </CardTitle>
+              <CardDescription>
+                Comprehensive integrity monitoring and health scores for all server backups
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BackupHealthScore />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

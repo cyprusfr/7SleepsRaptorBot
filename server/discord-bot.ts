@@ -1214,6 +1214,18 @@ export class RaptorBot {
       progressEmbed.fields[1].value = 'Finalizing backup...';
       await interaction.editReply({ embeds: [progressEmbed] });
 
+      // Run integrity check on the backup
+      try {
+        await BackupIntegrityChecker.performIntegrityCheck(
+          backupData.id,
+          backupData,
+          interaction.user.id,
+          false
+        );
+      } catch (error) {
+        console.error('Failed to run integrity check on backup:', error);
+      }
+
       // Log the backup activity
       await storage.logActivity({
         type: 'server_backup',

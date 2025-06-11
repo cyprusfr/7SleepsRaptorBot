@@ -9,6 +9,7 @@ import Users from "@/pages/users";
 import Servers from "@/pages/servers";
 import ActivityLogs from "@/pages/activity-logs";
 import Settings from "@/pages/settings";
+import BackupManagement from "@/pages/backup-management";
 import NotFound from "@/pages/not-found";
 
 function Router() {

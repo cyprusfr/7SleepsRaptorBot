@@ -606,37 +606,103 @@ export class RaptorBot {
         await interaction.editReply({ embeds: [progressEmbed] });
 
         try {
-          // Backup members with timeout handling
+          // Backup members with timeout handling and rate limiting
           const members = await guild.members.fetch({ 
-            limit: 500, // Reduced limit to avoid timeout
-            time: 15000 // 15 second timeout
+            limit: 200, // Further reduced to avoid rate limits
+            time: 20000 // 20 second timeout
           });
-          backupData.members = Array.from(members.values()).map(member => ({
-            userId: member.user.id,
-            username: member.user.username,
-            discriminator: member.user.discriminator,
-            displayName: member.displayName,
-            nickname: member.nickname,
-            joinedAt: member.joinedAt?.toISOString(),
-            premiumSince: member.premiumSince?.toISOString(),
-            roles: member.roles.cache.map(role => role.id),
-            bot: member.user.bot,
-            createdAt: member.user.createdAt.toISOString(),
-          }));
+          
+          backupData.members = [];
+          const memberArray = Array.from(members.values());
+          
+          // Process members with rate limiting (10 per second)
+          for (let i = 0; i < memberArray.length; i++) {
+            const member = memberArray[i];
+            
+            if (i > 0 && i % 10 === 0) {
+              // Wait 1 second every 10 members to avoid rate limits
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            backupData.members.push({
+              userId: member.user.id,
+              username: member.user.username,
+              discriminator: member.user.discriminator,
+              globalName: member.user.globalName,
+              displayName: member.displayName,
+              nickname: member.nickname,
+              avatarUrl: member.user.displayAvatarURL({ size: 512 }),
+              bannerUrl: member.user.bannerURL({ size: 1024 }),
+              accentColor: member.user.accentColor,
+              joinedAt: member.joinedAt?.toISOString(),
+              premiumSince: member.premiumSince?.toISOString(),
+              roles: member.roles.cache.map(role => ({
+                id: role.id,
+                name: role.name,
+                color: role.hexColor,
+                position: role.position
+              })),
+              permissions: member.permissions.toArray(),
+              bot: member.user.bot,
+              system: member.user.system,
+              flags: member.user.flags?.toArray(),
+              createdAt: member.user.createdAt.toISOString(),
+              status: member.presence?.status,
+              activities: member.presence?.activities?.map(activity => ({
+                name: activity.name,
+                type: activity.type,
+                url: activity.url,
+                state: activity.state,
+                details: activity.details
+              })),
+              voice: {
+                channelId: member.voice.channelId,
+                muted: member.voice.mute,
+                deafened: member.voice.deaf,
+                streaming: member.voice.streaming
+              }
+            });
+          }
         } catch (memberError) {
           console.warn('Member fetch timeout, using cached members:', memberError);
-          // Fall back to cached members if fetch times out
+          // Fall back to cached members with enhanced data
           backupData.members = Array.from(guild.members.cache.values()).map(member => ({
             userId: member.user.id,
             username: member.user.username,
             discriminator: member.user.discriminator,
+            globalName: member.user.globalName,
             displayName: member.displayName,
             nickname: member.nickname,
+            avatarUrl: member.user.displayAvatarURL({ size: 512 }),
+            bannerUrl: member.user.bannerURL({ size: 1024 }),
+            accentColor: member.user.accentColor,
             joinedAt: member.joinedAt?.toISOString(),
             premiumSince: member.premiumSince?.toISOString(),
-            roles: member.roles.cache.map(role => role.id),
+            roles: member.roles.cache.map(role => ({
+              id: role.id,
+              name: role.name,
+              color: role.hexColor,
+              position: role.position
+            })),
+            permissions: member.permissions.toArray(),
             bot: member.user.bot,
+            system: member.user.system,
+            flags: member.user.flags?.toArray(),
             createdAt: member.user.createdAt.toISOString(),
+            status: member.presence?.status,
+            activities: member.presence?.activities?.map(activity => ({
+              name: activity.name,
+              type: activity.type,
+              url: activity.url,
+              state: activity.state,
+              details: activity.details
+            })),
+            voice: {
+              channelId: member.voice.channelId,
+              muted: member.voice.mute,
+              deafened: member.voice.deaf,
+              streaming: member.voice.streaming
+            }
           }));
         }
       }
@@ -655,25 +721,91 @@ export class RaptorBot {
 
           backupData.messages = [];
           
-          for (const channel of textChannels.slice(0, 5)) { // Limit to 5 channels to avoid timeout
+          // Process channels with rate limiting
+          for (let i = 0; i < Math.min(textChannels.length, 5); i++) {
+            const channel = textChannels[i];
+            
+            if (i > 0) {
+              // Wait 2 seconds between channels to avoid rate limits
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
             try {
-              const messages = await (channel as any).messages.fetch({ limit: 50 });
+              const messages = await (channel as any).messages.fetch({ limit: 30 });
               const channelMessages = Array.from(messages.values()).map((msg: any) => ({
                 id: msg.id,
                 channelId: msg.channelId,
                 channelName: channel?.name,
+                channelType: channel?.type,
                 content: msg.content,
+                cleanContent: msg.cleanContent,
                 authorId: msg.author.id,
                 authorUsername: msg.author.username,
+                authorDisplayName: msg.author.displayName,
+                authorAvatarUrl: msg.author.displayAvatarURL({ size: 256 }),
+                authorBot: msg.author.bot,
                 timestamp: msg.createdAt.toISOString(),
+                editedTimestamp: msg.editedAt?.toISOString(),
+                messageType: msg.type,
+                system: msg.system,
+                pinned: msg.pinned,
+                tts: msg.tts,
                 attachments: msg.attachments.map((att: any) => ({
                   id: att.id,
                   name: att.name,
                   url: att.url,
-                  size: att.size
+                  proxyUrl: att.proxyURL,
+                  size: att.size,
+                  width: att.width,
+                  height: att.height,
+                  contentType: att.contentType,
+                  description: att.description
                 })),
-                embeds: msg.embeds.length,
-                reactions: msg.reactions.cache.size
+                embeds: msg.embeds.map((embed: any) => ({
+                  title: embed.title,
+                  description: embed.description,
+                  url: embed.url,
+                  color: embed.color,
+                  timestamp: embed.timestamp,
+                  footer: embed.footer,
+                  image: embed.image,
+                  thumbnail: embed.thumbnail,
+                  author: embed.author,
+                  fields: embed.fields
+                })),
+                reactions: Array.from(msg.reactions.cache.values()).map((reaction: any) => ({
+                  emoji: {
+                    id: reaction.emoji.id,
+                    name: reaction.emoji.name,
+                    animated: reaction.emoji.animated
+                  },
+                  count: reaction.count,
+                  me: reaction.me
+                })),
+                mentions: {
+                  users: msg.mentions.users.map((user: any) => ({
+                    id: user.id,
+                    username: user.username,
+                    displayName: user.displayName,
+                    avatarUrl: user.displayAvatarURL({ size: 256 })
+                  })),
+                  roles: msg.mentions.roles.map((role: any) => ({
+                    id: role.id,
+                    name: role.name,
+                    color: role.hexColor
+                  })),
+                  channels: msg.mentions.channels.map((ch: any) => ({
+                    id: ch.id,
+                    name: ch.name,
+                    type: ch.type
+                  }))
+                },
+                stickers: msg.stickers.map((sticker: any) => ({
+                  id: sticker.id,
+                  name: sticker.name,
+                  description: sticker.description,
+                  url: sticker.url
+                }))
               }));
               
               backupData.messages.push(...channelMessages);

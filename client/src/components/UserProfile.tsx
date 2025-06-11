@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -9,14 +10,17 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Shield } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 
 interface AuthUser {
   id: string;
   email?: string;
   name?: string;
   picture?: string;
+  isApproved?: boolean;
+  isAdmin?: boolean;
 }
 
 export function UserProfile() {
@@ -55,7 +59,12 @@ export function UserProfile() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{authUser.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium leading-none">{authUser.name}</p>
+              <Badge variant={authUser.isAdmin ? "destructive" : authUser.isApproved ? "default" : "secondary"} className="text-xs">
+                {authUser.isAdmin ? "Admin" : authUser.isApproved ? "User" : "Pending"}
+              </Badge>
+            </div>
             <p className="text-xs leading-none text-muted-foreground">
               {authUser.email}
             </p>
@@ -66,6 +75,14 @@ export function UserProfile() {
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
+        {authUser.isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Admin Panel</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
           <LogOut className="mr-2 h-4 w-4" />

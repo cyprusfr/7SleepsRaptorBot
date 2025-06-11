@@ -5,6 +5,27 @@ import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
 import { z } from "zod";
 
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  next();
+}
+
+function requireApproved(req: any, res: any, next: any) {
+  if (!req.user?.isApproved) {
+    return res.status(403).json({ error: "Access not approved" });
+  }
+  next();
+}
+
+function requireAdmin(req: any, res: any, next: any) {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Google OAuth authentication
   setupAuth(app);
@@ -16,6 +37,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error("❌ Failed to start Discord bot:", error);
   }
+
+  // Auth routes with user data
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Admin routes for user management
+  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/approve', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { approved } = req.body;
+      await storage.updateUserApproval(userId, approved);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user approval:", error);
+      res.status(500).json({ error: "Failed to update user approval" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/make-admin', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      await storage.makeUserAdmin(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error making user admin:", error);
+      res.status(500).json({ error: "Failed to make user admin" });
+    }
+  });
 
   // API Routes
   

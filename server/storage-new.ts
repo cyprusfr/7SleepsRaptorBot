@@ -4,6 +4,9 @@ export interface IStorage {
   // Users - Google OAuth Authentication
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserApproval(userId: string, isApproved: boolean): Promise<void>;
+  makeUserAdmin(userId: string): Promise<void>;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -134,18 +137,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Special case for admin user
+    const isAdminUser = userData.email === 'alexkkork123@gmail.com';
+    const userDataWithPermissions = {
+      ...userData,
+      isApproved: isAdminUser ? true : userData.isApproved ?? false,
+      isAdmin: isAdminUser ? true : userData.isAdmin ?? false,
+    };
+
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values(userDataWithPermissions)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          ...userDataWithPermissions,
           updatedAt: new Date(),
         },
       })
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    const userList = await db.select().from(users);
+    return userList;
+  }
+
+  async updateUserApproval(userId: string, isApproved: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isApproved, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async makeUserAdmin(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ isAdmin: true, isApproved: true, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async createDiscordKey(insertKey: InsertDiscordKey): Promise<DiscordKey> {

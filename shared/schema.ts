@@ -19,6 +19,8 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   name: varchar("name"),
   picture: varchar("picture"),
+  isApproved: boolean("is_approved").default(false),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

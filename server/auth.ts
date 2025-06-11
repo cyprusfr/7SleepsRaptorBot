@@ -3,6 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import type { Express } from 'express';
+import { storage } from './storage';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -36,15 +37,15 @@ export function setupAuth(app: Express) {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: "/api/auth/google/callback"
-    }, async (accessToken, refreshToken, profile, done) => {
+    }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
-        const user = {
+        // Upsert user in database
+        const user = await storage.upsertUser({
           id: profile.id,
           email: profile.emails?.[0]?.value,
           name: profile.displayName,
-          avatar: profile.photos?.[0]?.value,
-          provider: 'google'
-        };
+          picture: profile.photos?.[0]?.value,
+        });
         return done(null, user);
       } catch (error) {
         return done(error, null);
@@ -53,11 +54,16 @@ export function setupAuth(app: Express) {
   }
 
   passport.serializeUser((user: any, done) => {
-    done(null, user);
+    done(null, user.id);
   });
 
-  passport.deserializeUser((user: any, done) => {
-    done(null, user);
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
   });
 
   // Auth routes

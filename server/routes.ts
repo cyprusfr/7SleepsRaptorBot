@@ -9,6 +9,12 @@ function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  
+  // Check for secret phrase in session
+  if (!req.session.secretPhraseEntered) {
+    return res.status(401).json({ error: "Unauthorized - Access phrase required" });
+  }
+  
   next();
 }
 
@@ -37,6 +43,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error("❌ Failed to start Discord bot:", error);
   }
+
+  // Secret phrase validation endpoint
+  app.post("/api/auth/validate-phrase", async (req, res) => {
+    try {
+      const { phrase } = req.body;
+      
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      if (phrase === "omg im so cool") {
+        req.session.secretPhraseEntered = true;
+        res.json({ success: true, message: "Access granted" });
+      } else {
+        res.status(401).json({ error: "Invalid phrase" });
+      }
+    } catch (error) {
+      console.error("Error validating phrase:", error);
+      res.status(500).json({ error: "Failed to validate phrase" });
+    }
+  });
+
+  // Check phrase status
+  app.get("/api/auth/phrase-status", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      res.json({ 
+        phraseEntered: !!req.session.secretPhraseEntered,
+        authenticated: req.isAuthenticated()
+      });
+    } catch (error) {
+      console.error("Error checking phrase status:", error);
+      res.status(500).json({ error: "Failed to check phrase status" });
+    }
+  });
 
   // Auth routes with user data
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
@@ -195,6 +239,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error revoking key:", error);
       res.status(500).json({ error: "Failed to revoke key" });
+    }
+  });
+
+  // Main stats endpoint with real data
+  app.get("/api/stats", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getStats();
+      
+      // Get system health based on bot status and recent activity
+      const recentLogs = await storage.getActivityLogs(10);
+      const errorLogs = recentLogs.filter(log => log.type.includes('error')).length;
+      const systemHealth = raptorBot.isOnline() ? 
+        (errorLogs > 5 ? 'critical' : errorLogs > 2 ? 'warning' : 'healthy') : 'critical';
+
+      // Enhanced stats with real calculations
+      const enhancedStats = {
+        ...stats,
+        systemHealth,
+        botOnline: raptorBot.isOnline(),
+        lastUpdate: new Date().toISOString(),
+      };
+
+      res.json(enhancedStats);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ error: "Failed to fetch statistics" });
     }
   });
 

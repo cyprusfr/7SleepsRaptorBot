@@ -203,6 +203,33 @@ export class RaptorBot {
         .setName('help')
         .setDescription('Show available commands and usage'),
 
+      new SlashCommandBuilder()
+        .setName('whitelist-user')
+        .setDescription('Add a user ID to the bot whitelist')
+        .addStringOption(option =>
+          option.setName('user_id')
+            .setDescription('Discord user ID to whitelist')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('username')
+            .setDescription('Username for the user ID')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('unwhitelist-user')
+        .setDescription('Remove a user ID from the bot whitelist')
+        .addStringOption(option =>
+          option.setName('user_id')
+            .setDescription('Discord user ID to remove from whitelist')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-list')
+        .setDescription('List all whitelisted user IDs'),
+
       // Troll Commands
       new SlashCommandBuilder()
         .setName('say')
@@ -367,6 +394,15 @@ export class RaptorBot {
         case 'help':
           await this.handleHelp(interaction);
           break;
+        case 'whitelist-user':
+          await this.handleWhitelistUser(interaction);
+          break;
+        case 'unwhitelist-user':
+          await this.handleUnwhitelistUser(interaction);
+          break;
+        case 'whitelist-list':
+          await this.handleWhitelistList(interaction);
+          break;
         case 'say':
           await this.handleSay(interaction);
           break;
@@ -424,6 +460,12 @@ export class RaptorBot {
     // Check if user is in authorized list (bypass role requirements)
     const authorizedUserId = this.getSetting('authorized_user_id', '1131426483404026019');
     if (userId === authorizedUserId) {
+      return true;
+    }
+
+    // Check if user is in the whitelist
+    const whitelistedUsers = this.getSetting('whitelisted_users', '').split(',').filter(id => id.trim());
+    if (whitelistedUsers.includes(userId)) {
       return true;
     }
 
@@ -1506,6 +1548,150 @@ export class RaptorBot {
       uptime: this.client.uptime,
       status: this.isReady ? 'online' : 'offline',
     };
+  }
+
+  private async handleWhitelistUser(interaction: ChatInputCommandInteraction) {
+    const userId = interaction.options.getString('user_id', true);
+    const username = interaction.options.getString('username') || 'Unknown User';
+
+    try {
+      // Get current whitelisted users
+      const currentWhitelist = this.getSetting('whitelisted_users', '');
+      const whitelistedUsers = currentWhitelist.split(',').filter(id => id.trim());
+
+      // Check if user is already whitelisted
+      if (whitelistedUsers.includes(userId)) {
+        await interaction.reply({
+          content: `❌ User ID \`${userId}\` is already whitelisted.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Add user to whitelist
+      whitelistedUsers.push(userId);
+      await storage.setBotSetting('whitelisted_users', whitelistedUsers.join(','));
+
+      // Update local settings cache
+      this.settings.set('whitelisted_users', whitelistedUsers.join(','));
+
+      await interaction.reply({
+        content: `✅ Successfully added user ID \`${userId}\` (${username}) to the bot whitelist.\n\nThey can now use bot commands without role requirements.`,
+        flags: [4096],
+      });
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'whitelist_user_added',
+        userId: interaction.user.id,
+        targetId: userId,
+        description: `Added user ${username} (${userId}) to bot whitelist`,
+        metadata: {
+          whitelistedUserId: userId,
+          whitelistedUsername: username,
+          addedBy: interaction.user.username,
+        },
+      });
+
+    } catch (error) {
+      console.error('Error whitelisting user:', error);
+      await interaction.reply({
+        content: '❌ Failed to add user to whitelist. Please try again.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleUnwhitelistUser(interaction: ChatInputCommandInteraction) {
+    const userId = interaction.options.getString('user_id', true);
+
+    try {
+      // Get current whitelisted users
+      const currentWhitelist = this.getSetting('whitelisted_users', '');
+      const whitelistedUsers = currentWhitelist.split(',').filter(id => id.trim());
+
+      // Check if user is whitelisted
+      if (!whitelistedUsers.includes(userId)) {
+        await interaction.reply({
+          content: `❌ User ID \`${userId}\` is not currently whitelisted.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Remove user from whitelist
+      const updatedWhitelist = whitelistedUsers.filter(id => id !== userId);
+      await storage.setBotSetting('whitelisted_users', updatedWhitelist.join(','));
+
+      // Update local settings cache
+      this.settings.set('whitelisted_users', updatedWhitelist.join(','));
+
+      await interaction.reply({
+        content: `✅ Successfully removed user ID \`${userId}\` from the bot whitelist.\n\nThey will now need appropriate roles to use bot commands.`,
+        flags: [4096],
+      });
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'whitelist_user_removed',
+        userId: interaction.user.id,
+        targetId: userId,
+        description: `Removed user ${userId} from bot whitelist`,
+        metadata: {
+          removedUserId: userId,
+          removedBy: interaction.user.username,
+        },
+      });
+
+    } catch (error) {
+      console.error('Error removing user from whitelist:', error);
+      await interaction.reply({
+        content: '❌ Failed to remove user from whitelist. Please try again.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistList(interaction: ChatInputCommandInteraction) {
+    try {
+      const currentWhitelist = this.getSetting('whitelisted_users', '');
+      const whitelistedUsers = currentWhitelist.split(',').filter(id => id.trim());
+
+      if (whitelistedUsers.length === 0) {
+        await interaction.reply({
+          content: '📋 **Bot Whitelist**\n\nNo users are currently whitelisted.\n\nUse `/whitelist-user` to add users to the whitelist.',
+          flags: [4096],
+        });
+        return;
+      }
+
+      const embed = {
+        title: '📋 Bot Whitelist',
+        description: `Currently whitelisted user IDs (${whitelistedUsers.length} total):`,
+        fields: whitelistedUsers.slice(0, 20).map((userId, index) => ({
+          name: `User ${index + 1}`,
+          value: `\`${userId}\``,
+          inline: true,
+        })),
+        color: 0x00FF00,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: whitelistedUsers.length > 20 ? `Showing first 20 of ${whitelistedUsers.length} users` : `${whitelistedUsers.length} whitelisted users`
+        }
+      };
+
+      await interaction.reply({
+        embeds: [embed],
+        flags: [4096],
+      });
+
+    } catch (error) {
+      console.error('Error listing whitelisted users:', error);
+      await interaction.reply({
+        content: '❌ Failed to retrieve whitelist. Please try again.',
+        flags: [4096],
+      });
+    }
   }
 }
 

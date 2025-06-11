@@ -6,6 +6,7 @@ import StatsCard from "@/components/stats-card";
 import ActivityFeed from "@/components/activity-feed";
 import KeyTable from "@/components/key-table";
 import PhraseAuth from "@/components/PhraseAuth";
+import { RateLimitStatus } from "@/components/RateLimitStatus";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -333,6 +334,9 @@ function DashboardContent() {
 
             {/* Quick Actions & Server Status */}
             <div className="space-y-6">
+              {/* Rate Limit Status */}
+              <RateLimitStatus />
+              
               {/* Quick Actions */}
               <Card>
                 <CardHeader>

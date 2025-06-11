@@ -329,6 +329,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rate limit status endpoint
+  app.get('/api/rate-limits/status', requireAuth, async (req: any, res) => {
+    try {
+      const sessionKey = (req.session as any)?.dashboardKeyId;
+      const identifier = sessionKey ? `key:${sessionKey}` : `ip:${req.ip}`;
+      
+      const rateLimitStatus = {
+        auth: {
+          current: await storage.getRateLimit(`rate_limit:${identifier}:auth`) || 0,
+          resetTime: 15 * 60 * 1000 // 15 minutes
+        },
+        keyValidation: {
+          current: await storage.getRateLimit(`rate_limit:${identifier}:keyValidation`) || 0,
+          resetTime: 5 * 60 * 1000 // 5 minutes
+        },
+        api: {
+          current: await storage.getRateLimit(`rate_limit:${identifier}:api`) || 0,
+          resetTime: 1 * 60 * 1000 // 1 minute
+        },
+        backups: {
+          current: await storage.getRateLimit(`rate_limit:${identifier}:backups`) || 0,
+          resetTime: 10 * 60 * 1000 // 10 minutes
+        },
+        admin: {
+          current: await storage.getRateLimit(`rate_limit:${identifier}:admin`) || 0,
+          resetTime: 5 * 60 * 1000 // 5 minutes
+        }
+      };
+
+      res.json(rateLimitStatus);
+    } catch (error) {
+      console.error("Error fetching rate limit status:", error);
+      res.status(500).json({ error: "Failed to fetch rate limit status" });
+    }
+  });
+
   // Discord keys
   app.get("/api/keys", async (req, res) => {
     try {

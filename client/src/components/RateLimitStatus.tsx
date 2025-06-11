@@ -43,41 +43,41 @@ export function RateLimitStatus() {
       category: "Authentication",
       windowMs: 15 * 60 * 1000,
       maxRequests: 5,
-      currentUsage: rateLimits?.auth?.current || 0,
-      remainingTime: rateLimits?.auth?.resetTime || 0,
-      status: rateLimits?.auth?.current >= 4 ? "critical" : rateLimits?.auth?.current >= 2 ? "warning" : "healthy"
+      currentUsage: (rateLimits as any)?.auth?.current || 0,
+      remainingTime: (rateLimits as any)?.auth?.resetTime || 0,
+      status: (rateLimits as any)?.auth?.current >= 4 ? "critical" : (rateLimits as any)?.auth?.current >= 2 ? "warning" : "healthy"
     },
     {
       category: "Dashboard Key Validation",
       windowMs: 5 * 60 * 1000,
       maxRequests: 10,
-      currentUsage: rateLimits?.keyValidation?.current || 0,
-      remainingTime: rateLimits?.keyValidation?.resetTime || 0,
-      status: rateLimits?.keyValidation?.current >= 8 ? "critical" : rateLimits?.keyValidation?.current >= 5 ? "warning" : "healthy"
+      currentUsage: (rateLimits as any)?.keyValidation?.current || 0,
+      remainingTime: (rateLimits as any)?.keyValidation?.resetTime || 0,
+      status: (rateLimits as any)?.keyValidation?.current >= 8 ? "critical" : (rateLimits as any)?.keyValidation?.current >= 5 ? "warning" : "healthy"
     },
     {
       category: "General API",
       windowMs: 1 * 60 * 1000,
       maxRequests: 60,
-      currentUsage: rateLimits?.api?.current || 0,
-      remainingTime: rateLimits?.api?.resetTime || 0,
-      status: rateLimits?.api?.current >= 50 ? "critical" : rateLimits?.api?.current >= 30 ? "warning" : "healthy"
+      currentUsage: (rateLimits as any)?.api?.current || 0,
+      remainingTime: (rateLimits as any)?.api?.resetTime || 0,
+      status: (rateLimits as any)?.api?.current >= 50 ? "critical" : (rateLimits as any)?.api?.current >= 30 ? "warning" : "healthy"
     },
     {
       category: "Backup Operations",
       windowMs: 10 * 60 * 1000,
       maxRequests: 5,
-      currentUsage: rateLimits?.backups?.current || 0,
-      remainingTime: rateLimits?.backups?.resetTime || 0,
-      status: rateLimits?.backups?.current >= 4 ? "critical" : rateLimits?.backups?.current >= 2 ? "warning" : "healthy"
+      currentUsage: (rateLimits as any)?.backups?.current || 0,
+      remainingTime: (rateLimits as any)?.backups?.resetTime || 0,
+      status: (rateLimits as any)?.backups?.current >= 4 ? "critical" : (rateLimits as any)?.backups?.current >= 2 ? "warning" : "healthy"
     },
     {
       category: "Admin Actions",
       windowMs: 5 * 60 * 1000,
       maxRequests: 20,
-      currentUsage: rateLimits?.admin?.current || 0,
-      remainingTime: rateLimits?.admin?.resetTime || 0,
-      status: rateLimits?.admin?.current >= 16 ? "critical" : rateLimits?.admin?.current >= 10 ? "warning" : "healthy"
+      currentUsage: (rateLimits as any)?.admin?.current || 0,
+      remainingTime: (rateLimits as any)?.admin?.resetTime || 0,
+      status: (rateLimits as any)?.admin?.current >= 16 ? "critical" : (rateLimits as any)?.admin?.current >= 10 ? "warning" : "healthy"
     }
   ];
 

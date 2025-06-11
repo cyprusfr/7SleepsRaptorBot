@@ -33,10 +33,16 @@ export function setupAuth(app: Express) {
 
   // Google OAuth strategy
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+    // Use the production domain if available, otherwise fall back to the dev domain
+    const domain = process.env.REPL_SLUG 
+      ? `https://raptor-bot.replit.app`
+      : `https://${process.env.REPLIT_DOMAINS}`;
+    const callbackURL = `${domain}/api/auth/google/callback`;
+    
     passport.use(new GoogleStrategy({
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback"
+      callbackURL: callbackURL
     }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
         // Upsert user in database

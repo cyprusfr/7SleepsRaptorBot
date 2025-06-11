@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage-clean";
 import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
+import { rateLimits } from "./rate-limiter";
 import { z } from "zod";
 
 async function requireAuth(req: any, res: any, next: any) {
@@ -127,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Validate dashboard key
-  app.post("/api/dashboard-keys/validate", async (req, res) => {
+  app.post("/api/dashboard-keys/validate", rateLimits.keyValidation.middleware.bind(rateLimits.keyValidation), async (req, res) => {
     try {
       const { keyId } = req.body;
       
@@ -175,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Link dashboard key to account
-  app.post("/api/dashboard-keys/link", async (req, res) => {
+  app.post("/api/dashboard-keys/link", rateLimits.auth.middleware.bind(rateLimits.auth), async (req, res) => {
     try {
       const { keyId, linkToAccount } = req.body;
       
@@ -255,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes for user management
-  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  app.get('/api/admin/users', rateLimits.admin.middleware.bind(rateLimits.admin), requireAuth, requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -265,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/users/:userId/approve', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/users/:userId/approve', rateLimits.admin.middleware.bind(rateLimits.admin), requireAuth, requireAdmin, async (req, res) => {
     try {
       const { userId } = req.params;
       const { approved } = req.body;

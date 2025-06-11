@@ -699,17 +699,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]> {
-    return await db.select().from(backupIntegrity);
-  }
-
-  async getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]> {
-    return await db
-      .select()
-      .from(backupIntegrity)
-      .where(eq(backupIntegrity.serverId, serverId));
-  }
-
   async updateBackupIntegrity(id: number, updates: Partial<BackupIntegrity>): Promise<void> {
     await db
       .update(backupIntegrity)

@@ -59,7 +59,7 @@ export default function Dashboard() {
     queryKey: ["/api/servers"],
   });
 
-  const { data: candyStats } = useQuery({
+  const { data: candyStats } = useQuery<{ totalCandy: number; activeGames: number }>({
     queryKey: ["/api/candy/stats"],
   });
 

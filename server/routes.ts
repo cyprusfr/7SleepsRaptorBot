@@ -521,7 +521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create backup using the Discord bot
-      const backupResult = await raptorBot.createBackup(serverId, backupType, userId);
+      await raptorBot.createBackup(serverId, backupType, userId);
+      const backupId = `backup_${serverId}_${Date.now()}`;
 
       // Log backup creation
       await storage.logActivity({
@@ -532,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: {
           backupType,
           serverName: server.serverName,
-          backupId: backupResult.id,
+          backupId,
           timestamp: new Date().toISOString(),
         },
       });
@@ -540,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: `${backupType} backup created successfully`,
-        backupId: backupResult.id,
+        backupId,
         backupType,
         serverName: server.serverName,
         createdAt: new Date().toISOString(),
@@ -561,10 +562,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serverBackups = backupLogs
         .filter(log => log.targetId === serverId)
         .map(log => ({
-          id: log.metadata?.backupId || log.id,
-          type: log.metadata?.backupType || 'unknown',
+          id: (log.metadata as any)?.backupId || log.id,
+          type: (log.metadata as any)?.backupType || 'unknown',
           createdAt: log.timestamp,
-          serverName: log.metadata?.serverName || 'Unknown Server',
+          serverName: (log.metadata as any)?.serverName || 'Unknown Server',
         }))
         .slice(0, 10); // Latest 10 backups
 

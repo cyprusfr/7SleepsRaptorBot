@@ -1324,6 +1324,170 @@ export class RaptorBot {
     return this.isReady;
   }
 
+  // Troll command handlers
+  private async handleSay(interaction: ChatInputCommandInteraction) {
+    const message = interaction.options.getString('message', true);
+    const channel = interaction.options.getChannel('channel') || interaction.channel;
+
+    if (!channel || !channel.isTextBased()) {
+      await interaction.reply({
+        content: '❌ Invalid channel specified.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    try {
+      await channel.send(message);
+      await interaction.reply({
+        content: '✅ Message sent successfully!',
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to send message. Check bot permissions.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleDM(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const message = interaction.options.getString('message', true);
+
+    try {
+      await user.send(message);
+      await interaction.reply({
+        content: `✅ DM sent to ${user.username} successfully!`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `❌ Failed to send DM to ${user.username}. They may have DMs disabled.`,
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleNickname(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const nickname = interaction.options.getString('nickname', true);
+
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    try {
+      const member = await interaction.guild.members.fetch(user.id);
+      await member.setNickname(nickname);
+      await interaction.reply({
+        content: `✅ Changed ${user.username}'s nickname to "${nickname}"`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `❌ Failed to change nickname. Check bot permissions and role hierarchy.`,
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handlePurge(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (!interaction.guild || !interaction.channel || !interaction.channel.isTextBased()) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server text channel.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    try {
+      const messages = await interaction.channel.messages.fetch({ limit: amount });
+      await interaction.channel.bulkDelete(messages);
+      
+      await interaction.reply({
+        content: `✅ Deleted ${messages.size} messages.`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to delete messages. Messages may be older than 14 days or bot lacks permissions.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleTimeout(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const minutes = interaction.options.getInteger('minutes', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: '❌ This command can only be used in a server.',
+        flags: [4096],
+      });
+      return;
+    }
+
+    try {
+      const member = await interaction.guild.members.fetch(user.id);
+      const timeoutDuration = minutes * 60 * 1000; // Convert to milliseconds
+      
+      await member.timeout(timeoutDuration, reason);
+      await interaction.reply({
+        content: `✅ Timed out ${user.username} for ${minutes} minutes.\nReason: ${reason}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: `❌ Failed to timeout user. Check bot permissions and role hierarchy.`,
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleAnnounce(interaction: ChatInputCommandInteraction) {
+    const title = interaction.options.getString('title', true);
+    const message = interaction.options.getString('message', true);
+    const colorInput = interaction.options.getString('color');
+
+    let color = 0x5865F2; // Default Discord blurple
+    if (colorInput) {
+      const hexColor = colorInput.replace('#', '');
+      const parsedColor = parseInt(hexColor, 16);
+      if (!isNaN(parsedColor)) {
+        color = parsedColor;
+      }
+    }
+
+    const embed = {
+      title: title,
+      description: message,
+      color: color,
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `Announced by ${interaction.user.username}`,
+        icon_url: interaction.user.displayAvatarURL(),
+      },
+    };
+
+    try {
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to send announcement.',
+        flags: [4096],
+      });
+    }
+  }
+
   public getStats() {
     return {
       guilds: this.client.guilds.cache.size,

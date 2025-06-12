@@ -1,5 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import SimpleApp from "./SimpleApp";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Temporary diagnostic mode to identify the blank screen issue
+const useSimpleApp = true;
+
+createRoot(document.getElementById("root")!).render(
+  useSimpleApp ? <SimpleApp /> : <App />
+);

@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Candy statistics
   app.get("/api/candy/stats", async (req, res) => {
     try {
-      const candyTransactions = await storage.getAllCandyTransactions();
+      const candyTransactions = await storage.getCandyTransactions('all');
       
       // Calculate total candy in circulation
       const totalCandy = candyTransactions

@@ -147,11 +147,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard-keys/auth-status", async (req, res) => {
     try {
       const sessionKeyId = (req.session as any).dashboardKeyId;
+      
       if (!sessionKeyId) {
         return res.json({ authenticated: false });
       }
 
       const dashboardKey = await storage.getDashboardKeyByKeyId(sessionKeyId);
+      
       if (!dashboardKey || dashboardKey.status !== 'active') {
         return res.json({ authenticated: false });
       }

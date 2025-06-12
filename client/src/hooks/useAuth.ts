@@ -11,11 +11,15 @@ export function useAuth() {
     retry: false,
   });
 
+  const isAuthenticated = !!user;
+  const hasDashboardKey = !!(dashboardAuth as any)?.authenticated;
+  const loadingComplete = !isLoading && !isDashboardAuthLoading;
+
   return {
     user,
     isLoading: isLoading || isDashboardAuthLoading,
-    isAuthenticated: !!user,
-    hasDashboardKey: !!(dashboardAuth as any)?.authenticated,
-    dashboardKeyRequired: !(dashboardAuth as any)?.authenticated && !isLoading && !isDashboardAuthLoading,
+    isAuthenticated,
+    hasDashboardKey,
+    dashboardKeyRequired: !isAuthenticated && !hasDashboardKey && loadingComplete,
   };
 }

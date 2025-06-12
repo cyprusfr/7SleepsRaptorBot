@@ -343,7 +343,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             <CardFooter>
               <Button 
                 onClick={handleVerifyDiscord}
-                disabled={verifyDiscordMutation.isPending}
+                disabled={verifyDiscordMutation.isPending || !linkClicked}
                 className="w-full"
               >
                 {verifyDiscordMutation.isPending ? (

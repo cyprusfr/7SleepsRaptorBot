@@ -15,6 +15,7 @@ export class RaptorBot {
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.DirectMessages,
       ],
     });
 
@@ -2979,6 +2980,50 @@ export class RaptorBot {
     } catch (error) {
       console.error('Server sync error:', error);
       throw error;
+    }
+  }
+
+  public async sendVerificationDM(userId: string, verificationLink: string): Promise<boolean> {
+    try {
+      if (!this.isReady) {
+        console.log('Bot not ready, cannot send DM');
+        return false;
+      }
+
+      const user = await this.client.users.fetch(userId);
+      if (!user) {
+        console.log('User not found:', userId);
+        return false;
+      }
+
+      const embed = {
+        title: '🔗 Discord Account Verification',
+        description: 'Click the link below to verify your Discord account for dashboard access.',
+        fields: [
+          {
+            name: '🔒 Verification Link',
+            value: `[Click here to verify your account](${verificationLink})`,
+            inline: false
+          },
+          {
+            name: '⏰ Important',
+            value: 'This link expires in 10 minutes for security.',
+            inline: false
+          }
+        ],
+        color: 0x5865F2, // Discord blurple
+        footer: {
+          text: 'Raptor Dashboard Authentication'
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      await user.send({ embeds: [embed] });
+      console.log(`✅ Verification DM sent to user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Error sending verification DM:', error);
+      return false;
     }
   }
 }

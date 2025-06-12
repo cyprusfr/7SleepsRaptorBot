@@ -411,11 +411,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const verificationLink = `${baseUrl}/api/auth/verify-discord-link?token=${verificationToken}&discord=${discordUserId}`;
       
-      // For now, simulate Discord DM functionality
+      // Send actual Discord DM
       const discordUsername = `User#${discordUserId.slice(-4)}`;
       
-      // TODO: Send actual DM when Discord bot is configured
-      console.log(`Would send verification link ${verificationLink} to Discord user ${discordUserId}`);
+      try {
+        const dmSent = await raptorBot.sendVerificationDM(discordUserId, verificationLink);
+        if (!dmSent) {
+          console.log(`Failed to send DM to ${discordUserId}, using fallback method`);
+        }
+      } catch (error) {
+        console.error('Error sending Discord DM:', error);
+      }
+      
+      console.log(`Verification link generated for Discord user ${discordUserId}: ${verificationLink}`);
       
       res.json({
         discordUserId,

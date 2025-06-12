@@ -251,29 +251,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (req.session as any).dashboardKeyId = keyId;
 
       if (linkToAccount && req.isAuthenticated()) {
-        const userId = req.user.claims.sub;
-        const userEmail = req.user.claims.email;
-        
-        // Link the key to the Google account
-        await storage.linkDashboardKeyToGoogle(keyId, userId, userEmail);
-        
-        await storage.logActivity({
-          type: "dashboard_key_link",
-          description: `Dashboard key ${keyId} linked to Google account: ${userEmail}`,
-          metadata: { 
-            keyId,
-            userId,
-            userEmail,
-            discordUsername: dashboardKey.discordUsername,
-            ip: req.ip
+        try {
+          const userId = (req.user as any)?.id;
+          const userEmail = (req.user as any)?.email;
+          
+          if (!userId || !userEmail) {
+            console.error("Missing user data:", { userId, userEmail, user: req.user });
+            return res.status(400).json({ error: "Authentication data incomplete" });
           }
-        });
+          
+          // Link the key to the Google account
+          await storage.linkDashboardKeyToGoogle(keyId, userId, userEmail);
+          
+          await storage.logActivity({
+            type: "dashboard_key_link",
+            description: `Dashboard key ${keyId} linked to Google account: ${userEmail}`,
+            metadata: { 
+              keyId,
+              userId,
+              userEmail,
+              discordUsername: dashboardKey.discordUsername,
+              ip: req.ip
+            }
+          });
 
-        res.json({ 
-          success: true, 
-          linked: true,
-          message: "Dashboard key linked to your account successfully"
-        });
+          res.json({ 
+            success: true, 
+            linked: true,
+            message: "Dashboard key linked to your account successfully"
+          });
+        } catch (linkError) {
+          console.error("Error during account linking:", linkError);
+          return res.status(500).json({ error: "Failed to link to account" });
+        }
       } else {
         await storage.logActivity({
           type: "dashboard_key_access",

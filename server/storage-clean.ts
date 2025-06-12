@@ -142,8 +142,10 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(discordKeys)
       .set({
+        status: 'revoked',
         revokedAt: new Date(),
         revokedBy,
+        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }

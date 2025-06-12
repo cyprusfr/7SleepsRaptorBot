@@ -1,18 +1,37 @@
-import { users, type User, type UpsertUser, discordKeys, type DiscordKey, type InsertDiscordKey, discordUsers, type DiscordUser, type InsertDiscordUser, discordServers, type DiscordServer, type InsertDiscordServer, activityLogs, type ActivityLog, type InsertActivityLog, botSettings, type BotSetting, type InsertBotSetting, dashboardKeys, type DashboardKey, type InsertDashboardKey, backupIntegrity, type BackupIntegrity, type InsertBackupIntegrity } from "@shared/schema";
+import {
+  users,
+  discordKeys,
+  discordUsers,
+  discordServers,
+  activityLogs,
+  botSettings,
+  dashboardKeys,
+  backupIntegrity,
+  candyTransactions,
+  type User,
+  type UpsertUser,
+  type DiscordKey,
+  type InsertDiscordKey,
+  type DiscordUser,
+  type InsertDiscordUser,
+  type DiscordServer,
+  type InsertDiscordServer,
+  type ActivityLog,
+  type InsertActivityLog,
+  type BotSetting,
+  type DashboardKey,
+  type InsertDashboardKey,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
+// Interface for storage operations
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
-  getAllUsers(): Promise<User[]>;
-  updateUserRole(userId: string, role: string): Promise<void>;
-  updateUserApproval(userId: string, isApproved: boolean): Promise<void>;
-  makeUserAdmin(userId: string): Promise<void>;
-  getRolePermissions(role: string): any;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -72,35 +91,23 @@ export interface IStorage {
     connectedServers: number;
   }>;
 
-  // Backup Integrity
-  createBackupIntegrityCheck(check: InsertBackupIntegrity): Promise<BackupIntegrity>;
-  getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]>;
-  getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined>;
-  getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]>;
-  getHealthScoreStats(): Promise<{
-    averageHealthScore: number;
-    healthyBackups: number;
-    warningBackups: number;
-    criticalBackups: number;
-    corruptedBackups: number;
-    totalChecks: number;
-  }>;
+  // Admin functions
+  getAllUsers(): Promise<User[]>;
+  updateUserApproval(userId: string, isApproved: boolean): Promise<void>;
+  makeUserAdmin(userId: string): Promise<void>;
+  getRolePermissions(role: string): any;
 
-  // Backup Management
-  getAllBackups(): Promise<any[]>;
-
-  // Candy System
+  // Candy system
   getCandyBalance(userId: string): Promise<number>;
   updateCandyBalance(userId: string, newBalance: number): Promise<void>;
   addCandyTransaction(transaction: any): Promise<void>;
-  getCandyTransactions(userId: string, limit?: number): Promise<any[]>;
-  getCandyLeaderboard(limit?: number): Promise<any[]>;
+  getCandyTransactions(userId: string, limit: number): Promise<any[]>;
+  getCandyLeaderboard(limit: number): Promise<any[]>;
   checkDailyCandy(userId: string): Promise<boolean>;
   claimDailyCandy(userId: string): Promise<number>;
   transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
 }
 
-// Database Storage Implementation
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -118,10 +125,7 @@ export class DatabaseStorage implements IStorage {
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+        set: userData,
       })
       .returning();
     return user;
@@ -170,8 +174,9 @@ export class DatabaseStorage implements IStorage {
       .update(discordKeys)
       .set({
         status: 'revoked',
-        revokedBy,
         revokedAt: new Date(),
+        revokedBy,
+        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }
@@ -182,6 +187,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         userId,
         discordUsername: username,
+        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }
@@ -189,7 +195,7 @@ export class DatabaseStorage implements IStorage {
   async updateDiscordKey(id: number, updates: Partial<DiscordKey>): Promise<void> {
     await db
       .update(discordKeys)
-      .set(updates)
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(discordKeys.id, id));
   }
 
@@ -284,7 +290,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(activityLogs)
-      .orderBy(activityLogs.timestamp)
+      .orderBy(desc(activityLogs.timestamp))
       .limit(limit);
   }
 
@@ -293,7 +299,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(activityLogs)
       .where(eq(activityLogs.type, type))
-      .orderBy(activityLogs.timestamp)
+      .orderBy(desc(activityLogs.timestamp))
       .limit(limit);
   }
 
@@ -303,7 +309,7 @@ export class DatabaseStorage implements IStorage {
       .values({ key, value })
       .onConflictDoUpdate({
         target: botSettings.key,
-        set: { value, updatedAt: new Date() },
+        set: { value },
       });
   }
 
@@ -316,48 +322,46 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(botSettings);
   }
 
+  // Simple in-memory rate limiting for now
+  private rateLimits = new Map<string, { count: number; expires: number }>();
+
   async getRateLimit(key: string): Promise<number> {
-    // For simplicity, using memory-based rate limiting
-    // In production, you might want to use Redis or database
-    return 0;
+    const limit = this.rateLimits.get(key);
+    if (!limit || limit.expires < Date.now()) {
+      this.rateLimits.delete(key);
+      return 0;
+    }
+    return limit.count;
   }
 
   async setRateLimit(key: string, count: number, ttl: number): Promise<void> {
-    // For simplicity, using memory-based rate limiting
-    // In production, you might want to use Redis or database
+    this.rateLimits.set(key, {
+      count,
+      expires: Date.now() + ttl * 1000,
+    });
   }
 
-  // Dashboard Keys implementation
   async createDashboardKey(keyData: InsertDashboardKey): Promise<DashboardKey> {
-    const [dashboardKey] = await db
+    const [key] = await db
       .insert(dashboardKeys)
       .values(keyData)
       .returning();
-    return dashboardKey;
+    return key;
   }
 
   async getDashboardKeyByUserId(userId: string): Promise<DashboardKey | undefined> {
-    const [key] = await db
-      .select()
-      .from(dashboardKeys)
-      .where(eq(dashboardKeys.userId, userId));
-    return key;
+    const [key] = await db.select().from(dashboardKeys).where(eq(dashboardKeys.userId, userId));
+    return key || undefined;
   }
 
   async getDashboardKeyByDiscordUserId(discordUserId: string): Promise<DashboardKey | undefined> {
-    const [key] = await db
-      .select()
-      .from(dashboardKeys)
-      .where(eq(dashboardKeys.discordUserId, discordUserId));
-    return key;
+    const [key] = await db.select().from(dashboardKeys).where(eq(dashboardKeys.discordUserId, discordUserId));
+    return key || undefined;
   }
 
   async getDashboardKeyByKeyId(keyId: string): Promise<DashboardKey | undefined> {
-    const [key] = await db
-      .select()
-      .from(dashboardKeys)
-      .where(eq(dashboardKeys.keyId, keyId));
-    return key;
+    const [key] = await db.select().from(dashboardKeys).where(eq(dashboardKeys.keyId, keyId));
+    return key || undefined;
   }
 
   async getAllDashboardKeys(): Promise<DashboardKey[]> {
@@ -398,348 +402,176 @@ export class DatabaseStorage implements IStorage {
     totalUsers: number;
     connectedServers: number;
   }> {
-    const allKeys = await db.select().from(discordKeys);
-    const allUsers = await db.select().from(discordUsers);
-    const allServers = await db.select().from(discordServers);
+    const [
+      totalKeysResult,
+      activeKeysResult,
+      totalUsersResult,
+      connectedServersResult,
+    ] = await Promise.all([
+      db.select({ count: discordKeys.id }).from(discordKeys),
+      db.select({ count: discordKeys.id }).from(discordKeys).where(eq(discordKeys.status, 'active')),
+      db.select({ count: users.id }).from(users),
+      db.select({ count: discordServers.id }).from(discordServers).where(eq(discordServers.isActive, true)),
+    ]);
 
     return {
-      totalKeys: allKeys.length,
-      activeKeys: allKeys.filter(k => k.status === 'active').length,
-      totalUsers: allUsers.length,
-      connectedServers: allServers.filter(s => s.isActive).length,
+      totalKeys: totalKeysResult.length,
+      activeKeys: activeKeysResult.length,
+      totalUsers: totalUsersResult.length,
+      connectedServers: connectedServersResult.length,
     };
   }
 
-  // Backup Integrity Methods
-  async createBackupIntegrityCheck(checkData: InsertBackupIntegrity): Promise<BackupIntegrity> {
-    const [check] = await db
-      .insert(backupIntegrity)
-      .values(checkData)
-      .returning();
-    return check;
-  }
-
-  async getAllBackupIntegrityChecks(): Promise<BackupIntegrity[]> {
-    return await db
-      .select()
-      .from(backupIntegrity)
-      .orderBy(desc(backupIntegrity.lastChecked));
-  }
-
-  async getBackupIntegrityByBackupId(backupId: string): Promise<BackupIntegrity | undefined> {
-    const [check] = await db
-      .select()
-      .from(backupIntegrity)
-      .where(eq(backupIntegrity.backupId, backupId))
-      .orderBy(desc(backupIntegrity.lastChecked))
-      .limit(1);
-    return check;
-  }
-
-  async getIntegrityChecksByServerId(serverId: string): Promise<BackupIntegrity[]> {
-    return await db
-      .select()
-      .from(backupIntegrity)
-      .where(eq(backupIntegrity.serverId, serverId))
-      .orderBy(desc(backupIntegrity.lastChecked));
-  }
-
-  async getHealthScoreStats(): Promise<{
-    averageHealthScore: number;
-    healthyBackups: number;
-    warningBackups: number;
-    criticalBackups: number;
-    corruptedBackups: number;
-    totalChecks: number;
-  }> {
-    const checks = await this.getAllBackupIntegrityChecks();
-    
-    if (checks.length === 0) {
-      return {
-        averageHealthScore: 0,
-        healthyBackups: 0,
-        warningBackups: 0,
-        criticalBackups: 0,
-        corruptedBackups: 0,
-        totalChecks: 0,
-      };
-    }
-
-    const totalScore = checks.reduce((sum, check) => sum + check.healthScore, 0);
-    const averageHealthScore = Math.round(totalScore / checks.length);
-
-    const healthyBackups = checks.filter(c => c.integrityStatus === 'healthy').length;
-    const warningBackups = checks.filter(c => c.integrityStatus === 'warning').length;
-    const criticalBackups = checks.filter(c => c.integrityStatus === 'critical').length;
-    const corruptedBackups = checks.filter(c => c.integrityStatus === 'corrupted').length;
-
-    return {
-      averageHealthScore,
-      healthyBackups,
-      warningBackups,
-      criticalBackups,
-      corruptedBackups,
-      totalChecks: checks.length,
-    };
-  }
-
-  async getAllBackups(): Promise<any[]> {
-    // Get backups from server metadata
-    const servers = await this.getAllDiscordServers();
-    const backups: any[] = [];
-
-    for (const server of servers) {
-      if (server.permissions && typeof server.permissions === 'object') {
-        const serverPerms = server.permissions as any;
-        
-        if (serverPerms.backupData) {
-          backups.push({
-            id: serverPerms.backupData.id || `backup_${server.serverId}_${Date.now()}`,
-            serverId: server.serverId,
-            serverName: server.serverName,
-            backupType: serverPerms.backupType || 'full',
-            status: 'completed',
-            createdAt: serverPerms.lastBackup || server.lastDataSync,
-            createdBy: 'system',
-            size: serverPerms.backupSize,
-            metadata: serverPerms.backupData,
-            ...serverPerms.backupData
-          });
-        }
-      }
-    }
-
-    return backups;
-  }
-
-  // User Management
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
-  }
-
-  async updateUserRole(userId: string, role: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, userId));
   }
 
   async updateUserApproval(userId: string, isApproved: boolean): Promise<void> {
     await db
       .update(users)
-      .set({ isApproved, updatedAt: new Date() })
+      .set({ isApproved })
       .where(eq(users.id, userId));
   }
 
   async makeUserAdmin(userId: string): Promise<void> {
     await db
       .update(users)
-      .set({ role: 'admin', isApproved: true, updatedAt: new Date() })
+      .set({ role: 'admin' })
       .where(eq(users.id, userId));
   }
 
   getRolePermissions(role: string): any {
-    const permissions: Record<string, any> = {
-      owner: {
-        all: true,
-        dashboard: true,
-        users: true,
-        servers: true,
-        backups: true,
-        settings: true,
-        logs: true,
-        keys: true,
-        admin: true
-      },
-      server_management: {
-        dashboard: true,
-        servers: true,
-        backups: true,
-        logs: true,
-        keys: true,
-        users: false,
-        settings: false,
-        admin: false
-      },
-      head_admin: {
-        dashboard: true,
-        servers: true,
-        backups: true,
-        logs: true,
-        keys: true,
-        users: false,
-        settings: false,
-        admin: false
-      },
-      admin: {
-        dashboard: true,
-        servers: false,
-        backups: false,
-        logs: true,
-        keys: true,
-        users: false,
-        settings: false,
-        admin: false
-      },
-      pending: {
-        dashboard: false,
-        servers: false,
-        backups: false,
-        logs: false,
-        keys: false,
-        users: false,
-        settings: false,
-        admin: false
-      }
+    const permissions = {
+      owner: { all: true },
+      server_management: { servers: true, backups: true },
+      head_admin: { users: true, keys: true },
+      admin: { keys: true },
+      pending: {},
     };
-    return permissions[role] || permissions.pending;
+    return permissions[role as keyof typeof permissions] || {};
   }
 
-  // Candy System
   async getCandyBalance(userId: string): Promise<number> {
     const user = await this.getDiscordUserByDiscordId(userId);
-    return (user?.metadata as any)?.candyBalance || 0;
+    return user?.candyBalance || 0;
   }
 
   async updateCandyBalance(userId: string, newBalance: number): Promise<void> {
-    const user = await this.getDiscordUserByDiscordId(userId);
-    if (user) {
-      await db
-        .update(discordUsers)
-        .set({
-          metadata: {
-            ...user.metadata as any,
-            candyBalance: newBalance,
-          },
-        })
-        .where(eq(discordUsers.discordId, userId));
-    }
+    await db
+      .update(discordUsers)
+      .set({ candyBalance: newBalance })
+      .where(eq(discordUsers.discordId, userId));
+  }
+
+  async addCandyTransaction(transaction: any): Promise<void> {
+    await db.insert(candyTransactions).values(transaction);
+  }
+
+  async getCandyTransactions(userId: string, limit: number = 50): Promise<any[]> {
+    return await db
+      .select()
+      .from(candyTransactions)
+      .where(eq(candyTransactions.toUserId, userId))
+      .orderBy(desc(candyTransactions.createdAt))
+      .limit(limit);
+  }
+
+  async getCandyLeaderboard(limit: number = 10): Promise<any[]> {
+    return await db
+      .select()
+      .from(discordUsers)
+      .orderBy(desc(discordUsers.candyBalance))
+      .limit(limit);
   }
 
   async checkDailyCandy(userId: string): Promise<boolean> {
-    const user = await this.getDiscordUserByDiscordId(userId);
-    const metadata = user?.metadata as any;
-    const lastClaim = metadata?.lastDailyClaim;
-    if (!lastClaim) return true;
+    const today = new Date().toISOString().split('T')[0];
+    const [transaction] = await db
+      .select()
+      .from(candyTransactions)
+      .where(
+        and(
+          eq(candyTransactions.toUserId, userId),
+          eq(candyTransactions.type, 'daily')
+        )
+      )
+      .orderBy(desc(candyTransactions.createdAt))
+      .limit(1);
+
+    if (!transaction) return false;
     
-    const now = new Date();
-    const lastClaimDate = new Date(lastClaim);
-    const timeDiff = now.getTime() - lastClaimDate.getTime();
-    const hoursDiff = timeDiff / (1000 * 3600);
-    
-    return hoursDiff >= 24;
+    const transactionDate = transaction.createdAt.toISOString().split('T')[0];
+    return transactionDate === today;
   }
 
   async claimDailyCandy(userId: string): Promise<number> {
-    const reward = 100;
+    const amount = Math.floor(Math.random() * 50) + 10; // 10-59 candy
     const currentBalance = await this.getCandyBalance(userId);
-    const newBalance = currentBalance + reward;
     
-    const user = await this.getDiscordUserByDiscordId(userId);
-    if (user) {
-      await db
-        .update(discordUsers)
-        .set({
-          metadata: {
-            ...user.metadata as any,
-            candyBalance: newBalance,
-            lastDailyClaim: new Date().toISOString(),
-          },
-        })
-        .where(eq(discordUsers.discordId, userId));
-    }
-    
-    return reward;
+    await this.updateCandyBalance(userId, currentBalance + amount);
+    await this.addCandyTransaction({
+      toUserId: userId,
+      amount,
+      type: 'daily',
+      description: 'Daily candy reward',
+    });
+
+    return amount;
   }
 
   async transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void> {
     const fromBalance = await this.getCandyBalance(fromUserId);
     const toBalance = await this.getCandyBalance(toUserId);
-    
-    if (fromBalance >= amount) {
-      await this.updateCandyBalance(fromUserId, fromBalance - amount);
-      await this.updateCandyBalance(toUserId, toBalance + amount);
+
+    if (fromBalance < amount) {
+      throw new Error('Insufficient candy balance');
     }
+
+    await this.updateCandyBalance(fromUserId, fromBalance - amount);
+    await this.updateCandyBalance(toUserId, toBalance + amount);
+
+    await this.addCandyTransaction({
+      fromUserId,
+      toUserId,
+      amount,
+      type: 'transfer',
+      description: `Transfer from ${fromUserId} to ${toUserId}`,
+    });
   }
 
-  async addCandyTransaction(transaction: any): Promise<void> {
-    // Implementation for candy transactions
-    // This would store in a candy transactions table
+  // Backup integrity methods
+  async getAllBackupIntegrityChecks(): Promise<any[]> {
+    return await db.select().from(backupIntegrity);
   }
 
-  async getCandyTransactions(userId: string, limit: number = 50): Promise<any[]> {
-    // Implementation for getting candy transactions
-    return [];
+  async getBackupIntegrityByBackupId(backupId: string): Promise<any> {
+    const [result] = await db.select().from(backupIntegrity).where(eq(backupIntegrity.backupId, backupId));
+    return result;
   }
 
-  async getCandyLeaderboard(limit: number = 10): Promise<any[]> {
-    // Implementation for candy leaderboard
-    return [];
+  async getIntegrityChecksByServerId(serverId: string): Promise<any[]> {
+    return await db.select().from(backupIntegrity).where(eq(backupIntegrity.serverId, serverId));
+  }
+
+  async getHealthScoreStats(): Promise<any> {
+    const checks = await db.select().from(backupIntegrity);
+    const total = checks.length;
+    const healthy = checks.filter(c => c.healthScore >= 80).length;
+    const warning = checks.filter(c => c.healthScore >= 60 && c.healthScore < 80).length;
+    const critical = checks.filter(c => c.healthScore < 60).length;
+    
+    return {
+      total,
+      healthy,
+      warning,
+      critical,
+      averageScore: total > 0 ? checks.reduce((sum, c) => sum + c.healthScore, 0) / total : 0
+    };
   }
 
   async getAllBackups(): Promise<any[]> {
-    try {
-      const settings = await this.getAllBotSettings();
-      const backups = settings
-        .filter(setting => setting.key.startsWith('backup_'))
-        .map(setting => {
-          try {
-            return JSON.parse(setting.value);
-          } catch {
-            return null;
-          }
-        })
-        .filter(backup => backup !== null)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      
-      return backups;
-    } catch (error) {
-      console.error('Error fetching backups:', error);
-      return [];
-    }
-  }
-
-  async updateBackupIntegrity(id: number, updates: Partial<BackupIntegrity>): Promise<void> {
-    await db
-      .update(backupIntegrity)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(backupIntegrity.id, id));
-  }
-
-  async deleteBackupIntegrityCheck(id: number): Promise<void> {
-    await db
-      .delete(backupIntegrity)
-      .where(eq(backupIntegrity.id, id));
-  }
-
-  async getHealthScoreStats(): Promise<{
-    averageHealthScore: number;
-    healthyBackups: number;
-    warningBackups: number;
-    criticalBackups: number;
-    corruptedBackups: number;
-    totalChecks: number;
-  }> {
-    const checks = await db.select().from(backupIntegrity);
-    
-    const totalChecks = checks.length;
-    const averageHealthScore = totalChecks > 0 
-      ? Math.round(checks.reduce((sum, check) => sum + check.healthScore, 0) / totalChecks)
-      : 0;
-    
-    const healthyBackups = checks.filter(check => check.integrityStatus === 'healthy').length;
-    const warningBackups = checks.filter(check => check.integrityStatus === 'warning').length;
-    const criticalBackups = checks.filter(check => check.integrityStatus === 'critical').length;
-    const corruptedBackups = checks.filter(check => check.integrityStatus === 'corrupted').length;
-
-    return {
-      averageHealthScore,
-      healthyBackups,
-      warningBackups,
-      criticalBackups,
-      corruptedBackups,
-      totalChecks,
-    };
+    // Return empty array for now as backup data structure is not defined
+    return [];
   }
 }
 

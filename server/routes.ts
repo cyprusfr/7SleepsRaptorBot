@@ -493,6 +493,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Discord servers
+  app.get("/api/servers", async (req, res) => {
+    try {
+      const servers = await storage.getAllDiscordServers();
+      const botStats = raptorBot.getStats();
+      
+      // Enhance server data with real Discord guild information
+      const enhancedServers = servers.map(server => ({
+        id: server.id,
+        serverId: server.serverId,
+        serverName: server.serverName,
+        memberCount: server.memberCount || 0,
+        isActive: server.isActive,
+        lastDataSync: server.lastDataSync?.toISOString() || new Date().toISOString(),
+      }));
+      
+      res.json(enhancedServers);
+    } catch (error) {
+      console.error("Error fetching servers:", error);
+      res.status(500).json({ error: "Failed to fetch servers" });
+    }
+  });
+
+  // Dashboard keys
+  app.get("/api/keys", async (req, res) => {
+    try {
+      const keys = await storage.getAllDashboardKeys();
+      
+      // Format keys for dashboard display
+      const formattedKeys = keys.map(key => ({
+        id: key.id,
+        keyId: key.keyId,
+        discordUsername: key.discordUsername,
+        discordUserId: key.discordUserId,
+        status: key.status,
+        generatedAt: key.generatedAt?.toISOString(),
+        lastAccessAt: key.lastAccessAt?.toISOString(),
+        isLinked: !!key.userId,
+        linkedEmail: key.linkedEmail,
+      }));
+      
+      res.json(formattedKeys);
+    } catch (error) {
+      console.error("Error fetching keys:", error);
+      res.status(500).json({ error: "Failed to fetch keys" });
+    }
+  });
+
+  // Activity logs
+  app.get("/api/activity", async (req, res) => {
+    try {
+      const activities = await storage.getActivityLogs(50); // Get last 50 activities
+      
+      // Format activities for dashboard display
+      const formattedActivities = activities.map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        description: activity.description,
+        timestamp: activity.timestamp?.toISOString(),
+        metadata: activity.metadata,
+      }));
+      
+      res.json(formattedActivities);
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+
+  // Candy statistics
+  app.get("/api/candy/stats", async (req, res) => {
+    try {
+      const candyTransactions = await storage.getAllCandyTransactions();
+      
+      // Calculate total candy in circulation
+      const totalCandy = candyTransactions
+        .filter(t => t.type === 'daily' || t.type === 'game_win')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      // Count recent game activities (last 24 hours)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const activeGames = candyTransactions
+        .filter(t => t.type === 'game_win' && t.createdAt > oneDayAgo)
+        .length;
+      
+      res.json({
+        totalCandy,
+        activeGames,
+      });
+    } catch (error) {
+      console.error("Error fetching candy stats:", error);
+      res.status(500).json({ error: "Failed to fetch candy stats" });
+    }
+  });
+
   app.get("/api/users/:discordId", async (req, res) => {
     try {
       const user = await storage.getDiscordUserByDiscordId(req.params.discordId);

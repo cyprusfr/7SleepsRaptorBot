@@ -408,24 +408,50 @@ export class DatabaseStorage implements IStorage {
     activeKeys: number;
     totalUsers: number;
     connectedServers: number;
+    botStatus: "online" | "offline";
+    lastSync: string;
+    totalCandy?: number;
+    activeGames?: number;
+    systemHealth?: "healthy" | "warning" | "critical";
+    uptime?: number;
   }> {
     const [
-      totalKeysResult,
-      activeKeysResult,
-      totalUsersResult,
-      connectedServersResult,
+      allKeys,
+      allUsers,
+      allServers,
+      allCandyTransactions,
     ] = await Promise.all([
-      db.select({ count: discordKeys.id }).from(discordKeys),
-      db.select({ count: discordKeys.id }).from(discordKeys).where(eq(discordKeys.status, 'active')),
-      db.select({ count: users.id }).from(users),
-      db.select({ count: discordServers.id }).from(discordServers).where(eq(discordServers.isActive, true)),
+      db.select().from(discordKeys),
+      db.select().from(discordUsers),
+      db.select().from(discordServers),
+      db.select().from(candyTransactions),
     ]);
 
+    // Calculate total candy in circulation
+    const totalCandy = allCandyTransactions
+      .filter(t => t.type === 'daily' || t.type === 'game_win')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Count recent game activities (last 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeGames = allCandyTransactions
+      .filter(t => t.type === 'game_win' && t.createdAt > oneDayAgo)
+      .length;
+
+    // Get bot statistics from Discord client
+    const { raptorBot } = await import('./discord-bot');
+    const botStats = raptorBot.getStats();
+    
     return {
-      totalKeys: totalKeysResult.length,
-      activeKeys: activeKeysResult.length,
-      totalUsers: totalUsersResult.length,
-      connectedServers: connectedServersResult.length,
+      totalKeys: allKeys.length,
+      activeKeys: allKeys.filter(k => k.status === 'active').length,
+      totalUsers: allUsers.length,
+      connectedServers: allServers.filter(s => s.isActive).length,
+      botStatus: raptorBot.isOnline() ? "online" : "offline",
+      lastSync: new Date().toISOString(),
+      totalCandy,
+      activeGames,
+      uptime: botStats.uptime ? Math.floor(botStats.uptime / 1000) : 0,
     };
   }
 

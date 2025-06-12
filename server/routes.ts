@@ -159,6 +159,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force clear all authentication state
+  app.post("/api/auth/force-clear", async (req, res) => {
+    try {
+      // Destroy session
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+      
+      // Clear cookies
+      res.clearCookie('connect.sid');
+      res.clearCookie('dashboard_key');
+      
+      // Force logout
+      if (req.logout) {
+        req.logout(() => {});
+      }
+      
+      res.json({ success: true, message: "All auth state cleared" });
+    } catch (error) {
+      console.error("Force clear error:", error);
+      res.status(500).json({ error: "Failed to force clear" });
+    }
+  });
+
   // Dashboard key authentication status
   app.get("/api/dashboard-keys/auth-status", async (req, res) => {
     try {

@@ -87,22 +87,16 @@ export default function KeyTable({
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Key ID
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Key Details
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User Information
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  HWID
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status & Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -110,51 +104,117 @@ export default function KeyTable({
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedKeys.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                    No keys found
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <span className="text-2xl">🔑</span>
+                      </div>
+                      <p className="text-lg font-medium text-gray-900 mb-2">No keys found</p>
+                      <p className="text-sm text-gray-500">Generate your first Discord key to get started</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 paginatedKeys.map((key) => (
-                  <tr key={key.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono text-gray-900">
-                        {key.keyId}
-                      </span>
+                  <tr key={key.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-6">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span className="text-blue-600 font-bold text-sm">🔑</span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900 mb-1">
+                              Key ID
+                            </div>
+                            <div className="text-sm font-mono bg-gray-50 px-3 py-1 rounded-md border">
+                              {key.keyId.substring(0, 20)}...
+                            </div>
+                          </div>
+                        </div>
+                        {key.hwid && (
+                          <div className="text-xs text-gray-500 ml-13">
+                            HWID: <span className="font-mono">{key.hwid.substring(0, 16)}...</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-discord-primary/10 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-xs font-medium text-discord-primary">
+                    <td className="px-6 py-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-discord-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-discord-primary">
                             {key.discordUsername?.[0]?.toUpperCase() || "?"}
                           </span>
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {key.discordUsername || "Unknown User"}
+                            {key.discordUsername || "Unlinked Key"}
                           </div>
-                          {key.userId && (
-                            <div className="text-sm text-gray-500">
-                              ID: {key.userId}
+                          {key.userId ? (
+                            <div className="text-xs text-gray-500">
+                              User ID: {key.userId}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-amber-600">
+                              Not linked to user
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono text-gray-500">
-                        {key.hwid || "Not specified"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          statusColors[key.status as keyof typeof statusColors] ||
-                          "bg-gray-100 text-gray-800"
+                    <td className="px-6 py-6">
+                      <div className="flex flex-col space-y-2">
+                        <Badge
+                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full w-fit ${
+                            statusColors[key.status as keyof typeof statusColors] ||
+                            "bg-gray-100 text-gray-800"
                         }`}
                       >
                         {key.status.charAt(0).toUpperCase() + key.status.slice(1)}
                       </Badge>
+                        <div className="text-xs text-gray-500">
+                          Created {formatDistanceToNow(new Date(key.createdAt), { addSuffix: true })}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewKey?.(key.keyId)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="View Key Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {key.status === "active" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRevokeKey?.(key.keyId)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Revoke Key"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRestoreKey?.(key.keyId)}
+                            className="text-green-600 hover:text-green-800"
+                            title="Restore Key"
+                          >
+                            <Undo className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDistanceToNow(new Date(key.createdAt), { addSuffix: true })}

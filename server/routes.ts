@@ -143,6 +143,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear session endpoint for testing
+  app.post("/api/auth/clear-session", async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ error: "Failed to clear session" });
+        }
+        res.json({ success: true, message: "Session cleared" });
+      });
+    } catch (error) {
+      console.error("Error clearing session:", error);
+      res.status(500).json({ error: "Failed to clear session" });
+    }
+  });
+
   // Dashboard key authentication status
   app.get("/api/dashboard-keys/auth-status", async (req, res) => {
     try {
@@ -155,6 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dashboardKey = await storage.getDashboardKeyByKeyId(sessionKeyId);
       
       if (!dashboardKey || dashboardKey.status !== 'active') {
+        // Clear invalid session
+        delete (req.session as any).dashboardKeyId;
         return res.json({ authenticated: false });
       }
 

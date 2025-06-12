@@ -394,33 +394,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Discord user ID is required" });
       }
 
-      // Generate verification code
-      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Generate verification token
+      const verificationToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
       
       // Store pending verification in session
       (req.session as any).pendingDiscordVerification = {
         discordUserId,
-        verificationCode,
+        verificationToken,
         googleUserId: googleUser.id,
         googleEmail: googleUser.email,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        verified: false
       };
 
+      // Create verification link
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const verificationLink = `${baseUrl}/api/auth/verify-discord-link?token=${verificationToken}&discord=${discordUserId}`;
+      
       // For now, simulate Discord DM functionality
       const discordUsername = `User#${discordUserId.slice(-4)}`;
       
       // TODO: Send actual DM when Discord bot is configured
-      console.log(`Would send verification code ${verificationCode} to Discord user ${discordUserId}`);
+      console.log(`Would send verification link ${verificationLink} to Discord user ${discordUserId}`);
       
       res.json({
         discordUserId,
         discordUsername,
-        verificationCode,
+        verificationLink,
         isVerified: false
       });
     } catch (error) {
       console.error("Error linking Discord:", error);
       res.status(500).json({ error: "Failed to initiate Discord linking" });
+    }
+  });
+
+  // Discord Link Verification Endpoint
+  app.get("/api/auth/verify-discord-link", async (req, res) => {
+    try {
+      const { token, discord } = req.query;
+      
+      if (!token || !discord) {
+        return res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>Verification Error</title></head>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+              <h1 style="color: #e74c3c;">❌ Invalid Link</h1>
+              <p>This verification link is invalid or malformed.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      // Store successful verification in a temporary store
+      // In production, this would use Redis or database
+      global.verifiedTokens = global.verifiedTokens || new Map();
+      global.verifiedTokens.set(token as string, {
+        discordId: discord as string,
+        verifiedAt: Date.now()
+      });
+      
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Discord Linked!</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+                padding: 50px; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+              }
+              .container {
+                background: rgba(255,255,255,0.1);
+                padding: 40px;
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+              }
+              h1 { color: #4CAF50; margin-bottom: 20px; }
+              .discord-id { font-family: monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; }
+              .close-btn { 
+                background: #4CAF50; 
+                color: white; 
+                border: none; 
+                padding: 15px 30px; 
+                border-radius: 25px; 
+                cursor: pointer; 
+                font-size: 16px;
+                margin-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>✅ Discord Account Linked!</h1>
+              <p>Your Discord account has been successfully verified.</p>
+              <div class="discord-id">Discord ID: ${discord}</div>
+              <p>You can now close this tab and continue with the authentication process.</p>
+              <button class="close-btn" onclick="window.close()">Close Tab</button>
+              <script>
+                // Automatically notify parent window if opened in popup
+                if (window.opener) {
+                  window.opener.postMessage({
+                    type: 'DISCORD_VERIFIED',
+                    discordId: '${discord}',
+                    token: '${token}'
+                  }, '*');
+                }
+                
+                // Auto-close after 5 seconds
+                setTimeout(() => {
+                  window.close();
+                }, 5000);
+              </script>
+            </div>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error("Error handling Discord verification link:", error);
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Verification Error</title></head>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #e74c3c;">❌ Error</h1>
+            <p>An error occurred during verification. Please try again.</p>
+          </body>
+        </html>
+      `);
     }
   });
 

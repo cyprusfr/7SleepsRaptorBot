@@ -4,15 +4,11 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const { data: dashboardAuth, isLoading: isDashboardAuthLoading } = useQuery({
     queryKey: ["/api/dashboard-keys/auth-status"],
     retry: false,
-    staleTime: 0,
-    gcTime: 0,
   });
 
   const isAuthenticated = !!user;

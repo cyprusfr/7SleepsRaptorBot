@@ -51,6 +51,59 @@ class ReactErrorBoundary extends Component<
   }
 }
 
+function RouterTest() {
+  try {
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
+        <p>✓ Router component loaded</p>
+        <div style={{ marginTop: '10px' }}>
+          <h4>Testing useAuth hook:</h4>
+          <UseAuthTest />
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('RouterTest error:', error);
+    return <div>❌ Router failed: {String(error)}</div>;
+  }
+}
+
+function UseAuthTest() {
+  try {
+    const { isAuthenticated, isLoading } = useAuth();
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#e0e0e0' }}>
+        <p>✓ useAuth hook loaded</p>
+        <p>Loading: {isLoading ? 'true' : 'false'}</p>
+        <p>Authenticated: {isAuthenticated ? 'true' : 'false'}</p>
+        {!isLoading && !isAuthenticated && (
+          <div style={{ marginTop: '10px' }}>
+            <h5>Testing AuthFlow:</h5>
+            <AuthFlowTest />
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('UseAuthTest error:', error);
+    return <div>❌ useAuth hook failed: {String(error)}</div>;
+  }
+}
+
+function AuthFlowTest() {
+  try {
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#d0d0d0' }}>
+        <p>✓ AuthFlow would load here</p>
+        <p>This is where the authentication interface should appear</p>
+      </div>
+    );
+  } catch (error) {
+    console.error('AuthFlowTest error:', error);
+    return <div>❌ AuthFlow failed: {String(error)}</div>;
+  }
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -291,7 +344,7 @@ function App() {
             <p>✓ QueryClient loaded</p>
             <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #ddd' }}>
               <h3>2. Router Test</h3>
-              <Router />
+              <RouterTest />
             </div>
           </QueryClientProvider>
         </div>

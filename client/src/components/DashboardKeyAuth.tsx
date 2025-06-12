@@ -48,24 +48,25 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
   const linkAccountMutation = useMutation({
     mutationFn: async (shouldLink: boolean) => {
       return await apiRequest("/api/dashboard-keys/link", "POST", { 
-        keyId: keyInput, 
-        linkToAccount: shouldLink 
+        keyId: keyData?.keyId,
+        shouldLink 
       });
     },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Authentication Complete",
-        description: data.linked 
-          ? "Key linked to your account successfully." 
-          : "Temporary access granted.",
-      });
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard-keys/auth-status"] });
+      
+      toast({
+        title: "Success",
+        description: data.linked ? "Dashboard key linked to your account!" : "Access granted with dashboard key.",
+      });
+      
       onAuthenticated();
     },
     onError: (error: any) => {
       toast({
-        title: "Authentication Failed",
-        description: error.message || "Failed to authenticate with dashboard key.",
+        title: "Error",
+        description: error.message || "Failed to process account linking.",
         variant: "destructive",
       });
     },
@@ -75,8 +76,8 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
     e.preventDefault();
     if (!keyInput.trim()) {
       toast({
-        title: "Invalid Input",
-        description: "Please enter a valid dashboard key.",
+        title: "Error",
+        description: "Please enter a dashboard key.",
         variant: "destructive",
       });
       return;
@@ -98,7 +99,7 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
           </div>
           <CardTitle className="text-2xl">Access Raptor Dashboard</CardTitle>
           <CardDescription>
-            Enter your dashboard key or authenticate with Google to manage your Discord bot
+            Enter your dashboard key to manage your Discord bot
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -154,37 +155,41 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
               )}
             </div>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            {/* Google OAuth Alternative */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Google Account</h3>
-              <Button 
-                onClick={() => window.location.href = '/api/auth/google'}
-                className="w-full"
-                variant="outline"
-                size="lg"
-              >
-                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Continue with Google
-              </Button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Sign in with Google to link your dashboard key later
-              </p>
-            </div>
+            {/* Google OAuth Alternative - Only shown after valid key */}
+            {isKeyValid && keyData && (
+              <>
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">Continue with Google</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Link to Google Account</h3>
+                  <Button 
+                    onClick={() => window.location.href = '/api/auth/google'}
+                    className="w-full"
+                    variant="outline"
+                    size="lg"
+                  >
+                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Link your dashboard key to your Google account for easier access
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -192,46 +197,45 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
       <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Link Account to Key?
-            </DialogTitle>
-            <DialogDescription className="space-y-2">
-              <p>
-                Would you like to link this dashboard key to your current account?
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                <p className="text-sm font-medium text-blue-800 mb-1">If you choose "Yes":</p>
-                <ul className="text-xs text-blue-700 space-y-1 ml-4">
-                  <li>• Key will be permanently linked to your account</li>
-                  <li>• Only you can use this key</li>
-                  <li>• Enhanced security and audit logging</li>
-                </ul>
+            <DialogTitle>Link to Google Account?</DialogTitle>
+            <DialogDescription>
+              <p>Your dashboard key is valid and you can access the bot management interface.</p>
+              
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Key Details</span>
+                </div>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <div><strong>Key ID:</strong> {keyData?.keyId}</div>
+                  <div><strong>Discord User:</strong> {keyData?.discordUsername}</div>
+                  <div><strong>Created:</strong> {keyData?.createdAt ? new Date(keyData.createdAt).toLocaleDateString() : 'Unknown'}</div>
+                </div>
               </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-orange-800 mb-1">If you choose "No":</p>
-                <ul className="text-xs text-orange-700 space-y-1 ml-4">
-                  <li>• Key remains shareable</li>
-                  <li>• Other users can still access with this key</li>
-                  <li>• Temporary session only</li>
+              
+              <div className="mt-4">
+                <p className="text-sm">Would you like to link this dashboard key to your Google account? This will allow you to:</p>
+                <ul className="text-xs mt-2 space-y-1 list-disc list-inside text-gray-600">
+                  <li>Access the dashboard without entering your key each time</li>
+                  <li>Manage multiple dashboard keys from one account</li>
+                  <li>Enhanced security and easier account recovery</li>
                 </ul>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               onClick={() => handleLinkAccount(false)}
               disabled={linkAccountMutation.isPending}
             >
-              No, Keep Shareable
+              Skip Linking
             </Button>
-            <Button
+            <Button 
               onClick={() => handleLinkAccount(true)}
               disabled={linkAccountMutation.isPending}
             >
-              <Shield className="w-4 h-4 mr-2" />
-              Yes, Link to Account
+              {linkAccountMutation.isPending ? "Processing..." : "Link Account"}
             </Button>
           </DialogFooter>
         </DialogContent>

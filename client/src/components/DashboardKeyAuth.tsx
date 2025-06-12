@@ -96,21 +96,84 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
           <div className="mx-auto w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-4">
             <Key className="w-6 h-6 text-white" />
           </div>
-          <CardTitle className="text-2xl">Dashboard Access</CardTitle>
+          <CardTitle className="text-2xl">Access Raptor Dashboard</CardTitle>
           <CardDescription>
-            Choose your authentication method to access the Raptor Bot management interface
+            Enter your dashboard key or authenticate with Google to manage your Discord bot
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Google OAuth Login */}
-            <div className="text-center">
+            {/* Dashboard Key Form - Primary Method */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Dashboard Key Access</h3>
+              <form onSubmit={handleKeySubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="dashboardKey" className="text-sm font-medium">
+                    Dashboard Key
+                  </label>
+                  <Input
+                    id="dashboardKey"
+                    type="password"
+                    placeholder="Enter your dashboard key..."
+                    value={keyInput}
+                    onChange={(e) => setKeyInput(e.target.value)}
+                    className="font-mono"
+                    disabled={validateKeyMutation.isPending}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Dashboard keys start with "dash_" followed by 15 characters
+                  </p>
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={validateKeyMutation.isPending || !keyInput.trim()}
+                >
+                  {validateKeyMutation.isPending ? "Validating..." : "Authenticate"}
+                </Button>
+              </form>
+
+              {isKeyValid && keyData && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">Key Verified</span>
+                  </div>
+                  <div className="text-xs text-green-700 space-y-1">
+                    <p>Created: {new Date(keyData.createdAt).toLocaleDateString()}</p>
+                    <p>Discord User: {keyData.discordUsername}</p>
+                    {keyData.isLinked && (
+                      <Badge variant="secondary" className="mt-1">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Already Linked
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            {/* Google OAuth Alternative */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Google Account</h3>
               <Button 
                 onClick={() => window.location.href = '/api/auth/google'}
                 className="w-full"
                 variant="outline"
+                size="lg"
               >
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                   <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -118,64 +181,10 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
                 </svg>
                 Continue with Google
               </Button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Sign in with Google to link your dashboard key later
+              </p>
             </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or use dashboard key</span>
-              </div>
-            </div>
-
-            {/* Dashboard Key Form */}
-            <form onSubmit={handleKeySubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="dashboardKey" className="text-sm font-medium">
-                  Dashboard Key
-                </label>
-                <Input
-                  id="dashboardKey"
-                  type="password"
-                  placeholder="Enter your dashboard key..."
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  className="font-mono"
-                  disabled={validateKeyMutation.isPending}
-                />
-                <p className="text-xs text-gray-500">
-                  Dashboard keys start with "dash_" followed by 15 characters
-                </p>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={validateKeyMutation.isPending || !keyInput.trim()}
-              >
-                {validateKeyMutation.isPending ? "Validating..." : "Authenticate"}
-              </Button>
-            </form>
-
-            {isKeyValid && keyData && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Key Verified</span>
-                </div>
-                <div className="text-xs text-green-700 space-y-1">
-                  <p>Created: {new Date(keyData.createdAt).toLocaleDateString()}</p>
-                  <p>Discord User: {keyData.discordUsername}</p>
-                  {keyData.isLinked && (
-                    <Badge variant="secondary" className="mt-1">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Already Linked
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

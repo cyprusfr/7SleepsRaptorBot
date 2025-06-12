@@ -4,7 +4,7 @@ import SimpleApp from "./SimpleApp";
 import "./index.css";
 
 // Temporary diagnostic mode to identify the blank screen issue
-const useSimpleApp = true;
+const useSimpleApp = false;
 
 createRoot(document.getElementById("root")!).render(
   useSimpleApp ? <SimpleApp /> : <App />

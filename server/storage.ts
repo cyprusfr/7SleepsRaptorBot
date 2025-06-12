@@ -91,6 +91,13 @@ export interface IStorage {
     connectedServers: number;
   }>;
 
+  // Backup Integrity
+  getAllBackupIntegrityChecks(): Promise<any[]>;
+  getBackupIntegrityByBackupId(backupId: string): Promise<any>;
+  getIntegrityChecksByServerId(serverId: string): Promise<any[]>;
+  getHealthScoreStats(): Promise<any>;
+  getAllBackups(): Promise<any[]>;
+
   // Admin functions
   getAllUsers(): Promise<User[]>;
   updateUserApproval(userId: string, isApproved: boolean): Promise<void>;

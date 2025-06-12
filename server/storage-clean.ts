@@ -94,10 +94,7 @@ export class DatabaseStorage implements IStorage {
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+        set: userData,
       })
       .returning();
     return user;
@@ -145,7 +142,6 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(discordKeys)
       .set({
-        status: 'revoked',
         revokedAt: new Date(),
         revokedBy,
       })
@@ -158,6 +154,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         userId,
         discordUsername: username,
+        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }

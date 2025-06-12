@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         keyId: dashboardKey.keyId,
         discordUsername: dashboardKey.discordUsername,
         discordUserId: dashboardKey.discordUserId,
-        createdAt: dashboardKey.createdAt,
+        generatedAt: dashboardKey.generatedAt,
         isLinked: !!dashboardKey.userId
       });
     } catch (error) {

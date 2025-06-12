@@ -402,7 +402,7 @@ function App() {
           <TooltipProvider>
             <ReactErrorBoundary fallback={<FallbackApp />}>
               <Toaster />
-              <SafeRouter />
+              <Router />
             </ReactErrorBoundary>
           </TooltipProvider>
         </QueryClientProvider>

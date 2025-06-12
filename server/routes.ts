@@ -189,22 +189,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionKeyId = (req.session as any).dashboardKeyId;
       
       if (!sessionKeyId) {
-        return res.json({ authenticated: false });
+        return res.json({ 
+          authenticated: false,
+          isLinked: false,
+          hasValidSession: false
+        });
       }
 
       const dashboardKey = await storage.getDashboardKeyByKeyId(sessionKeyId);
       
       if (!dashboardKey || dashboardKey.status !== 'active') {
-        // Clear invalid session
+        // Clear invalid session and force fresh authentication
         delete (req.session as any).dashboardKeyId;
-        return res.json({ authenticated: false });
+        req.session.save(() => {});
+        return res.json({ 
+          authenticated: false,
+          isLinked: false,
+          hasValidSession: false,
+          invalidSessionCleared: true
+        });
       }
 
       res.json({ 
         authenticated: true,
         keyId: dashboardKey.keyId,
         isLinked: !!dashboardKey.userId,
-        discordUsername: dashboardKey.discordUsername
+        discordUsername: dashboardKey.discordUsername,
+        hasValidSession: true
       });
     } catch (error) {
       console.error("Error checking dashboard key status:", error);

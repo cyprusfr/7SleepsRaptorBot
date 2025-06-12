@@ -19,10 +19,13 @@ import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading, dashboardKeyRequired, hasDashboardKey } = useAuth();
-
-  // Show dashboard key auth if not authenticated and no dashboard key
-  const shouldShowDashboardAuth = !isAuthenticated && !hasDashboardKey && !isLoading;
+  const { 
+    isAuthenticated, 
+    isLoading, 
+    shouldShowGoogleLogin, 
+    shouldShowDashboardKeyEntry,
+    hasLinkedKey 
+  } = useAuth();
 
   if (isLoading) {
     return (
@@ -35,7 +38,13 @@ function Router() {
     );
   }
 
-  if (shouldShowDashboardAuth) {
+  // If user has Google auth but no linked dashboard key, show dashboard key entry
+  if (shouldShowDashboardKeyEntry) {
+    return <DashboardKeyAuth onAuthenticated={() => window.location.reload()} />;
+  }
+
+  // If no Google auth and no dashboard key, show Google login
+  if (shouldShowGoogleLogin) {
     return <DashboardKeyAuth onAuthenticated={() => window.location.reload()} />;
   }
 

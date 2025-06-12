@@ -237,6 +237,46 @@ function MinimalDashboardTest() {
   }
 }
 
+function WorkingRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <ReactErrorBoundary fallback={<FallbackApp />}>
+        <AuthFlow onComplete={() => window.location.reload()} />
+      </ReactErrorBoundary>
+    );
+  }
+
+  return (
+    <ReactErrorBoundary fallback={<FallbackApp />}>
+      <Switch>
+        <GlobalSyncStatus />
+        <Route path="/" component={Dashboard} />
+        <Route path="/keys" component={KeyManagement} />
+        <Route path="/users" component={Users} />
+        <Route path="/servers" component={Servers} />
+        <Route path="/backups" component={BackupsPage} />
+        <Route path="/activity" component={ActivityLogs} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/admin" component={AdminPanel} />
+        <Route component={NotFound} />
+      </Switch>
+    </ReactErrorBoundary>
+  );
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -464,26 +504,19 @@ function App() {
     return <FallbackApp />;
   }
 
-  // Create a minimal working app that bypasses problematic components
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Minimal Working App</h1>
-      <p>Building up components step by step...</p>
-      
-      <div style={{ marginTop: '20px' }}>
-        <h2>Step 1: QueryClient Test</h2>
+    <ReactErrorBoundary fallback={<FallbackApp />}>
+      <StorageErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <div style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
-            <p>✓ QueryClient working</p>
-            
-            <div style={{ marginTop: '10px' }}>
-              <h3>Step 2: Auth Hook Test</h3>
-              <MinimalAuthTest />
-            </div>
-          </div>
+          <TooltipProvider>
+            <ReactErrorBoundary fallback={<FallbackApp />}>
+              <Toaster />
+              <WorkingRouter />
+            </ReactErrorBoundary>
+          </TooltipProvider>
         </QueryClientProvider>
-      </div>
-    </div>
+      </StorageErrorBoundary>
+    </ReactErrorBoundary>
   );
 }
 

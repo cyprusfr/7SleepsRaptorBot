@@ -748,6 +748,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to simulate access denied error
+  app.post("/api/test/access-denied", requireAuth, async (req, res) => {
+    try {
+      // Log an access denied error for testing
+      await storage.logActivity({
+        type: "sync_error",
+        description: "Discord server sync failed: Access not approved - User requires approval from administrator",
+        userId: "system",
+        metadata: { error: "403", status: "access_denied" }
+      });
+      
+      res.json({ message: "Access denied error logged for testing" });
+    } catch (error) {
+      console.error("Error logging test error:", error);
+      res.status(500).json({ error: "Failed to log test error" });
+    }
+  });
+
   // Sync endpoint
   app.post('/api/sync', requireAuth, requireApproved, async (req: any, res) => {
     try {

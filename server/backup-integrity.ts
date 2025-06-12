@@ -279,6 +279,7 @@ export class BackupIntegrityChecker {
       await storage.createBackupIntegrityCheck(integrityData);
     } catch (error) {
       console.error('Failed to store integrity check result:', error);
+      // Continue without failing the backup process
     }
 
     return {

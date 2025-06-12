@@ -5,7 +5,7 @@ import Sidebar from "@/components/sidebar";
 import StatsCard from "@/components/stats-card";
 import ActivityFeed from "@/components/activity-feed";
 import KeyTable from "@/components/key-table";
-import PhraseAuth from "@/components/PhraseAuth";
+import AuthFlow from "@/components/AuthFlow";
 import { RateLimitStatus } from "@/components/RateLimitStatus";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -458,5 +458,9 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-  return <DashboardContent />;
+  return (
+    <AuthFlow>
+      <DashboardContent />
+    </AuthFlow>
+  );
 }

@@ -129,6 +129,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rate limit bypass validation
+  app.post("/api/auth/validate-rate-limit-bypass", async (req, res) => {
+    try {
+      const { password } = req.body;
+      
+      if (password === "rate_limit_bypass_X9K2mQ7pL4nW8vR3") {
+        req.session.rateLimitBypassed = true;
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ error: "Invalid password" });
+      }
+    } catch (error) {
+      console.error("Error validating rate limit bypass:", error);
+      res.status(500).json({ error: "Failed to validate password" });
+    }
+  });
+
   // Validate dashboard key
   app.post("/api/dashboard-keys/validate", rateLimits.keyValidation.middleware.bind(rateLimits.keyValidation), async (req, res) => {
     try {

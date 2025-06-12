@@ -72,18 +72,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Google OAuth authentication
   setupAuth(app);
 
+  // Health check endpoint for deployment infrastructure
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      discordBot: raptorBot.isOnline() ? 'online' : 'starting'
+    });
+  });
+
+  // Root health check for deployment systems that expect it at root
+  app.get('/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      discordBot: raptorBot.isOnline() ? 'online' : 'starting'
+    });
+  });
+
   // Handle favicon requests
   app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
   });
 
-  // Start Discord bot
-  try {
-    await raptorBot.start();
-    console.log("✅ Discord bot started successfully");
-  } catch (error) {
-    console.error("❌ Failed to start Discord bot:", error);
-  }
+  // Start Discord bot asynchronously (non-blocking)
+  setImmediate(async () => {
+    try {
+      await raptorBot.start();
+      console.log("✅ Discord bot started successfully");
+    } catch (error) {
+      console.error("❌ Failed to start Discord bot:", error);
+    }
+  });
 
   // Secret phrase validation endpoint
   app.post("/api/auth/validate-phrase", async (req, res) => {

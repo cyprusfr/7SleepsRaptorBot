@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ interface GoogleUser {
 interface VerificationData {
   discordUserId: string;
   discordUsername: string;
-  verificationCode: string;
+  verificationLink: string;
 }
 
 interface DashboardKeyData {
@@ -46,6 +46,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [discordId, setDiscordId] = useState('');
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
+  const [linkClicked, setLinkClicked] = useState(false);
   const [dashboardKey, setDashboardKey] = useState('');
   const [dashboardKeyData, setDashboardKeyData] = useState<DashboardKeyData | null>(null);
   const [consent, setConsent] = useState<ConsentData>({
@@ -56,6 +57,22 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   });
 
   const { toast } = useToast();
+
+  // Listen for verification link clicks
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'DISCORD_VERIFIED') {
+        setLinkClicked(true);
+        toast({
+          title: "Discord Verified!",
+          description: "You can now confirm your Discord account",
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [toast]);
 
   // Google OAuth login
   const googleLoginMutation = useMutation({
@@ -92,10 +109,11 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     },
     onSuccess: (data: any) => {
       setVerificationData(data as VerificationData);
+      setLinkClicked(false); // Reset link clicked state
       setStep('verification');
       toast({
-        title: "Verification Code Sent",
-        description: "Check your Discord DMs for the verification code",
+        title: "Verification Link Sent",
+        description: "Check your Discord DMs for the verification link",
       });
     },
     onError: (error: any) => {
@@ -300,11 +318,24 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               {verificationData && (
-                <div className="text-sm text-center space-y-2">
+                <div className="text-sm text-center space-y-4">
                   <p><strong>Discord:</strong> {verificationData.discordUsername}</p>
-                  <p><strong>Verification Code:</strong> {verificationData.verificationCode}</p>
-                  <p className="text-muted-foreground">
-                    A message has been sent to your Discord account. Please check your DMs.
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border">
+                    <p className="font-medium mb-2">Verification Link Sent!</p>
+                    <p className="text-muted-foreground mb-3">
+                      Check your Discord DMs and click the verification link to continue.
+                    </p>
+                    <Button
+                      onClick={() => window.open(verificationData.verificationLink, '_blank')}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Open Verification Link
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The "Confirm Discord Account" button will be enabled after you click the verification link.
                   </p>
                 </div>
               )}

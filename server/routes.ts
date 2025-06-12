@@ -551,11 +551,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Verification expired. Please try again." });
       }
 
-      // Mark as verified (in real implementation, this would check if user responded to DM)
-      pending.verified = true;
-      (req.session as any).pendingDiscordVerification = pending;
-
-      res.json({ verified: true });
+      // Check if the verification link was clicked
+      global.verifiedTokens = global.verifiedTokens || new Map();
+      const verificationData = global.verifiedTokens.get(pending.verificationToken);
+      
+      if (verificationData && verificationData.discordId === pending.discordUserId) {
+        // Mark as verified
+        pending.verified = true;
+        (req.session as any).pendingDiscordVerification = pending;
+        
+        // Clean up the token
+        global.verifiedTokens.delete(pending.verificationToken);
+        
+        res.json({ verified: true });
+      } else {
+        res.json({ verified: false, message: "Please click the verification link sent to your Discord DMs" });
+      }
     } catch (error) {
       console.error("Error verifying Discord:", error);
       res.status(500).json({ error: "Failed to verify Discord" });

@@ -24,6 +24,15 @@ function Router() {
   // Force show dashboard key auth if neither authenticated nor has dashboard key
   const shouldShowDashboardAuth = !isAuthenticated && !hasDashboardKey && !isLoading;
 
+  // Temporary debug logging
+  console.log('Router Debug:', {
+    isAuthenticated,
+    isLoading,
+    hasDashboardKey,
+    shouldShowDashboardAuth,
+    dashboardKeyRequired
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

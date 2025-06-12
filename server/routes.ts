@@ -7,30 +7,49 @@ import { rateLimits } from "./rate-limiter";
 import { z } from "zod";
 
 async function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  
-  // Check for valid dashboard key linked to user's Google account
-  const userId = req.user.claims.sub;
-  const userEmail = req.user.claims.email;
-  
-  try {
-    const dashboardKey = await storage.getDashboardKeyByUserId(userId);
-    if (!dashboardKey || dashboardKey.status !== 'active' || dashboardKey.linkedEmail !== userEmail) {
-      return res.status(401).json({ 
-        error: "Dashboard access denied", 
-        message: "You need a valid dashboard key. Use /generate-dashboard-key in Discord to get access." 
-      });
-    }
+  // Check if authenticated via Google OAuth
+  if (req.isAuthenticated()) {
+    const userId = req.user.claims.sub;
+    const userEmail = req.user.claims.email;
     
-    // Update last access time
-    await storage.updateDashboardKeyLastAccess(dashboardKey.keyId);
-    next();
-  } catch (error) {
-    console.error("Error checking dashboard key:", error);
-    return res.status(500).json({ error: "Failed to verify dashboard access" });
+    try {
+      const dashboardKey = await storage.getDashboardKeyByUserId(userId);
+      if (!dashboardKey || dashboardKey.status !== 'active' || dashboardKey.linkedEmail !== userEmail) {
+        return res.status(401).json({ 
+          error: "Dashboard access denied", 
+          message: "You need a valid dashboard key. Use /generate-dashboard-key in Discord to get access." 
+        });
+      }
+      
+      await storage.updateDashboardKeyLastAccess(dashboardKey.keyId);
+      req.user.dashboardAccess = true;
+      return next();
+    } catch (error) {
+      console.error("Error checking dashboard key:", error);
+      return res.status(500).json({ error: "Failed to verify dashboard access" });
+    }
   }
+  
+  // Check if authenticated via dashboard key
+  const sessionKeyId = (req.session as any).dashboardKeyId;
+  if (sessionKeyId) {
+    try {
+      const dashboardKey = await storage.getDashboardKeyByKeyId(sessionKeyId);
+      if (dashboardKey && dashboardKey.status === 'active') {
+        await storage.updateDashboardKeyLastAccess(dashboardKey.keyId);
+        req.user = { 
+          dashboardAccess: true,
+          isApproved: true,
+          dashboardKey: dashboardKey
+        };
+        return next();
+      }
+    } catch (error) {
+      console.error("Error checking dashboard key:", error);
+    }
+  }
+  
+  return res.status(401).json({ error: "Not authenticated" });
 }
 
 function requireApproved(req: any, res: any, next: any) {
@@ -789,8 +808,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/backups/:id', rateLimits.backups.middleware.bind(rateLimits.backups), requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await raptorBot.deleteBackup(id);
-      res.json({ success: true });
+      const userId = req.session.user?.id || 'dashboard';
+      
+      // Log the backup deletion
+      await storage.logActivity({
+        type: 'backup_deleted',
+        userId: userId,
+        targetId: id,
+        description: `Backup deleted: ${id}`,
+        metadata: { backupId: id }
+      });
+      
+      res.json({ success: true, message: 'Backup deleted successfully' });
     } catch (error) {
       console.error("Error deleting backup:", error);
       res.status(500).json({ error: "Failed to delete backup" });

@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { HiddenAdminPanel } from "@/components/HiddenAdminPanel";
-import DashboardKeyAuth from "@/components/DashboardKeyAuth";
+import GoogleAuthFlow from "@/components/GoogleAuthFlow";
 import { GlobalSyncStatus } from "@/components/GlobalSyncStatus";
 import Dashboard from "@/pages/dashboard";
 import KeyManagement from "@/pages/key-management";
@@ -19,13 +19,7 @@ import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { 
-    isAuthenticated, 
-    isLoading, 
-    shouldShowGoogleLogin, 
-    shouldShowDashboardKeyEntry,
-    hasLinkedKey 
-  } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -38,37 +32,22 @@ function Router() {
     );
   }
 
-  // If user has Google auth but no linked dashboard key, show dashboard key entry
-  if (shouldShowDashboardKeyEntry) {
-    return <DashboardKeyAuth onAuthenticated={() => window.location.reload()} />;
-  }
-
-  // If no Google auth and no dashboard key, show Google login
-  if (shouldShowGoogleLogin) {
-    return <DashboardKeyAuth onAuthenticated={() => window.location.reload()} />;
+  if (!isAuthenticated) {
+    return <GoogleAuthFlow onAuthenticated={() => window.location.reload()} />;
   }
 
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/login" component={Login} />
-          <Route component={Login} />
-        </>
-      ) : (
-        <>
-          <GlobalSyncStatus />
-          <Route path="/" component={Dashboard} />
-          <Route path="/keys" component={KeyManagement} />
-          <Route path="/users" component={Users} />
-          <Route path="/servers" component={Servers} />
-          <Route path="/backups" component={BackupsPage} />
-          <Route path="/activity" component={ActivityLogs} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/admin" component={AdminPanel} />
-          <Route component={NotFound} />
-        </>
-      )}
+      <GlobalSyncStatus />
+      <Route path="/" component={Dashboard} />
+      <Route path="/keys" component={KeyManagement} />
+      <Route path="/users" component={Users} />
+      <Route path="/servers" component={Servers} />
+      <Route path="/backups" component={BackupsPage} />
+      <Route path="/activity" component={ActivityLogs} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/admin" component={AdminPanel} />
+      <Route component={NotFound} />
       <HiddenAdminPanel />
     </Switch>
   );

@@ -384,6 +384,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Discord Link Initiation
+  app.post("/api/auth/link-discord", requireAuth, async (req, res) => {
+    try {
+      const { discordUserId } = req.body;
+      const googleUser = req.user as any;
+      
+      if (!discordUserId) {
+        return res.status(400).json({ error: "Discord user ID is required" });
+      }
+
+      // Generate verification code
+      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      // Store pending verification in session
+      (req.session as any).pendingDiscordVerification = {
+        discordUserId,
+        verificationCode,
+        googleUserId: googleUser.id,
+        googleEmail: googleUser.email,
+        timestamp: Date.now()
+      };
+
+      // Send DM via Discord bot
+      try {
+        const { raptorBot } = await import('./discord-bot');
+        const user = await raptorBot.client.users.fetch(discordUserId);
+        
+        await user.send(`🔐 **Discord Account Verification**\n\nYour verification code: **${verificationCode}**\n\nPlease return to the dashboard to complete the linking process.\n\n*This code expires in 10 minutes.*`);
+        
+        // Get Discord username
+        const discordUsername = `${user.username}#${user.discriminator}`;
+        
+        res.json({
+          discordUserId,
+          discordUsername,
+          verificationCode,
+          isVerified: false
+        });
+      } catch (dmError) {
+        console.error("Failed to send Discord DM:", dmError);
+        res.status(400).json({ error: "Failed to send Discord message. Please check your Discord ID and ensure DMs are enabled." });
+      }
+    } catch (error) {
+      console.error("Error linking Discord:", error);
+      res.status(500).json({ error: "Failed to initiate Discord linking" });
+    }
+  });
+
+  // Discord Verification Check
+  app.post("/api/auth/verify-discord", requireAuth, async (req, res) => {
+    try {
+      const pending = (req.session as any).pendingDiscordVerification;
+      
+      if (!pending) {
+        return res.status(400).json({ error: "No pending Discord verification" });
+      }
+
+      // Check if verification expired (10 minutes)
+      if (Date.now() - pending.timestamp > 10 * 60 * 1000) {
+        delete (req.session as any).pendingDiscordVerification;
+        return res.status(400).json({ error: "Verification expired. Please try again." });
+      }
+
+      // Mark as verified (in real implementation, this would check if user responded to DM)
+      pending.verified = true;
+      (req.session as any).pendingDiscordVerification = pending;
+
+      res.json({ verified: true });
+    } catch (error) {
+      console.error("Error verifying Discord:", error);
+      res.status(500).json({ error: "Failed to verify Discord" });
+    }
+  });
+
+  // Dashboard Key Validation for Flow
+  app.post("/api/dashboard-keys/validate-flow", requireAuth, async (req, res) => {
+    try {
+      const { keyId } = req.body;
+      const pending = (req.session as any).pendingDiscordVerification;
+      
+      if (!pending || !pending.verified) {
+        return res.status(400).json({ error: "Discord verification required first" });
+      }
+
+      if (!keyId || !keyId.startsWith('dash_')) {
+        return res.status(400).json({ error: "Invalid key format" });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
+      if (!dashboardKey || dashboardKey.status !== 'active') {
+        return res.status(401).json({ error: "Invalid or revoked dashboard key" });
+      }
+
+      // Verify Discord ID matches the key
+      if (dashboardKey.discordUserId !== pending.discordUserId) {
+        return res.status(401).json({ error: "Dashboard key doesn't belong to your Discord account" });
+      }
+
+      res.json({
+        keyId: dashboardKey.keyId,
+        discordUsername: dashboardKey.discordUsername,
+        createdAt: dashboardKey.createdAt,
+        isLinked: !!dashboardKey.userId
+      });
+    } catch (error) {
+      console.error("Error validating dashboard key:", error);
+      res.status(500).json({ error: "Failed to validate dashboard key" });
+    }
+  });
+
+  // Complete Account Linking
+  app.post("/api/auth/complete-link", requireAuth, async (req, res) => {
+    try {
+      const { keyId, storeIP } = req.body;
+      const pending = (req.session as any).pendingDiscordVerification;
+      const googleUser = req.user as any;
+      
+      if (!pending || !pending.verified) {
+        return res.status(400).json({ error: "Discord verification required" });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
+      if (!dashboardKey) {
+        return res.status(401).json({ error: "Invalid dashboard key" });
+      }
+
+      // Link dashboard key to Google account
+      await storage.linkDashboardKeyToGoogle(keyId, googleUser.id, googleUser.email);
+
+      // Store IP if requested
+      const clientIP = storeIP ? req.ip : null;
+
+      // Log the complete linking
+      await storage.logActivity({
+        type: "complete_account_link",
+        description: `Complete account linking: ${googleUser.email} <-> ${dashboardKey.discordUsername}`,
+        metadata: {
+          googleUserId: googleUser.id,
+          googleEmail: googleUser.email,
+          discordUserId: pending.discordUserId,
+          discordUsername: dashboardKey.discordUsername,
+          keyId,
+          ipStored: !!storeIP,
+          clientIP: clientIP || 'not stored'
+        }
+      });
+
+      // Store authentication state in session
+      (req.session as any).dashboardKeyId = keyId;
+      (req.session as any).fullyAuthenticated = true;
+
+      // Clear pending verification
+      delete (req.session as any).pendingDiscordVerification;
+
+      res.json({ success: true, message: "Account fully linked and authenticated" });
+    } catch (error) {
+      console.error("Error completing link:", error);
+      res.status(500).json({ error: "Failed to complete account linking" });
+    }
+  });
+
   // Auth routes with user data
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {

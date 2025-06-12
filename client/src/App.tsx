@@ -168,6 +168,75 @@ function ComponentTest({ name, component }: { name: string; component: React.Rea
   }
 }
 
+function MinimalAuthTest() {
+  try {
+    const { isAuthenticated, isLoading, user } = useAuth();
+    
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#e0e0e0' }}>
+        <p>✓ useAuth hook working</p>
+        <p>Loading: {isLoading ? 'true' : 'false'}</p>
+        <p>Authenticated: {isAuthenticated ? 'true' : 'false'}</p>
+        
+        {!isLoading && (
+          <div style={{ marginTop: '10px' }}>
+            <h4>Step 3: Authentication Flow</h4>
+            {!isAuthenticated ? (
+              <div style={{ padding: '10px', backgroundColor: '#d0d0d0' }}>
+                <p>User not authenticated - would show AuthFlow</p>
+                <button 
+                  onClick={() => window.location.href = '/api/login'}
+                  style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px' }}
+                >
+                  Start Authentication
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '10px', backgroundColor: '#d0d0d0' }}>
+                <p>✓ User authenticated successfully</p>
+                <p>Ready to show dashboard</p>
+                <MinimalDashboardTest />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('MinimalAuthTest error:', error);
+    return <div>❌ Auth test failed: {String(error)}</div>;
+  }
+}
+
+function MinimalDashboardTest() {
+  try {
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#c0c0c0', marginTop: '10px' }}>
+        <h4>Step 4: Dashboard Test</h4>
+        <p>✓ Dashboard area loaded</p>
+        <p>This is where the main dashboard would appear</p>
+        <div style={{ marginTop: '10px' }}>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', marginRight: '8px' }}
+          >
+            Reload App
+          </button>
+          <button 
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+            style={{ padding: '8px 16px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px' }}
+          >
+            Clear Storage
+          </button>
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('MinimalDashboardTest error:', error);
+    return <div>❌ Dashboard test failed: {String(error)}</div>;
+  }
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -395,19 +464,26 @@ function App() {
     return <FallbackApp />;
   }
 
+  // Create a minimal working app that bypasses problematic components
   return (
-    <ReactErrorBoundary fallback={<FallbackApp />}>
-      <StorageErrorBoundary>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Minimal Working App</h1>
+      <p>Building up components step by step...</p>
+      
+      <div style={{ marginTop: '20px' }}>
+        <h2>Step 1: QueryClient Test</h2>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <ReactErrorBoundary fallback={<FallbackApp />}>
-              <Toaster />
-              <Router />
-            </ReactErrorBoundary>
-          </TooltipProvider>
+          <div style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
+            <p>✓ QueryClient working</p>
+            
+            <div style={{ marginTop: '10px' }}>
+              <h3>Step 2: Auth Hook Test</h3>
+              <MinimalAuthTest />
+            </div>
+          </div>
         </QueryClientProvider>
-      </StorageErrorBoundary>
-    </ReactErrorBoundary>
+      </div>
+    </div>
   );
 }
 

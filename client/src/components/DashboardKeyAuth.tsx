@@ -15,6 +15,7 @@ interface DashboardKeyAuthProps {
 
 export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthProps) {
   const [keyInput, setKeyInput] = useState("");
+  const [discordId, setDiscordId] = useState("");
   const [isKeyValid, setIsKeyValid] = useState(false);
   const [keyData, setKeyData] = useState<any>(null);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -22,8 +23,8 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
   const queryClient = useQueryClient();
 
   const validateKeyMutation = useMutation({
-    mutationFn: async (key: string) => {
-      return await apiRequest("/api/dashboard-keys/validate", "POST", { keyId: key });
+    mutationFn: async ({ key, discordId }: { key: string; discordId: string }) => {
+      return await apiRequest("/api/dashboard-keys/validate", "POST", { keyId: key, discordId });
     },
     onSuccess: (data) => {
       setIsKeyValid(true);
@@ -49,16 +50,16 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
     mutationFn: async (shouldLink: boolean) => {
       return await apiRequest("/api/dashboard-keys/link", "POST", { 
         keyId: keyData?.keyId,
-        shouldLink 
+        linkToAccount: shouldLink 
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard-keys/auth-status"] });
       
       toast({
-        title: "Success",
-        description: data.linked ? "Dashboard key linked to your account!" : "Access granted with dashboard key.",
+        title: "Success", 
+        description: response.linked ? "Dashboard key linked to your account!" : "Access granted with dashboard key.",
       });
       
       onAuthenticated();
@@ -82,7 +83,15 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
       });
       return;
     }
-    validateKeyMutation.mutate(keyInput.trim());
+    if (!discordId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your Discord ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+    validateKeyMutation.mutate({ key: keyInput.trim(), discordId: discordId.trim() });
   };
 
   const handleLinkAccount = (shouldLink: boolean) => {
@@ -109,6 +118,24 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
               <h3 className="text-sm font-medium text-gray-900 mb-3">Dashboard Key Access</h3>
               <form onSubmit={handleKeySubmit} className="space-y-4">
                 <div className="space-y-2">
+                  <label htmlFor="discordId" className="text-sm font-medium">
+                    Discord ID
+                  </label>
+                  <Input
+                    id="discordId"
+                    type="text"
+                    placeholder="Enter your Discord ID..."
+                    value={discordId}
+                    onChange={(e) => setDiscordId(e.target.value)}
+                    className="font-mono"
+                    disabled={validateKeyMutation.isPending}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Your unique Discord user ID (18-19 digit number)
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
                   <label htmlFor="dashboardKey" className="text-sm font-medium">
                     Dashboard Key
                   </label>
@@ -129,7 +156,7 @@ export default function DashboardKeyAuth({ onAuthenticated }: DashboardKeyAuthPr
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={validateKeyMutation.isPending || !keyInput.trim()}
+                  disabled={validateKeyMutation.isPending || !keyInput.trim() || !discordId.trim()}
                 >
                   {validateKeyMutation.isPending ? "Validating..." : "Authenticate"}
                 </Button>

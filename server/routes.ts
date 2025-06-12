@@ -243,10 +243,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate dashboard key
   app.post("/api/dashboard-keys/validate", rateLimits.keyValidation.middleware.bind(rateLimits.keyValidation), async (req, res) => {
     try {
-      const { keyId } = req.body;
+      const { keyId, discordId } = req.body;
       
       if (!keyId || !keyId.startsWith('dash_')) {
         return res.status(400).json({ error: "Invalid key format" });
+      }
+
+      if (!discordId) {
+        return res.status(400).json({ error: "Discord ID is required" });
       }
 
       const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
@@ -256,11 +260,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: `Failed validation attempt for key: ${keyId}`,
           metadata: { 
             keyId, 
+            discordId,
             ip: req.ip,
             userAgent: req.get('User-Agent')
           }
         });
         return res.status(401).json({ error: "Invalid or revoked dashboard key" });
+      }
+
+      // Verify Discord ID matches the key
+      if (dashboardKey.discordUserId !== discordId) {
+        await storage.logActivity({
+          type: "dashboard_key_validation",
+          description: `Discord ID mismatch for key: ${keyId}`,
+          metadata: { 
+            keyId, 
+            providedDiscordId: discordId,
+            expectedDiscordId: dashboardKey.discordUserId,
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        });
+        return res.status(401).json({ error: "Discord ID does not match the dashboard key" });
       }
 
       // Log successful validation

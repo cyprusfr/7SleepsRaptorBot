@@ -21,8 +21,8 @@ import NotFound from "@/pages/not-found";
 function Router() {
   const { isAuthenticated, isLoading, dashboardKeyRequired, hasDashboardKey } = useAuth();
 
-  // Temporarily force show dashboard key auth to bypass browser caching issues
-  const shouldShowDashboardAuth = true; // Force dashboard auth for now
+  // Show dashboard key auth if not authenticated and no dashboard key
+  const shouldShowDashboardAuth = !isAuthenticated && !hasDashboardKey && !isLoading;
 
   if (isLoading) {
     return (

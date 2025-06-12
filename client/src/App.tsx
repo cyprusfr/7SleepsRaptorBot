@@ -484,6 +484,34 @@ function FallbackApp() {
   );
 }
 
+function AuthHandler() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthFlow onComplete={() => window.location.reload()} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <GlobalSyncStatus />
+      <div className="container mx-auto px-4 py-8">
+        <Dashboard />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [hasError, setHasError] = useState(false);
   
@@ -511,67 +539,12 @@ function App() {
           <TooltipProvider>
             <ReactErrorBoundary fallback={<FallbackApp />}>
               <Toaster />
-              {(() => {
-                const { isAuthenticated, isLoading } = useAuth();
-                
-                if (isLoading) {
-                  return (
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading authentication...</p>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (!isAuthenticated) {
-                  return <AuthFlow onComplete={() => window.location.reload()} />;
-                }
-
-                return (
-                  <div className="min-h-screen bg-gray-50">
-                    <GlobalSyncStatus />
-                    <div className="container mx-auto px-4 py-8">
-                      <Dashboard />
-                    </div>
-                  </div>
-                );
-              })()}
+              <AuthHandler />
             </ReactErrorBoundary>
           </TooltipProvider>
         </QueryClientProvider>
       </StorageErrorBoundary>
     </ReactErrorBoundary>
-  );
-}
-
-function SimpleWorkingApp() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading authentication...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <AuthFlow onComplete={() => window.location.reload()} />;
-  }
-
-  // Simple authenticated dashboard without complex routing
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <GlobalSyncStatus />
-      <div className="container mx-auto px-4 py-8">
-        <Dashboard />
-      </div>
-    </div>
   );
 }
 

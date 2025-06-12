@@ -515,12 +515,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const systemHealth = raptorBot.isOnline() ? 
         (errorLogs > 5 ? 'critical' : errorLogs > 2 ? 'warning' : 'healthy') : 'critical';
 
+      // Check for sync errors from recent activity logs
+      const syncErrors = recentLogs.filter(log => 
+        log.type.includes('sync') && log.description.includes('error')
+      );
+      const lastSyncError = syncErrors.length > 0 ? syncErrors[0].description : null;
+      
+      // Check for access denied errors specifically
+      const accessDeniedError = recentLogs.find(log => 
+        log.description.includes('Access not approved') || 
+        log.description.includes('not approved') ||
+        log.description.includes('403')
+      );
+
       // Enhanced stats with real calculations
       const enhancedStats = {
         ...stats,
         systemHealth,
         botOnline: raptorBot.isOnline(),
         lastUpdate: new Date().toISOString(),
+        syncError: accessDeniedError ? "Access not approved" : lastSyncError,
+        syncStatus: accessDeniedError ? "access_denied" : (lastSyncError ? "error" : "ok"),
       };
 
       res.json(enhancedStats);

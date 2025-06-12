@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { HiddenAdminPanel } from "@/components/HiddenAdminPanel";
 import DashboardKeyAuth from "@/components/DashboardKeyAuth";
+import { GlobalSyncStatus } from "@/components/GlobalSyncStatus";
 import Dashboard from "@/pages/dashboard";
 import KeyManagement from "@/pages/key-management";
 import Users from "@/pages/users";
@@ -41,6 +42,7 @@ function Router() {
         </>
       ) : (
         <>
+          <GlobalSyncStatus />
           <Route path="/" component={Dashboard} />
           <Route path="/keys" component={KeyManagement} />
           <Route path="/users" component={Users} />

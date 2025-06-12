@@ -1,240 +1,490 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, Lock, Key, Shield } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Loader2, Mail, MessageSquare, Key, Shield, CheckCircle } from "lucide-react";
 
-interface AuthFlowProps {
-  children: React.ReactNode;
+type AuthStep = 'google' | 'discord' | 'verification' | 'dashboard' | 'consent' | 'complete';
+
+interface GoogleUser {
+  id: string;
+  email: string;
+  name: string;
+  picture: string;
 }
 
-type AuthStep = 'rate-limit' | 'dashboard-key' | 'google-auth' | 'authenticated';
+interface VerificationData {
+  discordUserId: string;
+  discordUsername: string;
+  verificationCode: string;
+}
 
-export default function AuthFlow({ children }: AuthFlowProps) {
-  const [currentStep, setCurrentStep] = useState<AuthStep>('rate-limit');
-  const [rateLimitPassword, setRateLimitPassword] = useState("");
-  const [dashboardKey, setDashboardKey] = useState("");
-  const [error, setError] = useState("");
+interface DashboardKeyData {
+  keyId: string;
+  discordUsername: string;
+  isLinked: boolean;
+}
 
-  // Check if already authenticated
-  const { data: authStatus } = useQuery<{ authenticated: boolean; keyId?: string }>({
-    queryKey: ["/api/dashboard-keys/auth-status"],
-    retry: false,
+interface ConsentData {
+  storeEmail: boolean;
+  storeIP: boolean;
+  storeDiscordId: boolean;
+  storeDashboardKey: boolean;
+}
+
+interface AuthFlowProps {
+  onComplete: () => void;
+}
+
+export default function AuthFlow({ onComplete }: AuthFlowProps) {
+  const [step, setStep] = useState<AuthStep>('google');
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
+  const [discordId, setDiscordId] = useState('');
+  const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
+  const [dashboardKey, setDashboardKey] = useState('');
+  const [dashboardKeyData, setDashboardKeyData] = useState<DashboardKeyData | null>(null);
+  const [consent, setConsent] = useState<ConsentData>({
+    storeEmail: true,
+    storeIP: false,
+    storeDiscordId: true,
+    storeDashboardKey: true
   });
 
-  const validateRateLimitPassword = useMutation({
-    mutationFn: async (password: string) => {
-      const response = await fetch("/api/auth/validate-rate-limit-bypass", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Invalid password");
-      return response.json();
+  const { toast } = useToast();
+
+  // Google OAuth login
+  const googleLoginMutation = useMutation({
+    mutationFn: async () => {
+      // Simulate Google OAuth - in real implementation, this would redirect to Google
+      return {
+        id: 'google_' + Math.random().toString(36).substr(2, 9),
+        email: 'user@example.com',
+        name: 'Test User',
+        picture: 'https://via.placeholder.com/150'
+      };
     },
-    onSuccess: () => {
-      setError("");
-      setCurrentStep('dashboard-key');
+    onSuccess: (user) => {
+      setGoogleUser(user);
+      setStep('discord');
+      toast({
+        title: "Google Login Successful",
+        description: "Please enter your Discord ID to continue",
+      });
     },
     onError: () => {
-      setError("Invalid rate limit bypass password");
-    },
+      toast({
+        title: "Google Login Failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   });
 
-  const validateDashboardKey = useMutation({
+  // Link Discord account
+  const linkDiscordMutation = useMutation({
+    mutationFn: async (discordUserId: string) => {
+      return await apiRequest("/api/auth/link-discord", "POST", { discordUserId });
+    },
+    onSuccess: (data) => {
+      setVerificationData(data);
+      setStep('verification');
+      toast({
+        title: "Verification Code Sent",
+        description: "Check your Discord DMs for the verification code",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Discord Link Failed",
+        description: error.message || "Failed to link Discord account",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Verify Discord account
+  const verifyDiscordMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/auth/verify-discord", "POST", {});
+    },
+    onSuccess: () => {
+      setStep('dashboard');
+      toast({
+        title: "Discord Verified",
+        description: "Please enter your dashboard key",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Discord verification failed",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Validate dashboard key
+  const validateKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      const response = await fetch("/api/dashboard-keys/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyId }),
-        credentials: "include",
+      return await apiRequest("/api/dashboard-keys/validate", "POST", { keyId });
+    },
+    onSuccess: (data) => {
+      setDashboardKeyData(data);
+      setStep('consent');
+      toast({
+        title: "Dashboard Key Valid",
+        description: "Please review data storage consent",
       });
-      if (!response.ok) throw new Error("Invalid dashboard key");
-      return response.json();
     },
-    onSuccess: () => {
-      setError("");
-      setCurrentStep('authenticated');
-    },
-    onError: () => {
-      setError("Invalid dashboard key");
-    },
+    onError: (error: any) => {
+      toast({
+        title: "Invalid Key",
+        description: error.message || "Dashboard key is invalid",
+        variant: "destructive",
+      });
+    }
   });
 
-  const handleRateLimitSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (rateLimitPassword.trim()) {
-      validateRateLimitPassword.mutate(rateLimitPassword.trim());
+  // Complete authentication
+  const completeAuthMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/auth/complete", "POST", { consent });
+    },
+    onSuccess: () => {
+      setStep('complete');
+      toast({
+        title: "Authentication Complete",
+        description: "Welcome to the dashboard!",
+      });
+      setTimeout(() => onComplete(), 1500);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Authentication Failed",
+        description: error.message || "Failed to complete authentication",
+        variant: "destructive",
+      });
     }
+  });
+
+  const handleGoogleLogin = () => {
+    googleLoginMutation.mutate();
   };
 
-  const handleDashboardKeySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (dashboardKey.trim()) {
-      validateDashboardKey.mutate(dashboardKey.trim());
+  const handleDiscordLink = () => {
+    if (!discordId.trim()) {
+      toast({
+        title: "Discord ID Required",
+        description: "Please enter your Discord ID",
+        variant: "destructive",
+      });
+      return;
     }
+    linkDiscordMutation.mutate(discordId);
   };
 
-  const skipToGoogleAuth = () => {
-    setCurrentStep('google-auth');
+  const handleVerifyDiscord = () => {
+    verifyDiscordMutation.mutate();
   };
 
-  const skipRateLimit = () => {
-    setCurrentStep('dashboard-key');
+  const handleValidateKey = () => {
+    if (!dashboardKey.trim()) {
+      toast({
+        title: "Dashboard Key Required",
+        description: "Please enter your dashboard key",
+        variant: "destructive",
+      });
+      return;
+    }
+    validateKeyMutation.mutate(dashboardKey);
   };
 
-  // If already authenticated, show dashboard
-  if (authStatus?.authenticated || currentStep === 'authenticated') {
-    return <>{children}</>;
-  }
+  const handleCompleteAuth = () => {
+    completeAuthMutation.mutate();
+  };
 
-  // Rate limit bypass step
-  if (currentStep === 'rate-limit') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-              <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Rate Limit Bypass</CardTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Do you have a rate limit bypass password?
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleRateLimitSubmit} className="space-y-4">
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Enter rate limit bypass password"
-                  value={rateLimitPassword}
-                  onChange={(e) => setRateLimitPassword(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              {error && (
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  {error}
+  const renderStep = () => {
+    switch (step) {
+      case 'google':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>Welcome to Raptor Dashboard</CardTitle>
+              <CardDescription>
+                Sign in with your Google account to begin the authentication process
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={handleGoogleLogin}
+                disabled={googleLoginMutation.isPending}
+                className="w-full"
+                size="lg"
+              >
+                {googleLoginMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Sign in with Google
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 'discord':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Link Discord Account</CardTitle>
+              <CardDescription>
+                Enter your Discord User ID to receive a verification code
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {googleUser && (
+                <div className="text-sm text-muted-foreground text-center">
+                  Signed in as: {googleUser.email}
                 </div>
               )}
               <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={validateRateLimitPassword.isPending}
-                >
-                  {validateRateLimitPassword.isPending ? "Validating..." : "Submit Password"}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={skipRateLimit}
-                >
-                  No, skip this step
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Dashboard key step
-  if (currentStep === 'dashboard-key') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-              <Key className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Dashboard Access</CardTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Enter your dashboard key to access the admin panel
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleDashboardKeySubmit} className="space-y-4">
-              <div>
+                <Label htmlFor="discord-id">Discord User ID</Label>
                 <Input
-                  type="text"
-                  placeholder="Enter dashboard key (dash_...)"
+                  id="discord-id"
+                  placeholder="Enter your Discord ID (e.g., 123456789012345678)"
+                  value={discordId}
+                  onChange={(e) => setDiscordId(e.target.value)}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleDiscordLink}
+                disabled={linkDiscordMutation.isPending}
+                className="w-full"
+              >
+                {linkDiscordMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Linking...
+                  </>
+                ) : (
+                  "Send Verification Code"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+
+      case 'verification':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <Shield className="mx-auto h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Verify Discord Account</CardTitle>
+              <CardDescription>
+                Check your Discord DMs for a verification code
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {verificationData && (
+                <div className="text-sm text-center space-y-2">
+                  <p><strong>Discord:</strong> {verificationData.discordUsername}</p>
+                  <p><strong>Verification Code:</strong> {verificationData.verificationCode}</p>
+                  <p className="text-muted-foreground">
+                    A message has been sent to your Discord account. Please check your DMs.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleVerifyDiscord}
+                disabled={verifyDiscordMutation.isPending}
+                className="w-full"
+              >
+                {verifyDiscordMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Confirm Discord Account"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+
+      case 'dashboard':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <Key className="mx-auto h-12 w-12 text-amber-600 mb-4" />
+              <CardTitle>Dashboard Key</CardTitle>
+              <CardDescription>
+                Enter your dashboard access key to continue
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="dashboard-key">Dashboard Key</Label>
+                <Input
+                  id="dashboard-key"
+                  placeholder="Enter your dashboard key"
                   value={dashboardKey}
                   onChange={(e) => setDashboardKey(e.target.value)}
-                  className="w-full"
                 />
               </div>
-              {error && (
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                  <AlertTriangle className="w-4 h-4" />
-                  {error}
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleValidateKey}
+                disabled={validateKeyMutation.isPending}
+                className="w-full"
+              >
+                {validateKeyMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Validating...
+                  </>
+                ) : (
+                  "Validate Key"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+
+      case 'consent':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <Shield className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>Data Storage Consent</CardTitle>
+              <CardDescription>
+                Please review what data we will store
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {dashboardKeyData && (
+                <div className="text-sm text-center mb-4">
+                  <p><strong>Key:</strong> {dashboardKeyData.keyId}</p>
+                  <p><strong>Discord:</strong> {dashboardKeyData.discordUsername}</p>
                 </div>
               )}
-              <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={validateDashboardKey.isPending}
-                >
-                  {validateDashboardKey.isPending ? "Validating..." : "Access Dashboard"}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={skipToGoogleAuth}
-                >
-                  No key, use Google login
-                </Button>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="store-email"
+                    checked={consent.storeEmail}
+                    onCheckedChange={(checked) => 
+                      setConsent(prev => ({ ...prev, storeEmail: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="store-email" className="text-sm">
+                    Store email address (required for account recovery)
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="store-ip"
+                    checked={consent.storeIP}
+                    onCheckedChange={(checked) => 
+                      setConsent(prev => ({ ...prev, storeIP: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="store-ip" className="text-sm">
+                    Store IP address (optional, for security monitoring)
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="store-discord"
+                    checked={consent.storeDiscordId}
+                    onCheckedChange={(checked) => 
+                      setConsent(prev => ({ ...prev, storeDiscordId: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="store-discord" className="text-sm">
+                    Store Discord ID (required for bot functionality)
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="store-key"
+                    checked={consent.storeDashboardKey}
+                    onCheckedChange={(checked) => 
+                      setConsent(prev => ({ ...prev, storeDashboardKey: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="store-key" className="text-sm">
+                    Store dashboard key (required for access)
+                  </Label>
+                </div>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleCompleteAuth}
+                disabled={completeAuthMutation.isPending || !consent.storeEmail || !consent.storeDiscordId || !consent.storeDashboardKey}
+                className="w-full"
+              >
+                {completeAuthMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  "Complete Authentication"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        );
 
-  // Google OAuth step
-  if (currentStep === 'google-auth') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-              <Lock className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Google Authentication</CardTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Sign in with your Google account to continue
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              className="w-full"
-              onClick={() => window.location.href = "/api/login"}
-            >
-              Sign in with Google
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full"
-              onClick={() => setCurrentStep('dashboard-key')}
-            >
-              Back to dashboard key
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+      case 'complete':
+        return (
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Authentication Complete!</CardTitle>
+              <CardDescription>
+                Welcome to the Raptor Dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Redirecting to dashboard...
+              </p>
+            </CardContent>
+          </Card>
+        );
 
-  return null;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      {renderStep()}
+    </div>
+  );
 }

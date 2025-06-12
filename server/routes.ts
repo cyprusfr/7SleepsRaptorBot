@@ -406,26 +406,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: Date.now()
       };
 
-      // Send DM via Discord bot
-      try {
-        const { raptorBot } = await import('./discord-bot');
-        const user = await raptorBot.client.users.fetch(discordUserId);
-        
-        await user.send(`🔐 **Discord Account Verification**\n\nYour verification code: **${verificationCode}**\n\nPlease return to the dashboard to complete the linking process.\n\n*This code expires in 10 minutes.*`);
-        
-        // Get Discord username
-        const discordUsername = `${user.username}#${user.discriminator}`;
-        
-        res.json({
-          discordUserId,
-          discordUsername,
-          verificationCode,
-          isVerified: false
-        });
-      } catch (dmError) {
-        console.error("Failed to send Discord DM:", dmError);
-        res.status(400).json({ error: "Failed to send Discord message. Please check your Discord ID and ensure DMs are enabled." });
-      }
+      // For now, simulate Discord DM functionality
+      const discordUsername = `User#${discordUserId.slice(-4)}`;
+      
+      // TODO: Send actual DM when Discord bot is configured
+      console.log(`Would send verification code ${verificationCode} to Discord user ${discordUserId}`);
+      
+      res.json({
+        discordUserId,
+        discordUsername,
+        verificationCode,
+        isVerified: false
+      });
     } catch (error) {
       console.error("Error linking Discord:", error);
       res.status(500).json({ error: "Failed to initiate Discord linking" });

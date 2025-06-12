@@ -9,8 +9,8 @@ import { z } from "zod";
 async function requireAuth(req: any, res: any, next: any) {
   // Check if authenticated via Google OAuth
   if (req.isAuthenticated()) {
-    const userId = req.user.claims.sub;
-    const userEmail = req.user.claims.email;
+    const userId = (req.user as any)?.id;
+    const userEmail = (req.user as any)?.email;
     
     try {
       const dashboardKey = await storage.getDashboardKeyByUserId(userId);
@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes with user data
   app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any)?.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -655,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User permissions endpoint
   app.get('/api/user/permissions', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any)?.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User settings endpoints
   app.get('/api/user/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any)?.id;
       
       // Return default settings for now
       const defaultSettings = {
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/user/settings', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any)?.id;
       const settings = req.body;
       
       // Log settings update
@@ -894,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/backup-integrity/:backupId/check', requireAuth, requireApproved, async (req: any, res) => {
     try {
       const { backupId } = req.params;
-      const userId = req.user.claims.email || req.user.claims.sub;
+      const userId = (req.user as any)?.email || (req.user as any)?.id;
       
       // Get backup data
       const backups = await storage.getAllBackups();

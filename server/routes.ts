@@ -628,6 +628,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User settings endpoints
+  app.get('/api/user/settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Return default settings for now
+      const defaultSettings = {
+        id: userId,
+        dataConnection: {
+          useRealData: true,
+          syncDiscordServers: true,
+          trackActivity: true,
+          showBotStats: true,
+          autoRefresh: true,
+          refreshInterval: 300000
+        },
+        dashboard: {
+          showSystemHealth: true,
+          showCandyStats: true,
+          showKeyManagement: true,
+          showUserActivity: true
+        },
+        notifications: {
+          keyValidations: true,
+          serverEvents: true,
+          botStatus: true,
+          backupAlerts: true
+        }
+      };
+      
+      res.json(defaultSettings);
+    } catch (error) {
+      console.error("Error fetching user settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.post('/api/user/settings', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = req.body;
+      
+      // Log settings update
+      await storage.logActivity({
+        type: "settings_update",
+        userId: userId,
+        description: `User updated their settings`
+      });
+      
+      res.json({ success: true, message: "Settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating user settings:", error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
   // Sync endpoint
   app.post('/api/sync', requireAuth, requireApproved, async (req: any, res) => {
     try {

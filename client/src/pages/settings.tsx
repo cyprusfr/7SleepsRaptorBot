@@ -121,7 +121,7 @@ export default function Settings() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <Settings className="w-6 h-6" />
+        <SettingsIcon className="w-6 h-6" />
         <h1 className="text-3xl font-bold">User Settings</h1>
       </div>
 

@@ -26,6 +26,33 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const userSettings = pgTable("user_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  dataConnection: jsonb("data_connection").default({
+    useRealData: true,
+    syncDiscordServers: true,
+    trackActivity: true,
+    showBotStats: true,
+    autoRefresh: true,
+    refreshInterval: 300000
+  }),
+  dashboard: jsonb("dashboard").default({
+    showSystemHealth: true,
+    showCandyStats: true,
+    showKeyManagement: true,
+    showUserActivity: true
+  }),
+  notifications: jsonb("notifications").default({
+    keyValidations: true,
+    serverEvents: true,
+    botStatus: true,
+    backupAlerts: true
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const discordKeys = pgTable("discord_keys", {
   id: serial("id").primaryKey(),
   keyId: text("key_id").notNull().unique(),
@@ -180,6 +207,12 @@ export const insertBackupIntegritySchema = createInsertSchema(backupIntegrity).o
   lastChecked: true,
 });
 
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
@@ -189,6 +222,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserSettings = typeof userSettings.$inferInsert;
 
 export type InsertDiscordKey = z.infer<typeof insertDiscordKeySchema>;
 export type DiscordKey = typeof discordKeys.$inferSelect;

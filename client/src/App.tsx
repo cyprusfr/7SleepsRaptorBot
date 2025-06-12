@@ -17,8 +17,39 @@ import BackupsPage from "@/pages/backups";
 import AdminPanel from "@/pages/admin";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ReactErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -57,23 +88,44 @@ function Router() {
 
 function StorageErrorBoundary({ children }: { children: React.ReactNode }) {
   const [hasStorageError, setHasStorageError] = useState(false);
+  const [hasGenericError, setHasGenericError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
+      console.error('Global error caught:', event.error);
+      setErrorMessage(event.error?.message || 'Unknown error');
+      
       if (event.error?.message?.includes('FILE_ERROR_NO_SPACE') || 
           event.error?.message?.includes('QuotaExceededError') ||
           event.error?.message?.includes('QUOTA_EXCEEDED')) {
         setHasStorageError(true);
+      } else {
+        setHasGenericError(true);
       }
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      setErrorMessage(event.reason?.message || 'Promise rejection');
+      
       if (event.reason?.message?.includes('FILE_ERROR_NO_SPACE') ||
           event.reason?.message?.includes('QuotaExceededError') ||
           event.reason?.message?.includes('QUOTA_EXCEEDED')) {
         setHasStorageError(true);
+      } else {
+        setHasGenericError(true);
       }
     };
+
+    // Check for immediate errors
+    try {
+      localStorage.setItem('test', 'test');
+      localStorage.removeItem('test');
+    } catch (error) {
+      console.error('Storage test failed:', error);
+      setHasStorageError(true);
+    }
 
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
@@ -134,19 +186,111 @@ function StorageErrorBoundary({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (hasGenericError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md p-6 bg-white rounded-lg shadow-lg text-center">
+          <div className="text-red-500 text-6xl mb-4">💥</div>
+          <h1 className="text-xl font-bold mb-4">Application Error</h1>
+          <p className="text-gray-600 mb-4">
+            Something went wrong loading the application.
+          </p>
+          {errorMessage && (
+            <div className="bg-gray-100 p-3 rounded text-sm text-left mb-4">
+              <strong>Error:</strong> {errorMessage}
+            </div>
+          )}
+          <div className="space-y-3">
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Reload Page
+            </Button>
+            <Button onClick={clearBrowserData} variant="outline" className="w-full">
+              Clear Data & Reload
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
-function App() {
+function FallbackApp() {
+  const [showDebug, setShowDebug] = useState(false);
+  
   return (
-    <StorageErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </StorageErrorBoundary>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md p-6 bg-white rounded-lg shadow-lg text-center">
+        <h1 className="text-xl font-bold mb-4">Application Loading</h1>
+        <p className="text-gray-600 mb-4">
+          If you see this screen, the app is having trouble loading.
+        </p>
+        <div className="space-y-3">
+          <Button onClick={() => setShowDebug(!showDebug)} variant="outline" className="w-full">
+            Toggle Debug Info
+          </Button>
+          {showDebug && (
+            <div className="bg-gray-100 p-3 rounded text-sm text-left">
+              <p><strong>User Agent:</strong> {navigator.userAgent}</p>
+              <p><strong>Location:</strong> {window.location.href}</p>
+              <p><strong>Storage Test:</strong> {(() => {
+                try {
+                  localStorage.setItem('test', 'test');
+                  localStorage.removeItem('test');
+                  return 'PASS';
+                } catch (e) {
+                  return `FAIL: ${e.message}`;
+                }
+              })()}</p>
+            </div>
+          )}
+          <Button onClick={() => {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+          }} className="w-full">
+            Clear Storage & Reload
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    const handleError = () => setHasError(true);
+    const handleRejection = () => setHasError(true);
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
+
+  if (hasError) {
+    return <FallbackApp />;
+  }
+
+  return (
+    <ReactErrorBoundary fallback={<FallbackApp />}>
+      <StorageErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <ReactErrorBoundary fallback={<FallbackApp />}>
+              <Toaster />
+              <Router />
+            </ReactErrorBoundary>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </StorageErrorBoundary>
+    </ReactErrorBoundary>
   );
 }
 

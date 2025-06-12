@@ -327,21 +327,28 @@ function DashboardContent() {
             </Card>
           </div>
 
-          {/* Main Dashboard Sections */}
+          {/* Main Dashboard Sections - Reorganized Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Activity */}
-            <ActivityFeed activities={activities.slice(0, 10)} />
-
-            {/* Quick Actions & Server Status */}
+            {/* Left Column - Key Management */}
             <div className="space-y-6">
-              {/* Rate Limit Status */}
-              <RateLimitStatus />
-              
-              {/* Quick Actions */}
+              {/* Discord Keys Management */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Key className="w-5 h-5" />
+                    Discord Keys
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <KeyTable keys={keys} />
+                </CardContent>
+              </Card>
+
+              {/* Quick Key Actions */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-900">
-                    Quick Actions
+                    Key Management
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">

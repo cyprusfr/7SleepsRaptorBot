@@ -450,6 +450,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Complete Authentication Flow
+  app.post("/api/auth/complete", async (req, res) => {
+    try {
+      const { consent } = req.body;
+      const pending = (req.session as any).pendingDiscordVerification;
+      
+      if (!pending) {
+        return res.status(400).json({ error: "No pending authentication session" });
+      }
+      
+      // Store consent and complete authentication
+      (req.session as any).userConsent = consent;
+      (req.session as any).authenticated = true;
+      (req.session as any).userId = pending.googleUserId;
+      (req.session as any).email = pending.googleEmail;
+      (req.session as any).discordUserId = pending.discordUserId;
+      
+      // Clear pending verification
+      delete (req.session as any).pendingDiscordVerification;
+      
+      await storage.logActivity({
+        type: 'authentication',
+        description: `User completed multi-step authentication: ${pending.googleEmail}`,
+        userId: pending.googleUserId,
+        ipAddress: req.ip,
+        metadata: { consent, discordUserId: pending.discordUserId }
+      });
+      
+      res.json({ success: true, authenticated: true });
+    } catch (error) {
+      console.error("Error completing authentication:", error);
+      res.status(500).json({ error: "Failed to complete authentication" });
+    }
+  });
+
   // Dashboard Key Validation for Flow
   app.post("/api/dashboard-keys/validate-flow", requireAuth, async (req, res) => {
     try {

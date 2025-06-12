@@ -90,8 +90,8 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     mutationFn: async (discordUserId: string) => {
       return await apiRequest("/api/auth/link-discord", "POST", { discordUserId });
     },
-    onSuccess: (data) => {
-      setVerificationData(data);
+    onSuccess: (data: any) => {
+      setVerificationData(data as VerificationData);
       setStep('verification');
       toast({
         title: "Verification Code Sent",
@@ -133,8 +133,8 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     mutationFn: async (keyId: string) => {
       return await apiRequest("/api/dashboard-keys/validate", "POST", { keyId });
     },
-    onSuccess: (data) => {
-      setDashboardKeyData(data);
+    onSuccess: (data: any) => {
+      setDashboardKeyData(data as DashboardKeyData);
       setStep('consent');
       toast({
         title: "Dashboard Key Valid",

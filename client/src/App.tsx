@@ -104,6 +104,70 @@ function AuthFlowTest() {
   }
 }
 
+function SafeRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthFlow onComplete={() => window.location.reload()} />;
+  }
+
+  // Simplified authenticated view to test components one by one
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Authenticated Dashboard</h1>
+      <p>User is authenticated. Testing dashboard components...</p>
+      
+      <div style={{ marginTop: '20px' }}>
+        <h2>Component Tests:</h2>
+        
+        <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #ddd' }}>
+          <h3>1. Testing GlobalSyncStatus:</h3>
+          <ComponentTest name="GlobalSyncStatus" component={<GlobalSyncStatus />} />
+        </div>
+
+        <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #ddd' }}>
+          <h3>2. Testing Dashboard Component:</h3>
+          <ComponentTest name="Dashboard" component={<Dashboard />} />
+        </div>
+      </div>
+      
+      <div style={{ marginTop: '20px' }}>
+        <button onClick={() => window.location.reload()}>Reload Page</button>
+        <button onClick={() => localStorage.clear()} style={{ marginLeft: '10px' }}>
+          Clear Storage
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ComponentTest({ name, component }: { name: string; component: React.ReactNode }) {
+  try {
+    return (
+      <div style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
+        <p>✓ {name} component loading...</p>
+        <div style={{ marginTop: '10px', border: '1px solid #ccc', padding: '10px' }}>
+          {component}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error(`${name} component error:`, error);
+    return <div>❌ {name} failed: {String(error)}</div>;
+  }
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -331,36 +395,20 @@ function App() {
     return <FallbackApp />;
   }
 
-  // Temporarily simplify to identify the failing component
-  try {
-    return (
-      <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-        <h1>App Component Test</h1>
-        <p>Testing each component layer...</p>
-        
-        <div style={{ marginTop: '20px', padding: '10px', border: '1px solid #ddd' }}>
-          <h3>1. QueryClientProvider Test</h3>
-          <QueryClientProvider client={queryClient}>
-            <p>✓ QueryClient loaded</p>
-            <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #ddd' }}>
-              <h3>2. Router Test</h3>
-              <RouterTest />
-            </div>
-          </QueryClientProvider>
-        </div>
-        
-        <div style={{ marginTop: '20px' }}>
-          <button onClick={() => window.location.reload()}>Reload Page</button>
-          <button onClick={() => { localStorage.setItem('use-simple-app', 'true'); window.location.reload(); }} style={{ marginLeft: '10px' }}>
-            Switch to Simple App
-          </button>
-        </div>
-      </div>
-    );
-  } catch (error) {
-    console.error('App render error:', error);
-    return <FallbackApp />;
-  }
+  return (
+    <ReactErrorBoundary fallback={<FallbackApp />}>
+      <StorageErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <ReactErrorBoundary fallback={<FallbackApp />}>
+              <Toaster />
+              <SafeRouter />
+            </ReactErrorBoundary>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </StorageErrorBoundary>
+    </ReactErrorBoundary>
+  );
 }
 
 export default App;

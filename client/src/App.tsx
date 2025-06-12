@@ -21,6 +21,9 @@ import NotFound from "@/pages/not-found";
 function Router() {
   const { isAuthenticated, isLoading, dashboardKeyRequired } = useAuth();
 
+  // Debug logging
+  console.log('Auth state:', { isAuthenticated, isLoading, dashboardKeyRequired });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

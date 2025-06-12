@@ -322,17 +322,9 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                   <p><strong>Discord:</strong> {verificationData.discordUsername}</p>
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border">
                     <p className="font-medium mb-2">Verification Link Sent!</p>
-                    <p className="text-muted-foreground mb-3">
+                    <p className="text-muted-foreground">
                       Check your Discord DMs and click the verification link to continue.
                     </p>
-                    <Button
-                      onClick={() => window.open(verificationData.verificationLink, '_blank')}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
-                      Open Verification Link
-                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     The "Confirm Discord Account" button will be enabled after you click the verification link.

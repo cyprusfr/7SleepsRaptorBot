@@ -337,7 +337,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             <CardContent className="space-y-4">
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg border">
-                  <h4 className="font-semibold text-sm mb-2">Step 1: Send this code to the bot</h4>
+                  <h4 className="font-semibold text-sm mb-2">Step 1: Use the /verify command with this code</h4>
                   <div className="bg-white p-2 rounded border flex items-center justify-between">
                     <span className="font-mono text-lg font-bold text-blue-600 flex-1 text-center">
                       {verificationData?.verificationCode || 'Loading...'}
@@ -353,14 +353,14 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                     </Button>
                   </div>
                   <p className="text-xs text-gray-600 mt-2">
-                    DM this code to the Raptor bot on Discord
+                    Use <span className="font-mono bg-gray-200 px-1 rounded">/verify code:{verificationData?.verificationCode || 'CODE'}</span> in any Discord server with the bot
                   </p>
                 </div>
                 
                 {!linkClicked && (
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                     <p className="text-sm text-yellow-800">
-                      Waiting for you to send the code to the bot...
+                      Waiting for you to use the /verify command...
                     </p>
                   </div>
                 )}

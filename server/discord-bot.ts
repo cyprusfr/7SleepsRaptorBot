@@ -157,6 +157,78 @@ export class RaptorBot {
     }
   }
 
+  private async handleVerify(interaction: ChatInputCommandInteraction) {
+    const userId = interaction.user.id;
+    const code = interaction.options.getString('code')?.trim();
+
+    if (!code) {
+      await interaction.reply({ content: 'Please provide a verification code.', ephemeral: true });
+      return;
+    }
+
+    console.log(`🔍 Processing verification slash command from ${userId}: "${code}"`);
+
+    // Check if the code contains a valid verification code format (6 digits)
+    const verificationCodeMatch = code.match(/^[A-Z0-9]{6}$/);
+    if (!verificationCodeMatch) {
+      await interaction.reply({ content: 'Please provide a valid 6-character verification code (e.g., ABC123)', ephemeral: true });
+      return;
+    }
+
+    console.log(`✅ Valid verification code format detected: ${code}`);
+
+    try {
+      // Find verification session with this dashboard code
+      const session = await storage.getVerificationSessionByDiscordUserId(userId);
+      
+      if (!session) {
+        await interaction.reply({ content: 'No active verification session found. Please start verification from the dashboard first.', ephemeral: true });
+        return;
+      }
+
+      console.log(`📋 Found verification session: ${session.sessionId}`);
+
+      if (session.status !== 'pending') {
+        await interaction.reply({ content: 'This verification session is no longer active. Please start a new verification from the dashboard.', ephemeral: true });
+        return;
+      }
+
+      if (new Date() > session.expiresAt) {
+        await interaction.reply({ content: 'This verification session has expired. Please start a new verification from the dashboard.', ephemeral: true });
+        return;
+      }
+
+      if (session.dashboardCode !== code) {
+        await interaction.reply({ content: 'Invalid verification code. Please check the code from your dashboard and try again.', ephemeral: true });
+        return;
+      }
+
+      // Generate bot response code
+      const botResponseCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      // Update session with bot response code
+      await storage.updateVerificationSession(session.sessionId, {
+        botResponseCode,
+        status: 'bot_responded'
+      });
+
+      await interaction.reply({ content: `✅ Verification code accepted! Your response code is: **${botResponseCode}**\n\nPlease enter this code in the dashboard to complete verification.`, ephemeral: true });
+
+      console.log(`✅ Generated bot response code for session ${session.sessionId}: ${botResponseCode}`);
+
+      // Log the verification attempt
+      await storage.logActivity({
+        type: 'verification',
+        description: `Bot responded to verification request from user ${userId}`,
+        metadata: { userId, sessionId: session.sessionId },
+      });
+
+    } catch (error) {
+      console.error('❌ Error in verification process:', error);
+      await interaction.reply({ content: 'An error occurred while processing your verification. Please try again.', ephemeral: true });
+    }
+  }
+
   private async registerCommands() {
     const commands = [
       new SlashCommandBuilder()
@@ -571,6 +643,9 @@ export class RaptorBot {
       await this.storeUserData(user, member, guild);
 
       switch (commandName) {
+        case 'verify':
+          await this.handleVerify(interaction);
+          break;
         case 'whitelist':
           await this.handleWhitelist(interaction);
           break;

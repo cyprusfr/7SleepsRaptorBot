@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
-import { storage } from './storage-clean';
+import { storage } from './storage';
 import { BackupIntegrityChecker } from './backup-integrity';
 import crypto from 'crypto';
 

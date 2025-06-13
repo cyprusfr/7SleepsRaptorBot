@@ -391,10 +391,6 @@ export class RaptorBot {
             .setRequired(true)
         ),
 
-      new SlashCommandBuilder()
-        .setName('whitelist-list')
-        .setDescription('List all whitelisted user IDs'),
-
       // License Key Management Commands
       new SlashCommandBuilder()
         .setName('add')
@@ -665,11 +661,6 @@ export class RaptorBot {
         .setName('candy-leaderboard')
         .setDescription('View the candy leaderboard'),
 
-      // Testing Command
-      new SlashCommandBuilder()
-        .setName('test')
-        .setDescription('Test all bot commands and report status'),
-
       // Utility Commands
       new SlashCommandBuilder()
         .setName('ping')
@@ -768,15 +759,6 @@ export class RaptorBot {
         .addStringOption(option =>
           option.setName('to_user')
             .setDescription('Destination user ID')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('userinfo')
-        .setDescription('Get license key information for a user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to get info for')
             .setRequired(true)
         ),
 
@@ -931,6 +913,10 @@ export class RaptorBot {
             .setDescription('Embed color (hex)')
             .setRequired(false)
         ),
+
+      new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Test all bot commands and report status'),
     ];
 
     const rest = new REST().setToken(DISCORD_TOKEN!);

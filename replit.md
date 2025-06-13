@@ -67,6 +67,8 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - ✅ Suggestion system with approval workflow
 - ✅ Bug reporting system with tracking
 - ✅ Comprehensive error handling and validation
+- ✅ Candy system commands (balance, daily, transfer, leaderboard)
+- ✅ Comprehensive testing command (/test) for debugging
 
 ## User Preferences
 - Professional Discord bot commands replacing gaming-focused features

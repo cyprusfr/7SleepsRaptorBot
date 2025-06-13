@@ -107,11 +107,16 @@ export class RaptorBot {
     const content = message.content.trim().toUpperCase();
     const userId = message.author.id;
 
+    console.log(`🔍 Received DM from ${userId}: "${content}"`);
+
     // Check if message is a 6-character verification code
     if (!/^[A-Z0-9]{6}$/.test(content)) {
+      console.log(`❌ Invalid verification code format: ${content}`);
       await message.reply('Please send a valid 6-character verification code from the dashboard.');
       return;
     }
+
+    console.log(`✅ Valid verification code format detected: ${content}`);
 
     try {
       // Find verification session with this dashboard code

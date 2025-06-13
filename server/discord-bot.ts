@@ -632,6 +632,39 @@ export class RaptorBot {
             .setRequired(true)
         ),
 
+      // Candy System Commands
+      new SlashCommandBuilder()
+        .setName('balance')
+        .setDescription('Check your candy balance')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to check balance for (optional)')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('daily')
+        .setDescription('Claim your daily candy reward'),
+
+      new SlashCommandBuilder()
+        .setName('candy-transfer')
+        .setDescription('Transfer candy to another user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to transfer candy to')
+            .setRequired(true)
+        )
+        .addIntegerOption(option =>
+          option.setName('amount')
+            .setDescription('Amount of candy to transfer')
+            .setRequired(true)
+            .setMinValue(1)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('candy-leaderboard')
+        .setDescription('View the candy leaderboard'),
+
       // Utility Commands
       new SlashCommandBuilder()
         .setName('ping')
@@ -1128,6 +1161,18 @@ export class RaptorBot {
           break;
         case 'announce':
           await this.handleAnnounce(interaction);
+          break;
+        case 'balance':
+          await this.handleBalance(interaction);
+          break;
+        case 'daily':
+          await this.handleDaily(interaction);
+          break;
+        case 'candy-transfer':
+          await this.handleCandyTransfer(interaction);
+          break;
+        case 'candy-leaderboard':
+          await this.handleCandyLeaderboard(interaction);
           break;
         default:
           await interaction.reply({
@@ -5063,6 +5108,261 @@ Please purchase using PayPal on the website.`,
     } catch (error) {
       console.error('Error sending verification DM:', error);
       return false;
+    }
+  }
+
+  // Candy System Commands
+  private async handleBalance(interaction: ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+
+    try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Get user's candy balance
+      const balance = await storage.getCandyBalance(targetUser.id);
+
+      // Get recent transactions
+      const transactions = await storage.getCandyTransactions(targetUser.id, 5);
+
+      const embed = {
+        title: '🍭 Candy Balance',
+        description: `Balance for ${targetUser.username}`,
+        fields: [
+          { name: 'Current Balance', value: `${balance} 🍭`, inline: true },
+          { name: 'User ID', value: targetUser.id, inline: true },
+          { name: 'Recent Activity', value: transactions.length > 0 ? 'Last 5 transactions shown below' : 'No recent transactions', inline: false }
+        ],
+        color: 0xFF6B9D,
+        thumbnail: { url: targetUser.displayAvatarURL() },
+        timestamp: new Date().toISOString()
+      };
+
+      // Add recent transactions to embed
+      if (transactions.length > 0) {
+        const transactionText = transactions.map(t => {
+          const type = t.type === 'daily' ? '📅 Daily' : t.type === 'transfer' ? '💸 Transfer' : '🎁 Reward';
+          const amount = t.amount > 0 ? `+${t.amount}` : t.amount.toString();
+          return `${type}: ${amount} 🍭 - ${new Date(t.createdAt).toLocaleDateString()}`;
+        }).join('\n');
+
+        embed.fields.push({
+          name: 'Recent Transactions',
+          value: transactionText,
+          inline: false
+        });
+      }
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'balance_checked',
+        userId: interaction.user.id,
+        targetId: targetUser.id,
+        description: `${interaction.user.username} checked candy balance for ${targetUser.username}`,
+        metadata: { balance, targetUsername: targetUser.username }
+      });
+
+    } catch (error) {
+      console.error('Error checking candy balance:', error);
+      await interaction.reply({
+        content: '❌ Failed to check candy balance. Please try again.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleDaily(interaction: ChatInputCommandInteraction) {
+    try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Check if user can claim daily candy
+      const canClaim = await storage.checkDailyCandy(interaction.user.id);
+      
+      if (!canClaim) {
+        const embed = {
+          title: '🕐 Daily Candy Already Claimed',
+          description: 'You have already claimed your daily candy today!',
+          fields: [
+            { name: 'Next Claim', value: 'Come back tomorrow for more candy', inline: true },
+            { name: 'Tip', value: 'Use `/balance` to check your current candy amount', inline: true }
+          ],
+          color: 0xFFA500,
+          timestamp: new Date().toISOString()
+        };
+
+        await interaction.reply({ embeds: [embed], flags: [4096] });
+        return;
+      }
+
+      // Claim daily candy
+      const amount = await storage.claimDailyCandy(interaction.user.id);
+      const newBalance = await storage.getCandyBalance(interaction.user.id);
+
+      const embed = {
+        title: '🎉 Daily Candy Claimed!',
+        description: `You received ${amount} candy!`,
+        fields: [
+          { name: 'Candy Earned', value: `+${amount} 🍭`, inline: true },
+          { name: 'New Balance', value: `${newBalance} 🍭`, inline: true },
+          { name: 'Next Claim', value: 'Available tomorrow', inline: true }
+        ],
+        color: 0x00FF7F,
+        footer: { text: 'Come back tomorrow for more candy!' },
+        timestamp: new Date().toISOString()
+      };
+
+      await interaction.reply({ embeds: [embed] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'daily_candy_claimed',
+        userId: interaction.user.id,
+        description: `${interaction.user.username} claimed ${amount} daily candy`,
+        metadata: { amount, newBalance }
+      });
+
+    } catch (error) {
+      console.error('Error claiming daily candy:', error);
+      await interaction.reply({
+        content: '❌ Failed to claim daily candy. Please try again.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleCandyTransfer(interaction: ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getUser('user', true);
+    const amount = interaction.options.getInteger('amount', true);
+
+    try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Validate transfer
+      if (targetUser.id === interaction.user.id) {
+        await interaction.reply({
+          content: '❌ You cannot transfer candy to yourself.',
+          flags: [4096],
+        });
+        return;
+      }
+
+      if (amount <= 0) {
+        await interaction.reply({
+          content: '❌ Transfer amount must be positive.',
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Check sender's balance
+      const senderBalance = await storage.getCandyBalance(interaction.user.id);
+      if (senderBalance < amount) {
+        await interaction.reply({
+          content: `❌ Insufficient candy. You have ${senderBalance} candy but need ${amount}.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Perform transfer
+      await storage.transferCandy(interaction.user.id, targetUser.id, amount);
+
+      const newSenderBalance = await storage.getCandyBalance(interaction.user.id);
+      const newReceiverBalance = await storage.getCandyBalance(targetUser.id);
+
+      const embed = {
+        title: '💸 Candy Transfer Complete',
+        description: `Successfully transferred ${amount} candy to ${targetUser.username}`,
+        fields: [
+          { name: 'From', value: interaction.user.username, inline: true },
+          { name: 'To', value: targetUser.username, inline: true },
+          { name: 'Amount', value: `${amount} 🍭`, inline: true },
+          { name: 'Your New Balance', value: `${newSenderBalance} 🍭`, inline: true },
+          { name: 'Their New Balance', value: `${newReceiverBalance} 🍭`, inline: true },
+          { name: 'Transfer Date', value: new Date().toLocaleString(), inline: true }
+        ],
+        color: 0x32CD32,
+        timestamp: new Date().toISOString()
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'candy_transfer',
+        userId: interaction.user.id,
+        targetId: targetUser.id,
+        description: `${interaction.user.username} transferred ${amount} candy to ${targetUser.username}`,
+        metadata: { 
+          amount, 
+          senderNewBalance: newSenderBalance, 
+          receiverNewBalance: newReceiverBalance,
+          receiverUsername: targetUser.username 
+        }
+      });
+
+    } catch (error) {
+      console.error('Error transferring candy:', error);
+      await interaction.reply({
+        content: '❌ Failed to transfer candy. Please try again.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleCandyLeaderboard(interaction: ChatInputCommandInteraction) {
+    try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Get candy leaderboard
+      const leaderboard = await storage.getCandyLeaderboard(10);
+
+      if (leaderboard.length === 0) {
+        await interaction.reply({
+          content: '📊 No candy data available yet. Use `/daily` to start earning candy!',
+          flags: [4096],
+        });
+        return;
+      }
+
+      const leaderboardFields = leaderboard.map((user, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+        const balance = user.candyBalance || 0;
+        return {
+          name: `${medal} ${user.username}`,
+          value: `${balance} 🍭`,
+          inline: true
+        };
+      });
+
+      const embed = {
+        title: '🏆 Candy Leaderboard',
+        description: `Top ${leaderboard.length} candy holders`,
+        fields: leaderboardFields,
+        color: 0xFFD700,
+        footer: {
+          text: `Use /daily to earn candy daily • Use /candy-transfer to share candy`
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+
+      // Log activity
+      await storage.logActivity({
+        type: 'candy_leaderboard_viewed',
+        userId: interaction.user.id,
+        description: `${interaction.user.username} viewed candy leaderboard`,
+        metadata: { topUsersCount: leaderboard.length }
+      });
+
+    } catch (error) {
+      console.error('Error fetching candy leaderboard:', error);
+      await interaction.reply({
+        content: '❌ Failed to fetch candy leaderboard. Please try again.',
+        flags: [4096],
+      });
     }
   }
 }

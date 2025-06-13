@@ -40,6 +40,11 @@ export interface IStorage {
   // Email authentication
   createEmailUser(email: string, passwordHash: string, name?: string): Promise<User>;
   authenticateEmailUser(email: string, password: string): Promise<User | null>;
+  
+  // Email verification
+  createEmailVerificationCode(email: string, code: string): Promise<void>;
+  verifyEmailCode(email: string, code: string): Promise<boolean>;
+  cleanupExpiredEmailCodes(): Promise<void>;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;

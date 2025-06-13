@@ -28,6 +28,16 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Email verification codes table
+export const emailVerificationCodes = pgTable("email_verification_codes", {
+  id: serial("id").primaryKey(),
+  email: varchar("email").notNull(),
+  code: varchar("code", { length: 6 }).notNull(), // 6-digit verification code
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Two-way verification sessions table
 export const verificationSessions = pgTable("verification_sessions", {
   id: serial("id").primaryKey(),
@@ -265,3 +275,7 @@ export type DashboardKey = typeof dashboardKeys.$inferSelect;
 
 export type InsertBackupIntegrity = z.infer<typeof insertBackupIntegritySchema>;
 export type BackupIntegrity = typeof backupIntegrity.$inferSelect;
+
+// Email verification types
+export type EmailVerificationCode = typeof emailVerificationCodes.$inferSelect;
+export type InsertEmailVerificationCode = typeof emailVerificationCodes.$inferInsert;

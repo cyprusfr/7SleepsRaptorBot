@@ -124,6 +124,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
       return await apiRequest("/api/verify-discord", "POST", { discordUserId });
     },
     onSuccess: (data: any) => {
+      console.log('Verification response data:', data);
       setVerificationData({
         discordUserId: discordId,
         discordUsername: 'Unknown',

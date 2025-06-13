@@ -6,6 +6,14 @@ import { raptorBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
 import { z } from "zod";
 
+// Basic auth check for Google OAuth users (used during verification flow)
+function requireGoogleAuth(req: any, res: any, next: any) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  return res.status(401).json({ error: "Not authenticated" });
+}
+
 async function requireAuth(req: any, res: any, next: any) {
   // Check if authenticated via Google OAuth
   if (req.isAuthenticated()) {
@@ -849,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Verification endpoints for two-way Discord verification
-  app.post('/api/verify-discord', requireAuth, async (req: any, res: any) => {
+  app.post('/api/verify-discord', requireGoogleAuth, async (req: any, res: any) => {
     try {
       const { discordUserId } = req.body;
       
@@ -882,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete verification with bot response code
-  app.post('/api/verify-discord/complete', requireAuth, async (req: any, res: any) => {
+  app.post('/api/verify-discord/complete', requireGoogleAuth, async (req: any, res: any) => {
     try {
       const { sessionId, botResponseCode } = req.body;
       

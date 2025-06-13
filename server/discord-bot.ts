@@ -86,17 +86,8 @@ export class RaptorBot {
       await storage.updateServerStatus(guild.id, false);
     });
 
-    // Handle direct messages for verification
-    this.client.on('messageCreate', async (message) => {
-      if (message.author.bot) return;
-      if (message.channel.type !== 1) return; // Only handle DMs
-
-      try {
-        await this.handleVerificationMessage(message);
-      } catch (error) {
-        console.error('Error handling verification message:', error);
-      }
-    });
+    // Note: DM verification disabled due to MessageContent intent limitations
+    // Using slash command verification instead
 
     this.client.on('error', (error) => {
       console.error('❌ Discord client error:', error);
@@ -168,6 +159,15 @@ export class RaptorBot {
 
   private async registerCommands() {
     const commands = [
+      new SlashCommandBuilder()
+        .setName('verify')
+        .setDescription('Verify your dashboard access with a verification code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('The verification code from the dashboard')
+            .setRequired(true)
+        ),
+
       new SlashCommandBuilder()
         .setName('whitelist')
         .setDescription('Generate and whitelist a new key')

@@ -5839,12 +5839,17 @@ Please purchase using PayPal on the website.`,
 
           completedTests++;
           
-          // Update progress every 10 tests or on completion
-          if (completedTests % 10 === 0 || completedTests === totalTestsCount) {
+          // Update progress every 15 tests or on completion (reduce frequency)
+          if (completedTests % 15 === 0 || completedTests === totalTestsCount) {
             const progressBar = createProgressBar(completedTests, totalTestsCount);
-            await interaction.editReply({
-              content: `🧪 Testing bot commands...\n\n${progressBar}\n\n${completedTests === totalTestsCount ? 'Processing results...' : `Currently testing: ${test.name}`}`
-            });
+            try {
+              await interaction.editReply({
+                content: `🧪 Testing: ${progressBar} ${completedTests === totalTestsCount ? 'Done!' : test.name}`
+              });
+            } catch (progressError) {
+              // Ignore progress update errors to prevent blocking
+              console.log('Progress update skipped');
+            }
           }
           
         } catch (error) {
@@ -5872,9 +5877,14 @@ Please purchase using PayPal on the website.`,
       const successRate = Math.round((passedTests / totalTestsCompleted) * 100);
       
       // Send minimal summary with just content (no embed to avoid field issues)
-      await interaction.editReply({
-        content: `🧪 **Test Results Summary**\n\n📊 ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\n⚡ Average: ${avgTime}ms\n\n✅ Passed: ${passedTests} | ❌ Failed: ${failedTests} | ⚠️ Errors: ${erroredTests}\n\nDetailed results loading...`
-      });
+      try {
+        await interaction.editReply({
+          content: `🧪 **Test Results Summary**\n\n📊 ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\n⚡ Average: ${avgTime}ms\n\n✅ Passed: ${passedTests} | ❌ Failed: ${failedTests} | ⚠️ Errors: ${erroredTests}\n\nDetailed results loading...`
+        });
+      } catch (summaryError) {
+        console.error('Summary update failed:', summaryError);
+        // Continue with results anyway
+      }
 
       // Create multiple text-only pages with 15 commands each (no embeds)
       const commandsPerPage = 15;
@@ -5892,10 +5902,15 @@ Please purchase using PayPal on the website.`,
 
         const pageText = `**📋 Test Results - Page ${page + 1}/${totalPages}**\n\`\`\`\n${pageContent}\n\`\`\`\n*Commands ${startIndex + 1}-${endIndex} of ${testResults.length}*`;
 
-        await interaction.followUp({
-          content: pageText.substring(0, 1980), // Stay well under 2000 char limit
-          flags: [4096]
-        });
+        try {
+          await interaction.followUp({
+            content: pageText.substring(0, 1980), // Stay well under 2000 char limit
+            flags: [4096]
+          });
+        } catch (pageError) {
+          console.error(`Page ${page + 1} failed:`, pageError);
+          // Continue with next page
+        }
 
         // Delay between pages
         if (page < totalPages - 1) {
@@ -5910,10 +5925,14 @@ Please purchase using PayPal on the website.`,
           return `${result.status} ${result.command}${result.error ? ` - ${result.error.substring(0, 40)}...` : ''}`;
         }).join('\n');
 
-        await interaction.followUp({
-          content: `**⚠️ Issues Found:**\n\`\`\`\n${errorText}\n\`\`\``,
-          flags: [4096]
-        });
+        try {
+          await interaction.followUp({
+            content: `**⚠️ Issues Found:**\n\`\`\`\n${errorText}\n\`\`\``,
+            flags: [4096]
+          });
+        } catch (errorSummaryError) {
+          console.error('Error summary failed:', errorSummaryError);
+        }
       }
 
       // Log comprehensive test execution
@@ -5932,10 +5951,13 @@ Please purchase using PayPal on the website.`,
 
     } catch (error) {
       console.error('Error running comprehensive test:', error);
-      await interaction.reply({
-        content: `❌ Test execution failed: ${error instanceof Error ? error.message : String(error)}`,
-        flags: [4096],
-      });
+      try {
+        await interaction.editReply({
+          content: `❌ Test execution failed: ${error instanceof Error ? error.message : String(error)}`
+        });
+      } catch (editError) {
+        console.error('Error updating test failure message:', editError);
+      }
     }
   }
 }

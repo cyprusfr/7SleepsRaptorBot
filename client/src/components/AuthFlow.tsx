@@ -306,7 +306,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
               <CardTitle>Link Discord Account</CardTitle>
               <CardDescription>
-                {user ? `Signed in successfully` : 'Enter your Discord User ID to receive a verification code'}
+                {user ? `Signed in as ${(user as { email?: string }).email || 'Unknown'}` : 'Enter your Discord User ID to receive a verification code'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

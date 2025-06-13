@@ -965,7 +965,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId,
         discordUserId,
         dashboardCode,
-        status: 'pending',
         expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       });
 

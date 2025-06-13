@@ -600,10 +600,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(candyTransactions.createdAt))
       .limit(1);
 
-    if (!transaction) return false;
+    if (!transaction) return true; // No transactions = can claim
     
     const transactionDate = transaction.createdAt.toISOString().split('T')[0];
-    return transactionDate === today;
+    return transactionDate !== today; // Can claim if last claim wasn't today
   }
 
   async claimDailyCandy(userId: string): Promise<number> {

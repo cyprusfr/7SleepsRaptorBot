@@ -1248,25 +1248,6 @@ export class RaptorBot {
     return hasRequiredRole;
   }
 
-  private async isRateLimited(userId: string): Promise<boolean> {
-    // Check if rate limiting is enabled
-    const rateLimitEnabled = this.getSetting('rate_limit_enabled', 'true') === 'true';
-    if (!rateLimitEnabled) {
-      return false;
-    }
-
-    // Simple rate limiting - 5 commands per minute
-    const key = `ratelimit:${userId}`;
-    const count = await storage.getRateLimit(key);
-    
-    if (count >= 5) {
-      return true;
-    }
-    
-    await storage.setRateLimit(key, count + 1, 60); // 60 seconds TTL
-    return false;
-  }
-
   private rateLimitMap = new Map<string, number[]>();
 
   private async isRateLimited(userId: string): Promise<boolean> {

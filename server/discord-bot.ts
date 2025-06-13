@@ -3964,13 +3964,54 @@ export class RaptorBot {
     const suggestionId = interaction.options.getString('suggestion_id', true);
 
     try {
-      await interaction.reply({
-        content: `✅ Approved suggestion ${suggestionId}`,
-        flags: [4096],
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Find the suggestion in activity logs
+      const activities = await storage.getActivityLogsByType('suggestion_created', 500);
+      const suggestion = activities.find(activity => {
+        const metadata = activity.metadata as any;
+        return metadata?.suggestionId === suggestionId;
       });
+
+      if (!suggestion) {
+        await interaction.reply({
+          content: `❌ Suggestion ${suggestionId} not found.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Log the approval
+      await storage.logActivity({
+        type: 'suggestion_approved',
+        userId: interaction.user.id,
+        targetId: suggestionId,
+        description: `Suggestion ${suggestionId} approved by ${interaction.user.username}`,
+        metadata: { 
+          suggestionId: suggestionId,
+          approvedBy: interaction.user.username,
+          originalSuggestion: (suggestion.metadata as any)?.suggestion,
+          approvedAt: new Date().toISOString()
+        }
+      });
+
+      const embed = {
+        title: '✅ Suggestion Approved',
+        fields: [
+          { name: 'Suggestion ID', value: `\`${suggestionId}\``, inline: true },
+          { name: 'Approved by', value: interaction.user.username, inline: true },
+          { name: 'Status', value: 'Approved', inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0x00FF00,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error approving suggestion:', error);
       await interaction.reply({
-        content: '❌ Failed to approve suggestion.',
+        content: '❌ Failed to approve suggestion. Please try again.',
         flags: [4096],
       });
     }
@@ -3980,20 +4021,45 @@ export class RaptorBot {
     const suggestion = interaction.options.getString('suggestion', true);
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      const suggestionId = `SUG-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      await storage.logActivity({
+        type: 'suggestion_created',
+        userId: interaction.user.id,
+        targetId: suggestionId,
+        description: `Suggestion created by ${interaction.user.username}: ${suggestion}`,
+        metadata: { 
+          suggestionId: suggestionId,
+          suggestion: suggestion,
+          submittedBy: interaction.user.username,
+          status: 'pending',
+          submittedAt: new Date().toISOString()
+        }
+      });
+
       const embed = {
-        title: '💡 New Suggestion',
+        title: '💡 Suggestion Submitted',
         description: suggestion,
         fields: [
-          { name: 'Suggested by', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Suggestion ID', value: `\`${suggestionId}\``, inline: true },
           { name: 'Status', value: 'Pending Review', inline: true },
+          { name: 'Submitted by', value: interaction.user.username, inline: true },
+          { name: 'Submitted', value: new Date().toLocaleString(), inline: true },
         ],
-        color: 0xFFD700,
+        color: 0xFFE135,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'Suggestion stored in database for review'
+        }
       };
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
+      console.error('Error creating suggestion:', error);
       await interaction.reply({
-        content: '❌ Failed to create suggestion.',
+        content: '❌ Failed to submit suggestion. Please try again.',
         flags: [4096],
       });
     }
@@ -4004,13 +4070,56 @@ export class RaptorBot {
     const reason = interaction.options.getString('reason') || 'No reason provided';
 
     try {
-      await interaction.reply({
-        content: `❌ Denied suggestion ${suggestionId}\nReason: ${reason}`,
-        flags: [4096],
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Find the suggestion in activity logs
+      const activities = await storage.getActivityLogsByType('suggestion_created', 500);
+      const suggestion = activities.find(activity => {
+        const metadata = activity.metadata as any;
+        return metadata?.suggestionId === suggestionId;
       });
+
+      if (!suggestion) {
+        await interaction.reply({
+          content: `❌ Suggestion ${suggestionId} not found.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Log the denial
+      await storage.logActivity({
+        type: 'suggestion_denied',
+        userId: interaction.user.id,
+        targetId: suggestionId,
+        description: `Suggestion ${suggestionId} denied by ${interaction.user.username}. Reason: ${reason}`,
+        metadata: { 
+          suggestionId: suggestionId,
+          deniedBy: interaction.user.username,
+          reason: reason,
+          originalSuggestion: (suggestion.metadata as any)?.suggestion,
+          deniedAt: new Date().toISOString()
+        }
+      });
+
+      const embed = {
+        title: '❌ Suggestion Denied',
+        fields: [
+          { name: 'Suggestion ID', value: `\`${suggestionId}\``, inline: true },
+          { name: 'Denied by', value: interaction.user.username, inline: true },
+          { name: 'Status', value: 'Denied', inline: true },
+          { name: 'Reason', value: reason, inline: false },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0xFF0000,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error denying suggestion:', error);
       await interaction.reply({
-        content: '❌ Failed to deny suggestion.',
+        content: '❌ Failed to deny suggestion. Please try again.',
         flags: [4096],
       });
     }

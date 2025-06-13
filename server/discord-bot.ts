@@ -3262,7 +3262,7 @@ export class RaptorBot {
       await this.storeUserData(interaction.user, interaction.member, interaction.guild);
 
       // Search for keys with this HWID
-      const allKeys = await storage.getDiscordKeys();
+      const allKeys = await storage.getAllDiscordKeys();
       const matchingKeys = allKeys.filter(key => {
         const metadata = key.metadata as any;
         return metadata?.hwid === hwid || metadata?.hardwareId === hwid || key.hwid === hwid;

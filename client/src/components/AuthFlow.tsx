@@ -50,9 +50,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     storeDiscordId: false,
     storeDashboardKey: false,
   });
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
 
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -294,47 +292,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   });
 
-  // Handle email login
-  const handleEmailLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter both email and password",
-        variant: "destructive",
-      });
-      return;
-    }
-    emailLoginMutation.mutate({ email: email.trim(), password });
-  };
 
-  // Handle email signup
-  const handleEmailSignup = () => {
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (password.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
-      return;
-    }
-    emailSignupMutation.mutate({ email: email.trim(), password });
-  };
 
   // Handle final completion
   const handleComplete = () => {
@@ -356,7 +314,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button 
-                onClick={() => setStep('google')}
+                onClick={handleGoogleLogin}
                 className="w-full"
                 size="lg"
                 variant="outline"
@@ -364,207 +322,15 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                 <Mail className="mr-2 h-4 w-4" />
                 Continue with Google
               </Button>
-              <Button 
-                onClick={() => setStep('email-login')}
-                className="w-full"
-                size="lg"
-                variant="outline"
-              >
-                <Key className="mr-2 h-4 w-4" />
-                Sign in with Email
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <button 
-                  onClick={() => setStep('email-signup')}
-                  className="text-blue-600 hover:underline"
-                >
-                  Sign up here
-                </button>
-              </div>
             </CardContent>
           </Card>
         );
 
-      case 'google':
-        return (
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
-              <CardTitle>Raptor Bot Dashboard</CardTitle>
-              <CardDescription>
-                Sign in with your account to begin the authentication process
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={handleGoogleLogin}
-                className="w-full"
-                size="lg"
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Sign in with Google
-              </Button>
-              <div className="text-center">
-                <button 
-                  onClick={() => setStep('auth')}
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  ← Back to authentication options
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        );
 
-      case 'email-login':
-        return (
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <Key className="mx-auto h-12 w-12 text-green-600 mb-4" />
-              <CardTitle>Sign In</CardTitle>
-              <CardDescription>
-                Enter your email and password to continue
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleEmailLogin()}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleEmailLogin()}
-                />
-              </div>
-              <Button 
-                onClick={handleEmailLogin}
-                className="w-full"
-                size="lg"
-                disabled={emailLoginMutation.isPending}
-              >
-                {emailLoginMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Key className="mr-2 h-4 w-4" />
-                )}
-                Sign In
-              </Button>
-              <div className="text-center space-y-2">
-                <button 
-                  onClick={() => setStep('email-signup')}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Don't have an account? Sign up
-                </button>
-                <br />
-                <button 
-                  onClick={() => setStep('auth')}
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  ← Back to authentication options
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        );
 
-      case 'email-signup':
-        return (
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <Key className="mx-auto h-12 w-12 text-purple-600 mb-4" />
-              <CardTitle>Create Account</CardTitle>
-              <CardDescription>
-                Create a new account to access the dashboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="signup-email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="signup-password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  placeholder="Create a password (min 6 characters)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="confirm-password" className="text-sm font-medium">
-                  Confirm Password
-                </label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleEmailSignup()}
-                />
-              </div>
-              <Button 
-                onClick={handleEmailSignup}
-                className="w-full"
-                size="lg"
-                disabled={emailSignupMutation.isPending}
-              >
-                {emailSignupMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Key className="mr-2 h-4 w-4" />
-                )}
-                Create Account
-              </Button>
-              <div className="text-center space-y-2">
-                <button 
-                  onClick={() => setStep('email-login')}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Already have an account? Sign in
-                </button>
-                <br />
-                <button 
-                  onClick={() => setStep('auth')}
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  ← Back to authentication options
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        );
+
+
+
 
       case 'discord':
         return (
@@ -573,7 +339,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
               <CardTitle>Link Discord Account</CardTitle>
               <CardDescription>
-                {user ? `Signed in as ${user.email}` : 'Enter your Discord User ID to receive a verification code'}
+                {user ? `Signed in successfully` : 'Enter your Discord User ID to receive a verification code'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

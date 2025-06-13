@@ -185,9 +185,20 @@ export class DatabaseStorage implements IStorage {
 
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values(userData)
       .returning();
     return user;
+  }
+
+  async authenticateEmailUser(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user || !user.passwordHash || user.authMethod !== 'email') {
+      return null;
+    }
+
+    const bcrypt = await import('bcrypt');
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    return isValid ? user : null;
   }
 
   async createDiscordKey(insertKey: InsertDiscordKey): Promise<DiscordKey> {

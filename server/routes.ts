@@ -38,6 +38,21 @@ async function requireAuth(req: any, res: any, next: any) {
     }
   }
   
+  // Check if authenticated via email session
+  const sessionUserId = (req.session as any).userId;
+  const sessionAuthMethod = (req.session as any).authMethod;
+  if (sessionUserId && sessionAuthMethod === 'email') {
+    try {
+      const user = await storage.getUser(sessionUserId);
+      if (user && user.authMethod === 'email') {
+        req.user = user;
+        return next();
+      }
+    } catch (error) {
+      console.error("Error checking email auth session:", error);
+    }
+  }
+  
   // Check if authenticated via dashboard key
   const sessionKeyId = (req.session as any).dashboardKeyId;
   if (sessionKeyId) {
@@ -110,6 +125,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ Discord bot started successfully");
     } catch (error) {
       console.error("❌ Failed to start Discord bot:", error);
+    }
+  });
+
+  // Email authentication endpoints
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "User with this email already exists" });
+      }
+      
+      // Create new user
+      const user = await storage.createEmailUser(email, password);
+      
+      // Log them in by setting session
+      (req.session as any).userId = user.id;
+      (req.session as any).authMethod = 'email';
+      
+      res.json({ 
+        success: true, 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          name: user.name,
+          authMethod: user.authMethod 
+        } 
+      });
+    } catch (error) {
+      console.error("Error during signup:", error);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      // Authenticate user
+      const user = await storage.authenticateEmailUser(email, password);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Log them in by setting session
+      (req.session as any).userId = user.id;
+      (req.session as any).authMethod = 'email';
+      
+      res.json({ 
+        success: true, 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          name: user.name,
+          authMethod: user.authMethod 
+        } 
+      });
+    } catch (error) {
+      console.error("Error during login:", error);
+      res.status(500).json({ error: "Failed to log in" });
     }
   });
 

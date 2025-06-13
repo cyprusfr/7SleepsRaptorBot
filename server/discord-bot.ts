@@ -2126,7 +2126,6 @@ export class RaptorBot {
     const message = interaction.options.getString('message', true);
     const targetChannel = interaction.options.getChannel('channel');
     
-    // Use the target channel if specified, otherwise use current channel
     const channel = targetChannel ? await interaction.guild?.channels.fetch(targetChannel.id) : interaction.channel;
 
     if (!channel || !('send' in channel)) {
@@ -2138,12 +2137,40 @@ export class RaptorBot {
     }
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
       await channel.send(message);
-      await interaction.reply({
-        content: '✅ Message sent successfully!',
-        flags: [4096],
+
+      // Log the moderation action
+      await storage.logActivity({
+        type: 'bot_message_sent',
+        userId: interaction.user.id,
+        targetId: channel.id,
+        description: `Bot message sent by ${interaction.user.username} in #${channel.name}: ${message}`,
+        metadata: { 
+          channelId: channel.id,
+          channelName: channel.name,
+          message: message,
+          sentBy: interaction.user.username,
+          serverId: interaction.guild?.id
+        }
       });
+
+      const embed = {
+        title: '📢 Message Sent Successfully',
+        fields: [
+          { name: 'Channel', value: `#${channel.name}`, inline: true },
+          { name: 'Sent by', value: interaction.user.username, inline: true },
+          { name: 'Message Length', value: `${message.length} characters`, inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0x00FF00,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error sending bot message:', error);
       await interaction.reply({
         content: '❌ Failed to send message. Check bot permissions.',
         flags: [4096],
@@ -2156,12 +2183,40 @@ export class RaptorBot {
     const message = interaction.options.getString('message', true);
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
       await user.send(message);
-      await interaction.reply({
-        content: `✅ DM sent to ${user.username} successfully!`,
-        flags: [4096],
+
+      // Log the DM action
+      await storage.logActivity({
+        type: 'dm_sent',
+        userId: interaction.user.id,
+        targetId: user.id,
+        description: `DM sent by ${interaction.user.username} to ${user.username}: ${message}`,
+        metadata: { 
+          targetUserId: user.id,
+          targetUsername: user.username,
+          message: message,
+          sentBy: interaction.user.username,
+          serverId: interaction.guild?.id
+        }
       });
+
+      const embed = {
+        title: '📩 Direct Message Sent',
+        fields: [
+          { name: 'Recipient', value: user.username, inline: true },
+          { name: 'Sent by', value: interaction.user.username, inline: true },
+          { name: 'Message Length', value: `${message.length} characters`, inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0x5865F2,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error sending DM:', error);
       await interaction.reply({
         content: `❌ Failed to send DM to ${user.username}. They may have DMs disabled.`,
         flags: [4096],
@@ -2182,13 +2237,45 @@ export class RaptorBot {
     }
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
       const member = await interaction.guild.members.fetch(user.id);
+      const oldNickname = member.nickname || member.user.username;
+      
       await member.setNickname(nickname);
-      await interaction.reply({
-        content: `✅ Changed ${user.username}'s nickname to "${nickname}"`,
-        flags: [4096],
+
+      // Log the moderation action
+      await storage.logActivity({
+        type: 'nickname_changed',
+        userId: interaction.user.id,
+        targetId: user.id,
+        description: `Nickname changed by ${interaction.user.username} for ${user.username}: "${oldNickname}" → "${nickname}"`,
+        metadata: { 
+          targetUserId: user.id,
+          targetUsername: user.username,
+          oldNickname: oldNickname,
+          newNickname: nickname,
+          changedBy: interaction.user.username,
+          serverId: interaction.guild.id
+        }
       });
+
+      const embed = {
+        title: '✏️ Nickname Changed',
+        fields: [
+          { name: 'User', value: user.username, inline: true },
+          { name: 'Old Nickname', value: oldNickname, inline: true },
+          { name: 'New Nickname', value: nickname, inline: true },
+          { name: 'Changed by', value: interaction.user.username, inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0xFFD700,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error changing nickname:', error);
       await interaction.reply({
         content: `❌ Failed to change nickname. Check bot permissions and role hierarchy.`,
         flags: [4096],
@@ -2246,15 +2333,47 @@ export class RaptorBot {
     }
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
       const member = await interaction.guild.members.fetch(user.id);
-      const timeoutDuration = minutes * 60 * 1000; // Convert to milliseconds
+      const timeoutDuration = minutes * 60 * 1000;
       
       await member.timeout(timeoutDuration, reason);
-      await interaction.reply({
-        content: `✅ Timed out ${user.username} for ${minutes} minutes.\nReason: ${reason}`,
-        flags: [4096],
+
+      // Log the moderation action
+      await storage.logActivity({
+        type: 'user_timeout',
+        userId: interaction.user.id,
+        targetId: user.id,
+        description: `User ${user.username} timed out by ${interaction.user.username} for ${minutes} minutes. Reason: ${reason}`,
+        metadata: { 
+          targetUserId: user.id,
+          targetUsername: user.username,
+          duration: minutes,
+          reason: reason,
+          moderator: interaction.user.username,
+          serverId: interaction.guild.id,
+          timeoutUntil: new Date(Date.now() + timeoutDuration).toISOString()
+        }
       });
+
+      const embed = {
+        title: '⏰ User Timed Out',
+        fields: [
+          { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+          { name: 'Duration', value: `${minutes} minutes`, inline: true },
+          { name: 'Moderator', value: interaction.user.username, inline: true },
+          { name: 'Reason', value: reason, inline: false },
+          { name: 'Timeout Until', value: new Date(Date.now() + timeoutDuration).toLocaleString(), inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0xFF8C00,
+        timestamp: new Date().toISOString(),
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error timing out user:', error);
       await interaction.reply({
         content: `❌ Failed to timeout user. Check bot permissions and role hierarchy.`,
         flags: [4096],
@@ -2267,7 +2386,7 @@ export class RaptorBot {
     const message = interaction.options.getString('message', true);
     const colorInput = interaction.options.getString('color');
 
-    let color = 0x5865F2; // Default Discord blurple
+    let color = 0x5865F2;
     if (colorInput) {
       const hexColor = colorInput.replace('#', '');
       const parsedColor = parseInt(hexColor, 16);
@@ -2276,22 +2395,40 @@ export class RaptorBot {
       }
     }
 
-    const embed = {
-      title: title,
-      description: message,
-      color: color,
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: `Announced by ${interaction.user.username}`,
-        icon_url: interaction.user.displayAvatarURL(),
-      },
-    };
-
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      const embed = {
+        title: title,
+        description: message,
+        color: color,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: `Announced by ${interaction.user.username}`,
+          icon_url: interaction.user.displayAvatarURL(),
+        },
+      };
+
       await interaction.reply({ embeds: [embed] });
+
+      // Log the announcement
+      await storage.logActivity({
+        type: 'announcement_sent',
+        userId: interaction.user.id,
+        targetId: interaction.channel?.id || 'unknown',
+        description: `Announcement "${title}" sent by ${interaction.user.username}`,
+        metadata: { 
+          title: title,
+          message: message,
+          color: color.toString(16),
+          announcedBy: interaction.user.username,
+          serverId: interaction.guild?.id
+        }
+      });
     } catch (error) {
+      console.error('Error sending announcement:', error);
       await interaction.reply({
-        content: '❌ Failed to send announcement.',
+        content: '❌ Failed to send announcement. Please try again.',
         flags: [4096],
       });
     }
@@ -2758,20 +2895,47 @@ export class RaptorBot {
     const description = interaction.options.getString('description', true);
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      const bugId = `BUG-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      // Store bug report in database as activity
+      await storage.logActivity({
+        type: 'bug_report',
+        userId: interaction.user.id,
+        targetId: bugId,
+        description: `Bug report submitted by ${interaction.user.username}: ${description}`,
+        metadata: { 
+          bugId: bugId,
+          description: description,
+          reportedBy: interaction.user.username,
+          status: 'open',
+          priority: 'normal',
+          reportedAt: new Date().toISOString()
+        }
+      });
+
       const embed = {
         title: '🐛 Bug Report Submitted',
-        description: `**Bug Description:**\n${description}`,
+        description: `**Bug ID:** \`${bugId}\`\n**Description:**\n${description}`,
         fields: [
           { name: 'Reported by', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Status', value: 'Open', inline: true },
+          { name: 'Priority', value: 'Normal', inline: true },
           { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
         ],
         color: 0xFF6B35,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'Bug report stored in database for developer review'
+        }
       };
 
       await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error submitting bug report:', error);
       await interaction.reply({
-        content: '❌ Failed to submit bug report.',
+        content: '❌ Failed to submit bug report. Please try again.',
         flags: [4096],
       });
     }

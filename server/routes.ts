@@ -168,11 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Discord user ID required" });
       }
 
-      // Check if user exists in database (indicating verification was completed)
-      const user = await storage.getUserByDiscordId(discordUserId);
+      // Check if Discord user exists in database (indicating verification was completed)
+      const discordUser = await storage.getDiscordUserByDiscordId(discordUserId);
       
       res.json({ 
-        verified: !!user,
+        verified: !!discordUser,
         discordUserId 
       });
     } catch (error) {

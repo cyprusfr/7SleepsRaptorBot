@@ -77,10 +77,9 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     if (step === 'verification' && verificationData && !linkClicked) {
       pollInterval = setInterval(async () => {
         try {
-          const response = await apiRequest('/api/auth/check-verification', 'POST', {
+          const data = await apiRequest('/api/auth/check-verification', 'POST', {
             discordUserId: verificationData.discordUserId
           });
-          const data = await response.json();
           if (data.verified) {
             setLinkClicked(true);
             toast({

@@ -250,53 +250,20 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   });
 
-  // Email login mutation
-  const emailLoginMutation = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      return await apiRequest("/api/auth/login", "POST", credentials);
-    },
-    onSuccess: () => {
-      setStep('discord');
-      toast({
-        title: "Login Successful",
-        description: "Please link your Discord account",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid email or password",
-        variant: "destructive",
-      });
-    }
-  });
 
-  // Email signup mutation
-  const emailSignupMutation = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      return await apiRequest("/api/auth/signup", "POST", credentials);
-    },
-    onSuccess: () => {
-      setStep('discord');
-      toast({
-        title: "Account Created",
-        description: "Please link your Discord account",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Signup Failed",
-        description: error.message || "Failed to create account",
-        variant: "destructive",
-      });
-    }
-  });
 
 
 
   // Handle final completion
   const handleComplete = () => {
-    completeAuthMutation.mutate();
+    setStep('complete');
+    toast({
+      title: "Authentication Complete",
+      description: "Welcome to the Raptor Dashboard!",
+    });
+    setTimeout(() => {
+      onComplete();
+    }, 2000);
   };
 
   // Render current step

@@ -194,11 +194,13 @@ export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
 export const insertDiscordUserSchema = createInsertSchema(discordUsers).omit({
   id: true,
   joinedAt: true,
+  lastSeen: true,
 });
 
 export const insertDiscordServerSchema = createInsertSchema(discordServers).omit({
   id: true,
   botJoinedAt: true,
+  lastDataSync: true,
 });
 
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({

@@ -5839,25 +5839,28 @@ Please purchase using PayPal on the website.`,
       const failedTests = testResults.filter(r => r.status === '❌ FAIL').length;
       const erroredTests = testResults.filter(r => r.status === '❌ ERROR').length;
 
-      // Create detailed embed with results
+      // Create minimal safe summary embed
       const totalTestsCompleted = testResults.length;
-      const embed = {
+      const avgTime = Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTestsCompleted);
+      const successRate = Math.round((passedTests / totalTestsCompleted) * 100);
+      
+      const summaryEmbed = {
         title: '🧪 Discord Bot Command Test Results',
-        description: `Comprehensive testing of ${totalTestsCompleted} commands completed`,
+        description: `Testing complete: ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\nAverage time: ${avgTime}ms`,
         fields: [
           {
-            name: '📊 Test Summary',
-            value: `**Passed:** ${passedTests}\n**Failed:** ${failedTests}\n**Errors:** ${erroredTests}`,
+            name: '✅ Passed',
+            value: passedTests.toString(),
             inline: true
           },
           {
-            name: '⚡ Performance',
-            value: `Average execution time: ${Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTestsCompleted)}ms`,
+            name: '❌ Failed', 
+            value: failedTests.toString(),
             inline: true
           },
           {
-            name: '🎯 Success Rate',
-            value: `${Math.round((passedTests / totalTestsCompleted) * 100)}%`,
+            name: '⚠️ Errors',
+            value: erroredTests.toString(),
             inline: true
           }
         ],
@@ -5866,7 +5869,7 @@ Please purchase using PayPal on the website.`,
       };
 
       // Send the main summary embed first
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [summaryEmbed] });
 
       // Create detailed results for each command with multiple embeds
       const detailedResults = testResults.map(result => {
@@ -5893,7 +5896,7 @@ Please purchase using PayPal on the website.`,
         const detailEmbed = {
           title: `📋 Detailed Test Results (Part ${i + 1}/${chunks.length})`,
           description: chunks[i],
-          color: embed.color,
+          color: 0x00FF00,
           timestamp: new Date().toISOString()
         };
 

@@ -5916,9 +5916,9 @@ Please purchase using PayPal on the website.`,
       await storage.logActivity({
         type: 'comprehensive_test',
         userId: testUser.id,
-        description: `Comprehensive bot test completed: ${passedTests}/${totalTests} passed`,
+        description: `Comprehensive bot test completed: ${passedTests}/${totalTestsCompleted} passed`,
         metadata: { 
-          totalTests, 
+          totalTests: totalTestsCompleted, 
           passedTests, 
           failedTests, 
           erroredTests,

@@ -5844,32 +5844,10 @@ Please purchase using PayPal on the website.`,
       const avgTime = Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTestsCompleted);
       const successRate = Math.round((passedTests / totalTestsCompleted) * 100);
       
-      const summaryEmbed = {
-        title: '🧪 Discord Bot Command Test Results',
-        description: `Testing complete: ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\nAverage time: ${avgTime}ms`,
-        fields: [
-          {
-            name: '✅ Passed',
-            value: passedTests.toString(),
-            inline: true
-          },
-          {
-            name: '❌ Failed', 
-            value: failedTests.toString(),
-            inline: true
-          },
-          {
-            name: '⚠️ Errors',
-            value: erroredTests.toString(),
-            inline: true
-          }
-        ],
-        color: passedTests === totalTestsCompleted ? 0x00FF00 : failedTests > 0 ? 0xFF6600 : 0xFF0000,
-        timestamp: new Date().toISOString()
-      };
-
-      // Send the main summary embed first
-      await interaction.editReply({ embeds: [summaryEmbed] });
+      // Send minimal summary with just content (no embed to avoid field issues)
+      await interaction.editReply({
+        content: `🧪 **Test Results Summary**\n\n📊 ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\n⚡ Average: ${avgTime}ms\n\n✅ Passed: ${passedTests} | ❌ Failed: ${failedTests} | ⚠️ Errors: ${erroredTests}\n\nDetailed results loading...`
+      });
 
       // Create detailed results for each command with multiple embeds
       const detailedResults = testResults.map(result => {

@@ -40,14 +40,7 @@ export interface IStorage {
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
-  // Email authentication
-  createEmailUser(email: string, passwordHash: string, name?: string): Promise<User>;
-  authenticateEmailUser(email: string, password: string): Promise<User | null>;
-  
-  // Email verification
-  createEmailVerificationCode(email: string, code: string): Promise<void>;
-  verifyEmailCode(email: string, code: string): Promise<boolean>;
-  cleanupExpiredEmailCodes(): Promise<void>;
+
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -669,49 +662,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(verificationSessions.sessionId, sessionId));
   }
 
-  // Email verification methods
-  async createEmailVerificationCode(email: string, code: string): Promise<void> {
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
-    await db.insert(emailVerificationCodes).values({
-      email,
-      code,
-      expiresAt,
-    });
-  }
 
-  async verifyEmailCode(email: string, code: string): Promise<boolean> {
-    const [verificationCode] = await db.select()
-      .from(emailVerificationCodes)
-      .where(
-        and(
-          eq(emailVerificationCodes.email, email),
-          eq(emailVerificationCodes.code, code),
-          eq(emailVerificationCodes.isUsed, false)
-        )
-      );
-
-    if (!verificationCode) {
-      return false;
-    }
-
-    // Check if code is expired
-    if (new Date() > verificationCode.expiresAt) {
-      return false;
-    }
-
-    // Mark code as used
-    await db.update(emailVerificationCodes)
-      .set({ isUsed: true })
-      .where(eq(emailVerificationCodes.id, verificationCode.id));
-
-    return true;
-  }
-
-  async cleanupExpiredEmailCodes(): Promise<void> {
-    const now = new Date();
-    await db.delete(emailVerificationCodes)
-      .where(eq(emailVerificationCodes.expiresAt, now));
-  }
 
   // Backup integrity methods
   async getAllBackupIntegrityChecks(): Promise<any[]> {

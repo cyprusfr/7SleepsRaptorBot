@@ -4,8 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
-import { generateVerificationCode, sendVerificationEmail } from "./email";
-import bcrypt from "bcrypt";
+
 import { z } from "zod";
 
 // Basic auth check for Google OAuth users (used during verification flow)
@@ -242,68 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email verification endpoints
-  app.post("/api/auth/send-verification", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
-      }
 
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ error: "Email already registered" });
-      }
-
-      const code = generateVerificationCode();
-      await storage.createEmailVerificationCode(email, code);
-      
-      const emailSent = await sendVerificationEmail(email, code);
-      
-      if (!emailSent) {
-        return res.status(500).json({ error: "Failed to send verification email" });
-      }
-
-      res.json({ success: true, message: "Verification code sent to your email" });
-    } catch (error) {
-      console.error("Error sending verification code:", error);
-      res.status(500).json({ error: "Failed to send verification code" });
-    }
-  });
-
-  app.post("/api/auth/verify-email", async (req, res) => {
-    try {
-      const { email, code, password, name } = req.body;
-      
-      if (!email || !code || !password) {
-        return res.status(400).json({ error: "Email, code, and password are required" });
-      }
-
-      const isValidCode = await storage.verifyEmailCode(email, code);
-      
-      if (!isValidCode) {
-        return res.status(400).json({ error: "Invalid or expired verification code" });
-      }
-
-      // Create user with verified email
-      const passwordHash = await bcrypt.hash(password, 10);
-      const user = await storage.createEmailUser(email, passwordHash, name);
-
-      // Log the user in
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Error logging in user:", err);
-          return res.status(500).json({ error: "Failed to log in after registration" });
-        }
-        res.json({ success: true, user });
-      });
-    } catch (error) {
-      console.error("Error verifying email:", error);
-      res.status(500).json({ error: "Failed to verify email" });
-    }
-  });
 
   // Clear session endpoint for testing
   app.post("/api/auth/clear-session", async (req, res) => {

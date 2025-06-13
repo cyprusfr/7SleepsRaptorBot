@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Mail, MessageSquare, Key, Shield, CheckCircle, Copy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-type AuthStep = 'auth' | 'google' | 'email-login' | 'email-signup' | 'discord' | 'verification' | 'dashboard' | 'consent' | 'complete';
+type AuthStep = 'auth' | 'discord' | 'verification' | 'dashboard' | 'consent' | 'complete';
 
 interface VerificationData {
   discordUserId: string;
@@ -76,7 +76,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
 
   // Auto-advance to Discord step if user is already authenticated
   useEffect(() => {
-    if (isAuthenticated && user && step === 'google') {
+    if (isAuthenticated && user && step === 'auth') {
       setStep('discord');
     }
   }, [isAuthenticated, user, step]);
@@ -118,7 +118,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
 
   // Handle Google login redirect
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = '/api/login';
   };
 
   // Link Discord account

@@ -75,21 +75,26 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     // Poll for verification status if we're on the verification step
     let pollInterval: NodeJS.Timeout;
     if (step === 'verification' && verificationData && !linkClicked) {
+      console.log('Starting verification polling for Discord ID:', verificationData.discordUserId);
       pollInterval = setInterval(async () => {
         try {
+          console.log('Polling verification status for:', verificationData.discordUserId);
           const response = await apiRequest('/api/auth/check-verification', 'POST', {
             discordUserId: verificationData.discordUserId
           });
           const data = await response.json() as { verified: boolean; discordUserId: string };
+          console.log('Verification poll response:', data);
           if (data.verified) {
+            console.log('Discord verification detected - enabling button');
             setLinkClicked(true);
+            clearInterval(pollInterval);
             toast({
               title: "Discord Verified!",
               description: "You can now confirm your Discord account",
             });
           }
         } catch (error) {
-          // Ignore errors during polling
+          console.error('Verification polling error:', error);
         }
       }, 2000); // Poll every 2 seconds
     }
@@ -101,32 +106,10 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   }, [toast, step, verificationData, linkClicked]);
 
   // Google OAuth login
-  const googleLoginMutation = useMutation({
-    mutationFn: async () => {
-      // Simulate Google OAuth - in real implementation, this would redirect to Google
-      return {
-        id: 'google_' + Math.random().toString(36).substr(2, 9),
-        email: 'user@example.com',
-        name: 'Test User',
-        picture: 'https://via.placeholder.com/150'
-      };
-    },
-    onSuccess: (user) => {
-      setGoogleUser(user);
-      setStep('discord');
-      toast({
-        title: "Google Login Successful",
-        description: "Please enter your Discord ID to continue",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Google Login Failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
-  });
+  const handleGoogleLogin = () => {
+    // Redirect to Replit OAuth
+    window.location.href = '/api/login';
+  };
 
   // Link Discord account
   const linkDiscordMutation = useMutation({
@@ -216,9 +199,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   });
 
-  const handleGoogleLogin = () => {
-    googleLoginMutation.mutate();
-  };
+
 
   const handleDiscordLink = () => {
     if (!discordId.trim()) {
@@ -267,21 +248,11 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             <CardContent>
               <Button 
                 onClick={handleGoogleLogin}
-                disabled={googleLoginMutation.isPending}
                 className="w-full"
                 size="lg"
               >
-                {googleLoginMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Sign in with Google
-                  </>
-                )}
+                <Mail className="mr-2 h-4 w-4" />
+                Sign in with Google
               </Button>
             </CardContent>
           </Card>

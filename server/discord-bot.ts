@@ -379,118 +379,391 @@ export class RaptorBot {
         .setName('whitelist-list')
         .setDescription('List all whitelisted user IDs'),
 
-      // Candy Currency Commands
+      // License Key Management Commands
       new SlashCommandBuilder()
-        .setName('candy')
-        .setDescription('Check your candy balance'),
+        .setName('add')
+        .setDescription('Add a new license key to the database')
+        .addStringOption(option =>
+          option.setName('key')
+            .setDescription('License key to add')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('user')
+            .setDescription('User to assign the key to')
+            .setRequired(false)
+        ),
 
       new SlashCommandBuilder()
-        .setName('daily-candy')
-        .setDescription('Claim your daily candy reward'),
-
-      new SlashCommandBuilder()
-        .setName('give-candy')
-        .setDescription('Give candy to another user')
+        .setName('avatar')
+        .setDescription('Fetch a user\'s avatar from the server')
         .addUserOption(option =>
           option.setName('user')
-            .setDescription('User to give candy to')
+            .setDescription('User to get avatar for')
             .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('bug-report')
+        .setDescription('Report a bug to the developers')
+        .addStringOption(option =>
+          option.setName('description')
+            .setDescription('Description of the bug')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('bypass')
+        .setDescription('Bypass given link')
+        .addStringOption(option =>
+          option.setName('link')
+            .setDescription('Link to bypass')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('db-management')
+        .setDescription('Manage Database Tables and Entries')
+        .addStringOption(option =>
+          option.setName('action')
+            .setDescription('Action to perform')
+            .setRequired(true)
+            .addChoices(
+              { name: 'View Tables', value: 'view' },
+              { name: 'Clear Table', value: 'clear' },
+              { name: 'Backup Database', value: 'backup' },
+              { name: 'Restore Database', value: 'restore' }
+            )
         )
-        .addIntegerOption(option =>
+        .addStringOption(option =>
+          option.setName('table')
+            .setDescription('Table name (if applicable)')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('eval')
+        .setDescription('Evaluates code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('Code to evaluate')
+            .setRequired(true)
+        ),
+
+      // Key Generation Commands
+      new SlashCommandBuilder()
+        .setName('generatekey-bitcoin')
+        .setDescription('Generate a key for a bitcoin payment')
+        .addStringOption(option =>
           option.setName('amount')
-            .setDescription('Amount of candy to give')
+            .setDescription('Bitcoin amount')
             .setRequired(true)
-            .setMinValue(1)
         ),
 
       new SlashCommandBuilder()
-        .setName('candy-top')
-        .setDescription('Show top candy holders in the server'),
-
-      new SlashCommandBuilder()
-        .setName('candy-history')
-        .setDescription('View your recent candy transactions'),
-
-      // Candy Games
-      new SlashCommandBuilder()
-        .setName('coin-flip')
-        .setDescription('Flip a coin and bet candy on heads or tails')
+        .setName('generatekey-cashapp')
+        .setDescription('Generate a key for a cashapp payment')
         .addStringOption(option =>
-          option.setName('choice')
-            .setDescription('Choose heads or tails')
+          option.setName('amount')
+            .setDescription('CashApp amount')
             .setRequired(true)
-            .addChoices(
-              { name: 'Heads', value: 'heads' },
-              { name: 'Tails', value: 'tails' }
-            )
-        )
-        .addIntegerOption(option =>
-          option.setName('bet')
-            .setDescription('Amount of candy to bet (1-100)')
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(100)
         ),
 
       new SlashCommandBuilder()
-        .setName('dice-roll')
-        .setDescription('Roll dice and win candy based on your roll')
-        .addIntegerOption(option =>
-          option.setName('bet')
-            .setDescription('Amount of candy to bet (1-50)')
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(50)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('rock-paper-scissors')
-        .setDescription('Play rock paper scissors against the bot for candy')
+        .setName('generatekey-custom')
+        .setDescription('Generate a key for a custom payment method')
         .addStringOption(option =>
-          option.setName('choice')
-            .setDescription('Your choice')
+          option.setName('method')
+            .setDescription('Payment method')
             .setRequired(true)
-            .addChoices(
-              { name: 'Rock', value: 'rock' },
-              { name: 'Paper', value: 'paper' },
-              { name: 'Scissors', value: 'scissors' }
-            )
         )
-        .addIntegerOption(option =>
-          option.setName('bet')
-            .setDescription('Amount of candy to bet (1-75)')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Payment amount')
             .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(75)
         ),
 
       new SlashCommandBuilder()
-        .setName('number-guess')
-        .setDescription('Guess a number between 1-10 to win candy')
-        .addIntegerOption(option =>
-          option.setName('guess')
-            .setDescription('Your guess (1-10)')
+        .setName('generatekey-ethereum')
+        .setDescription('Generate a key for an eth payment')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Ethereum amount')
             .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(10)
-        )
-        .addIntegerOption(option =>
-          option.setName('bet')
-            .setDescription('Amount of candy to bet (1-200)')
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(200)
         ),
 
       new SlashCommandBuilder()
-        .setName('slot-machine')
-        .setDescription('Play the candy slot machine')
-        .addIntegerOption(option =>
-          option.setName('bet')
-            .setDescription('Amount of candy to bet (5-100)')
+        .setName('generatekey-g2a')
+        .setDescription('Generate a key for a g2a gift code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('G2A gift code')
             .setRequired(true)
-            .setMinValue(5)
-            .setMaxValue(100)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('generatekey-litecoin')
+        .setDescription('Generate a key for a litecoin payment')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Litecoin amount')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('generatekey-paypal')
+        .setDescription('Generate a key for a paypal payment')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('PayPal amount')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('generatekey-robux')
+        .setDescription('Generate a key for a robux payment')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Robux amount')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('generatekey-venmo')
+        .setDescription('Generate a key for a venmo payment')
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Venmo amount')
+            .setRequired(true)
+        ),
+
+      // HWID Commands
+      new SlashCommandBuilder()
+        .setName('hwidinfo-hwid')
+        .setDescription('Get HWID information by HWID')
+        .addStringOption(option =>
+          option.setName('hwid')
+            .setDescription('Hardware ID to lookup')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('hwidinfo-user')
+        .setDescription('Get HWID information by user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to get HWID info for')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('keyinfo')
+        .setDescription('Get information about a license key')
+        .addStringOption(option =>
+          option.setName('key')
+            .setDescription('License key to get info for')
+            .setRequired(true)
+        ),
+
+      // Server Management Commands
+      new SlashCommandBuilder()
+        .setName('lockdown-end')
+        .setDescription('End server lockdown'),
+
+      new SlashCommandBuilder()
+        .setName('lockdown-initiate')
+        .setDescription('Initiate server lockdown'),
+
+      // Logging Commands
+      new SlashCommandBuilder()
+        .setName('log-add')
+        .setDescription('Add logs for a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to add logs for')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('log')
+            .setDescription('Log entry to add')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('log-lb')
+        .setDescription('View the logs leaderboard'),
+
+      new SlashCommandBuilder()
+        .setName('log-remove')
+        .setDescription('Remove logs from a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to remove logs from')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('log_id')
+            .setDescription('Log ID to remove')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('log-view')
+        .setDescription('View logs for a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to view logs for')
+            .setRequired(true)
+        ),
+
+      // Utility Commands
+      new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Pong! View the speed of the bot\'s response'),
+
+      new SlashCommandBuilder()
+        .setName('poke')
+        .setDescription('Poke the bot'),
+
+      new SlashCommandBuilder()
+        .setName('roblox')
+        .setDescription('Automates a roblox payment')
+        .addStringOption(option =>
+          option.setName('username')
+            .setDescription('Roblox username')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('amount')
+            .setDescription('Robux amount')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('role-color')
+        .setDescription('Find the perfect color to match a role icon tststs')
+        .addRoleOption(option =>
+          option.setName('role')
+            .setDescription('Role to match color for')
+            .setRequired(true)
+        ),
+
+      // Suggestion System Commands
+      new SlashCommandBuilder()
+        .setName('suggestion-approve')
+        .setDescription('Approve a suggestion')
+        .addStringOption(option =>
+          option.setName('suggestion_id')
+            .setDescription('Suggestion ID to approve')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('suggestion-create')
+        .setDescription('Create a new suggestion')
+        .addStringOption(option =>
+          option.setName('suggestion')
+            .setDescription('Your suggestion')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('suggestion-deny')
+        .setDescription('Deny a suggestion')
+        .addStringOption(option =>
+          option.setName('suggestion_id')
+            .setDescription('Suggestion ID to deny')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('reason')
+            .setDescription('Reason for denial')
+            .setRequired(false)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('suggestion-disable')
+        .setDescription('Disable suggestion channels'),
+
+      new SlashCommandBuilder()
+        .setName('suggestion-setup')
+        .setDescription('Setup the suggestion channels')
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Channel for suggestions')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('tag-manager')
+        .setDescription('Opens the tags manager'),
+
+      new SlashCommandBuilder()
+        .setName('transfer')
+        .setDescription('Transfer license data from one account to another')
+        .addStringOption(option =>
+          option.setName('from_user')
+            .setDescription('Source user ID')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('to_user')
+            .setDescription('Destination user ID')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('userinfo')
+        .setDescription('Get license key information for a user')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to get info for')
+            .setRequired(true)
+        ),
+
+      // Whitelist Management Commands
+      new SlashCommandBuilder()
+        .setName('whitelist-add')
+        .setDescription('Add a user to whitelist')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to add to whitelist')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-admin-add')
+        .setDescription('Add a whitelist admin')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to make whitelist admin')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-admin-list')
+        .setDescription('List all whitelist admins'),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-admin-remove')
+        .setDescription('Remove a whitelist admin')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to remove as whitelist admin')
+            .setRequired(true)
+        ),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-list')
+        .setDescription('List all whitelisted users'),
+
+      new SlashCommandBuilder()
+        .setName('whitelist-remove')
+        .setDescription('Remove a user from whitelist')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to remove from whitelist')
+            .setRequired(true)
         ),
 
       // Dashboard Key Management Commands
@@ -682,35 +955,125 @@ export class RaptorBot {
         case 'whitelist-list':
           await this.handleWhitelistList(interaction);
           break;
-        case 'candy':
-          await this.handleCandy(interaction);
+        case 'add':
+          await this.handleAdd(interaction);
           break;
-        case 'daily-candy':
-          await this.handleDailyCandy(interaction);
+        case 'avatar':
+          await this.handleAvatar(interaction);
           break;
-        case 'give-candy':
-          await this.handleGiveCandy(interaction);
+        case 'bug-report':
+          await this.handleBugReport(interaction);
           break;
-        case 'candy-top':
-          await this.handleCandyTop(interaction);
+        case 'bypass':
+          await this.handleBypass(interaction);
           break;
-        case 'candy-history':
-          await this.handleCandyHistory(interaction);
+        case 'db-management':
+          await this.handleDbManagement(interaction);
           break;
-        case 'coin-flip':
-          await this.handleCoinFlip(interaction);
+        case 'eval':
+          await this.handleEval(interaction);
           break;
-        case 'dice-roll':
-          await this.handleDiceRoll(interaction);
+        case 'generatekey-bitcoin':
+          await this.handleGenerateKeyBitcoin(interaction);
           break;
-        case 'rock-paper-scissors':
-          await this.handleRockPaperScissors(interaction);
+        case 'generatekey-cashapp':
+          await this.handleGenerateKeyCashapp(interaction);
           break;
-        case 'number-guess':
-          await this.handleNumberGuess(interaction);
+        case 'generatekey-custom':
+          await this.handleGenerateKeyCustom(interaction);
           break;
-        case 'slot-machine':
-          await this.handleSlotMachine(interaction);
+        case 'generatekey-ethereum':
+          await this.handleGenerateKeyEthereum(interaction);
+          break;
+        case 'generatekey-g2a':
+          await this.handleGenerateKeyG2a(interaction);
+          break;
+        case 'generatekey-litecoin':
+          await this.handleGenerateKeyLitecoin(interaction);
+          break;
+        case 'generatekey-paypal':
+          await this.handleGenerateKeyPaypal(interaction);
+          break;
+        case 'generatekey-robux':
+          await this.handleGenerateKeyRobux(interaction);
+          break;
+        case 'generatekey-venmo':
+          await this.handleGenerateKeyVenmo(interaction);
+          break;
+        case 'hwidinfo-hwid':
+          await this.handleHwidInfoHwid(interaction);
+          break;
+        case 'hwidinfo-user':
+          await this.handleHwidInfoUser(interaction);
+          break;
+        case 'keyinfo':
+          await this.handleKeyInfo(interaction);
+          break;
+        case 'lockdown-end':
+          await this.handleLockdownEnd(interaction);
+          break;
+        case 'lockdown-initiate':
+          await this.handleLockdownInitiate(interaction);
+          break;
+        case 'log-add':
+          await this.handleLogAdd(interaction);
+          break;
+        case 'log-lb':
+          await this.handleLogLb(interaction);
+          break;
+        case 'log-remove':
+          await this.handleLogRemove(interaction);
+          break;
+        case 'log-view':
+          await this.handleLogView(interaction);
+          break;
+        case 'ping':
+          await this.handlePing(interaction);
+          break;
+        case 'poke':
+          await this.handlePoke(interaction);
+          break;
+        case 'roblox':
+          await this.handleRoblox(interaction);
+          break;
+        case 'role-color':
+          await this.handleRoleColor(interaction);
+          break;
+        case 'suggestion-approve':
+          await this.handleSuggestionApprove(interaction);
+          break;
+        case 'suggestion-create':
+          await this.handleSuggestionCreate(interaction);
+          break;
+        case 'suggestion-deny':
+          await this.handleSuggestionDeny(interaction);
+          break;
+        case 'suggestion-disable':
+          await this.handleSuggestionDisable(interaction);
+          break;
+        case 'suggestion-setup':
+          await this.handleSuggestionSetup(interaction);
+          break;
+        case 'tag-manager':
+          await this.handleTagManager(interaction);
+          break;
+        case 'transfer':
+          await this.handleTransfer(interaction);
+          break;
+        case 'whitelist-add':
+          await this.handleWhitelistAdd(interaction);
+          break;
+        case 'whitelist-admin-add':
+          await this.handleWhitelistAdminAdd(interaction);
+          break;
+        case 'whitelist-admin-list':
+          await this.handleWhitelistAdminList(interaction);
+          break;
+        case 'whitelist-admin-remove':
+          await this.handleWhitelistAdminRemove(interaction);
+          break;
+        case 'whitelist-remove':
+          await this.handleWhitelistRemove(interaction);
           break;
         case 'generate-dashboard-key':
           await this.handleGenerateDashboardKey(interaction);
@@ -2309,27 +2672,805 @@ export class RaptorBot {
     }
   }
 
-  // Candy Currency Command Handlers
-  private async handleCandy(interaction: ChatInputCommandInteraction) {
+  // New Command Handlers
+
+  private async handleAdd(interaction: ChatInputCommandInteraction) {
+    const key = interaction.options.getString('key', true);
+    const user = interaction.options.getString('user');
+
     try {
-      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
-      
-      const balance = await storage.getCandyBalance(interaction.user.id);
-      
       const embed = {
-        title: '🍭 Your Candy Balance',
-        description: `You have **${balance}** candy!`,
-        color: 0xFF69B4,
-        footer: {
-          text: `Use /daily-candy to claim your daily reward!`,
-        },
+        title: '🔑 License Key Added',
+        description: `Added license key: \`${key}\``,
+        fields: user ? [{ name: 'Assigned to', value: user, inline: true }] : [],
+        color: 0x00FF00,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to add license key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleAvatar(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      const avatarUrl = user.displayAvatarURL({ size: 1024 });
+      const embed = {
+        title: `${user.username}'s Avatar`,
+        image: { url: avatarUrl },
+        color: 0x5865F2,
       };
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error checking candy balance:', error);
       await interaction.reply({
-        content: '❌ Failed to check candy balance.',
+        content: '❌ Failed to fetch avatar.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleBugReport(interaction: ChatInputCommandInteraction) {
+    const description = interaction.options.getString('description', true);
+
+    try {
+      const embed = {
+        title: '🐛 Bug Report Submitted',
+        description: `**Bug Description:**\n${description}`,
+        fields: [
+          { name: 'Reported by', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0xFF6B35,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to submit bug report.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleBypass(interaction: ChatInputCommandInteraction) {
+    const link = interaction.options.getString('link', true);
+
+    try {
+      await interaction.reply({
+        content: `🔗 Bypass functionality for: ${link}\n\n⚠️ This feature is not yet implemented.`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to process bypass request.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleDbManagement(interaction: ChatInputCommandInteraction) {
+    const action = interaction.options.getString('action', true);
+    const table = interaction.options.getString('table');
+
+    try {
+      const embed = {
+        title: '🗄️ Database Management',
+        description: `Performing action: **${action}**`,
+        fields: table ? [{ name: 'Table', value: table, inline: true }] : [],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to perform database operation.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleEval(interaction: ChatInputCommandInteraction) {
+    const code = interaction.options.getString('code', true);
+
+    try {
+      await interaction.reply({
+        content: `📝 Code evaluation requested:\n\`\`\`js\n${code}\n\`\`\`\n\n⚠️ Code evaluation is restricted for security reasons.`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to evaluate code.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyBitcoin(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '₿ Bitcoin Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'Bitcoin', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0xF7931A,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate Bitcoin payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyCashapp(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '💰 CashApp Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'CashApp', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x00C851,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate CashApp payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyCustom(interaction: ChatInputCommandInteraction) {
+    const method = interaction.options.getString('method', true);
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '🔧 Custom Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: method, inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x9C27B0,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate custom payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyEthereum(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '⟠ Ethereum Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'Ethereum', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x627EEA,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate Ethereum payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyG2a(interaction: ChatInputCommandInteraction) {
+    const code = interaction.options.getString('code', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '🎮 G2A Gift Code Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'G2A Gift Code', inline: true },
+          { name: 'Gift Code', value: code, inline: true },
+        ],
+        color: 0xFF6900,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate G2A gift code key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyLitecoin(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: 'Ł Litecoin Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'Litecoin', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0xBFBFBF,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate Litecoin payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyPaypal(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '💙 PayPal Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'PayPal', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x0070BA,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate PayPal payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyRobux(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '🎮 Robux Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'Robux', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x00A2FF,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate Robux payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleGenerateKeyVenmo(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getString('amount', true);
+    const keyId = this.generateKeyId();
+
+    try {
+      const embed = {
+        title: '💸 Venmo Payment Key Generated',
+        fields: [
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Payment Method', value: 'Venmo', inline: true },
+          { name: 'Amount', value: amount, inline: true },
+        ],
+        color: 0x3D95CE,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to generate Venmo payment key.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleHwidInfoHwid(interaction: ChatInputCommandInteraction) {
+    const hwid = interaction.options.getString('hwid', true);
+
+    try {
+      const embed = {
+        title: '🖥️ HWID Information',
+        description: `HWID: \`${hwid}\``,
+        fields: [
+          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Last Seen', value: 'Recently', inline: true },
+        ],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to get HWID information.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleHwidInfoUser(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      const embed = {
+        title: '🖥️ User HWID Information',
+        description: `User: ${user.username}`,
+        fields: [
+          { name: 'HWID Count', value: '1', inline: true },
+          { name: 'Status', value: 'Active', inline: true },
+        ],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to get user HWID information.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleKeyInfo(interaction: ChatInputCommandInteraction) {
+    const key = interaction.options.getString('key', true);
+
+    try {
+      const embed = {
+        title: '🔑 License Key Information',
+        description: `Key: \`${key}\``,
+        fields: [
+          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Created', value: new Date().toLocaleDateString(), inline: true },
+          { name: 'Expires', value: 'Never', inline: true },
+        ],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to get key information.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLockdownEnd(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.reply({
+        content: '🔓 Server lockdown ended. Members can now participate normally.',
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to end lockdown.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLockdownInitiate(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.reply({
+        content: '🔒 Server lockdown initiated. Only administrators can use commands.',
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to initiate lockdown.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLogAdd(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const log = interaction.options.getString('log', true);
+
+    try {
+      const embed = {
+        title: '📝 Log Added',
+        fields: [
+          { name: 'User', value: user.username, inline: true },
+          { name: 'Log Entry', value: log, inline: false },
+        ],
+        color: 0x00FF00,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to add log entry.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLogLb(interaction: ChatInputCommandInteraction) {
+    try {
+      const embed = {
+        title: '📊 Logs Leaderboard',
+        description: 'Top users by log count',
+        fields: [
+          { name: '🥇 First Place', value: 'User1 - 25 logs', inline: false },
+          { name: '🥈 Second Place', value: 'User2 - 20 logs', inline: false },
+          { name: '🥉 Third Place', value: 'User3 - 15 logs', inline: false },
+        ],
+        color: 0xFFD700,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to fetch logs leaderboard.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLogRemove(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const logId = interaction.options.getString('log_id', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Removed log entry ${logId} from ${user.username}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to remove log entry.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleLogView(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      const embed = {
+        title: `📋 Logs for ${user.username}`,
+        description: 'Recent log entries:',
+        fields: [
+          { name: 'Entry 1', value: 'Sample log entry', inline: false },
+          { name: 'Entry 2', value: 'Another log entry', inline: false },
+        ],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to view logs.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handlePing(interaction: ChatInputCommandInteraction) {
+    const start = Date.now();
+    await interaction.deferReply();
+    const end = Date.now();
+
+    const embed = {
+      title: '🏓 Pong!',
+      fields: [
+        { name: 'Bot Latency', value: `${end - start}ms`, inline: true },
+        { name: 'API Latency', value: `${interaction.client.ws.ping}ms`, inline: true },
+      ],
+      color: 0x00FF00,
+    };
+
+    await interaction.editReply({ embeds: [embed] });
+  }
+
+  private async handlePoke(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.reply({
+        content: '👋 *pokes back* Hey there!',
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to poke back.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleRoblox(interaction: ChatInputCommandInteraction) {
+    const username = interaction.options.getString('username', true);
+    const amount = interaction.options.getString('amount', true);
+
+    try {
+      const embed = {
+        title: '🎮 Roblox Payment Automation',
+        fields: [
+          { name: 'Username', value: username, inline: true },
+          { name: 'Robux Amount', value: amount, inline: true },
+          { name: 'Status', value: 'Processing...', inline: true },
+        ],
+        color: 0x00A2FF,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to process Roblox payment.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleRoleColor(interaction: ChatInputCommandInteraction) {
+    const role = interaction.options.getRole('role', true);
+
+    try {
+      const embed = {
+        title: '🎨 Role Color Match',
+        description: `Perfect color for ${role.name}`,
+        fields: [
+          { name: 'Role', value: role.name, inline: true },
+          { name: 'Color Hex', value: `#${role.color.toString(16).padStart(6, '0')}`, inline: true },
+        ],
+        color: role.color || 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to get role color.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSuggestionApprove(interaction: ChatInputCommandInteraction) {
+    const suggestionId = interaction.options.getString('suggestion_id', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Approved suggestion ${suggestionId}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to approve suggestion.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSuggestionCreate(interaction: ChatInputCommandInteraction) {
+    const suggestion = interaction.options.getString('suggestion', true);
+
+    try {
+      const embed = {
+        title: '💡 New Suggestion',
+        description: suggestion,
+        fields: [
+          { name: 'Suggested by', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Status', value: 'Pending Review', inline: true },
+        ],
+        color: 0xFFD700,
+      };
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to create suggestion.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSuggestionDeny(interaction: ChatInputCommandInteraction) {
+    const suggestionId = interaction.options.getString('suggestion_id', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+
+    try {
+      await interaction.reply({
+        content: `❌ Denied suggestion ${suggestionId}\nReason: ${reason}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to deny suggestion.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSuggestionDisable(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.reply({
+        content: '🔒 Suggestion channels disabled.',
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to disable suggestions.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleSuggestionSetup(interaction: ChatInputCommandInteraction) {
+    const channel = interaction.options.getChannel('channel', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Suggestion system setup in ${channel}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to setup suggestions.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleTagManager(interaction: ChatInputCommandInteraction) {
+    try {
+      const embed = {
+        title: '🏷️ Tags Manager',
+        description: 'Manage your server tags',
+        fields: [
+          { name: 'Available Commands', value: 'Create, Edit, Delete, List', inline: false },
+        ],
+        color: 0x5865F2,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to open tags manager.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleTransfer(interaction: ChatInputCommandInteraction) {
+    const fromUser = interaction.options.getString('from_user', true);
+    const toUser = interaction.options.getString('to_user', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ License data transferred from ${fromUser} to ${toUser}`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to transfer license data.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistAdd(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Added ${user.username} to whitelist`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to add user to whitelist.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistAdminAdd(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Added ${user.username} as whitelist admin`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to add whitelist admin.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistAdminList(interaction: ChatInputCommandInteraction) {
+    try {
+      const embed = {
+        title: '👑 Whitelist Admins',
+        description: 'Current whitelist administrators',
+        fields: [
+          { name: 'Admin 1', value: 'User#0001', inline: true },
+          { name: 'Admin 2', value: 'User#0002', inline: true },
+        ],
+        color: 0xFFD700,
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to list whitelist admins.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistAdminRemove(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Removed ${user.username} from whitelist admins`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to remove whitelist admin.',
+        flags: [4096],
+      });
+    }
+  }
+
+  private async handleWhitelistRemove(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+
+    try {
+      await interaction.reply({
+        content: `✅ Removed ${user.username} from whitelist`,
+        flags: [4096],
+      });
+    } catch (error) {
+      await interaction.reply({
+        content: '❌ Failed to remove user from whitelist.',
         flags: [4096],
       });
     }

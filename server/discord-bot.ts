@@ -5865,51 +5865,47 @@ Please purchase using PayPal on the website.`,
         timestamp: new Date().toISOString()
       };
 
-      // Add detailed results for each command
-      const resultText = testResults.map(result => {
-        const errorInfo = result.error ? `\n**Error:** ${result.error}` : '';
-        return `${result.status} **${result.command}** (${result.executionTime})\n${result.description}\n*Result:* ${result.result}${errorInfo}`;
-      }).join('\n\n');
+      // Send the main summary embed first
+      await interaction.editReply({ embeds: [embed] });
 
-      // Split results if too long for Discord
-      if (resultText.length > 1900) {
-        const chunks = [];
-        let currentChunk = '';
-        
-        for (const result of testResults) {
-          const resultLine = `${result.status} **${result.command}** - ${result.result}\n`;
-          if (currentChunk.length + resultLine.length > 1900) {
-            chunks.push(currentChunk);
-            currentChunk = resultLine;
-          } else {
-            currentChunk += resultLine;
-          }
+      // Create detailed results for each command with multiple embeds
+      const detailedResults = testResults.map(result => {
+        const errorInfo = result.error ? `\n**Error:** ${result.error.substring(0, 200)}` : '';
+        return `${result.status} **${result.command}** (${result.executionTime})\n${result.description.substring(0, 100)}\n*Result:* ${result.result.substring(0, 150)}${errorInfo}`;
+      });
+
+      // Split into chunks that fit in Discord embeds (max 4096 chars per embed description)
+      const chunks = [];
+      let currentChunk = '';
+      
+      for (const result of detailedResults) {
+        if (currentChunk.length + result.length + 4 > 4000) { // Leave some buffer
+          chunks.push(currentChunk);
+          currentChunk = result;
+        } else {
+          currentChunk += (currentChunk ? '\n\n' : '') + result;
         }
-        if (currentChunk) chunks.push(currentChunk);
+      }
+      if (currentChunk) chunks.push(currentChunk);
 
-        embed.fields.push({
-          name: '📋 Test Results (Part 1)',
-          value: chunks[0] || 'No results',
-          inline: false
+      // Send detailed results as separate embeds
+      for (let i = 0; i < chunks.length; i++) {
+        const detailEmbed = {
+          title: `📋 Detailed Test Results (Part ${i + 1}/${chunks.length})`,
+          description: chunks[i],
+          color: embed.color,
+          timestamp: new Date().toISOString()
+        };
+
+        await interaction.followUp({
+          embeds: [detailEmbed],
+          flags: [4096]
         });
 
-        await interaction.editReply({ embeds: [embed] });
-
-        // Send additional chunks if needed
-        for (let i = 1; i < chunks.length; i++) {
-          await interaction.followUp({
-            content: `**Test Results (Part ${i + 1}):**\n\`\`\`\n${chunks[i]}\n\`\`\``,
-            flags: [4096]
-          });
+        // Small delay to avoid rate limits
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
-      } else {
-        embed.fields.push({
-          name: '📋 Detailed Test Results',
-          value: resultText.substring(0, 1024),
-          inline: false
-        });
-
-        await interaction.editReply({ embeds: [embed] });
       }
 
       // Log comprehensive test execution

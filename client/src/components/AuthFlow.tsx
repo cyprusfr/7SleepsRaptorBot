@@ -176,9 +176,10 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
       });
     },
     onError: (error: any) => {
+      const errorData = error.response?.data || error;
       toast({
         title: "Verification Failed",
-        description: error.message || "Failed to complete verification",
+        description: errorData.hint || errorData.error || error.message || "Failed to complete verification",
         variant: "destructive",
       });
     }

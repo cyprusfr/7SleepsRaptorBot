@@ -1028,7 +1028,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (session.botResponseCode !== botResponseCode) {
-        return res.status(400).json({ error: 'Invalid verification code' });
+        console.log(`Verification code mismatch - Expected: "${session.botResponseCode}", Received: "${botResponseCode}"`);
+        return res.status(400).json({ 
+          error: 'Invalid verification code. Please check that you entered the complete 6-character code from the bot.',
+          hint: botResponseCode.length < 6 ? 'The code appears to be incomplete. Make sure you copied all 6 characters.' : 'The code doesn\'t match. Please try copying it again from Discord.'
+        });
       }
 
       if (new Date() > session.expiresAt) {

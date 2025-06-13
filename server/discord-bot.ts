@@ -4550,13 +4550,83 @@ Please purchase using PayPal on the website.`,
     const toUser = interaction.options.getString('to_user', true);
 
     try {
-      await interaction.reply({
-        content: `✅ License data transferred from ${fromUser} to ${toUser}`,
-        flags: [4096],
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Validate that both users exist
+      const fromUserData = await storage.getDiscordUserByDiscordId(fromUser);
+      const toUserData = await storage.getDiscordUserByDiscordId(toUser);
+
+      if (!fromUserData) {
+        await interaction.reply({
+          content: `❌ Source user ${fromUser} not found in database.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      if (!toUserData) {
+        await interaction.reply({
+          content: `❌ Destination user ${toUser} not found in database.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Get all active keys for the source user
+      const sourceKeys = await storage.getDiscordKeysByUserId(fromUser);
+      const activeKeys = sourceKeys.filter(key => key.status === 'active');
+
+      if (activeKeys.length === 0) {
+        await interaction.reply({
+          content: `❌ No active keys found for user ${fromUser}.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Transfer all active keys to the destination user
+      for (const key of activeKeys) {
+        await storage.updateDiscordKey(key.keyId, {
+          userId: toUser,
+          discordUsername: toUserData.username
+        });
+      }
+
+      // Log the transfer activity
+      await storage.logActivity({
+        type: 'license_transfer',
+        userId: interaction.user.id,
+        description: `Transferred ${activeKeys.length} license keys from ${fromUserData.username} to ${toUserData.username}`,
+        metadata: {
+          fromUserId: fromUser,
+          toUserId: toUser,
+          transferredKeys: activeKeys.length,
+          transferredBy: interaction.user.username,
+          keyIds: activeKeys.map(k => k.keyId)
+        }
       });
+
+      const embed = {
+        title: '✅ License Transfer Complete',
+        description: `Successfully transferred license data`,
+        fields: [
+          { name: 'From User', value: fromUserData.username, inline: true },
+          { name: 'To User', value: toUserData.username, inline: true },
+          { name: 'Keys Transferred', value: activeKeys.length.toString(), inline: true },
+          { name: 'Transferred By', value: interaction.user.username, inline: true },
+          { name: 'Transfer Date', value: new Date().toLocaleString(), inline: true },
+          { name: 'Key IDs', value: activeKeys.map(k => `\`${k.keyId}\``).join(', '), inline: false }
+        ],
+        color: 0x00FF00,
+        timestamp: new Date().toISOString(),
+        footer: { text: 'All specified keys have been transferred successfully' }
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error transferring license data:', error);
       await interaction.reply({
-        content: '❌ Failed to transfer license data.',
+        content: '❌ Failed to transfer license data. Please try again.',
         flags: [4096],
       });
     }

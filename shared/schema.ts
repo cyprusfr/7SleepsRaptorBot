@@ -184,6 +184,24 @@ export const backupIntegrity = pgTable("backup_integrity", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Command logs table for tracking Discord bot command usage
+export const commandLogs = pgTable("command_logs", {
+  id: serial("id").primaryKey(),
+  commandName: varchar("command_name", { length: 100 }).notNull(),
+  userId: varchar("user_id").notNull(), // Discord user ID
+  username: varchar("username").notNull(), // Discord username
+  serverId: varchar("server_id"), // Discord server ID
+  serverName: varchar("server_name"), // Discord server name
+  channelId: varchar("channel_id"), // Discord channel ID
+  channelName: varchar("channel_name"), // Discord channel name
+  arguments: jsonb("arguments"), // Command arguments/options
+  executionTime: integer("execution_time"), // Time taken to execute in ms
+  success: boolean("success").default(true), // Whether command executed successfully
+  errorMessage: text("error_message"), // Error message if failed
+  metadata: jsonb("metadata"), // Additional command-specific data
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,
@@ -238,6 +256,11 @@ export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
   updatedAt: true,
 });
 
+export const insertCommandLogSchema = createInsertSchema(commandLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
@@ -247,6 +270,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type CommandLog = typeof commandLogs.$inferSelect;
+export type InsertCommandLog = z.infer<typeof insertCommandLogSchema>;
 
 // Verification session types
 export type InsertVerificationSession = typeof verificationSessions.$inferInsert;

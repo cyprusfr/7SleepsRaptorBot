@@ -10,6 +10,7 @@ import {
   candyTransactions,
   verificationSessions,
   emailVerificationCodes,
+  commandLogs,
   type User,
   type UpsertUser,
   type DiscordKey,
@@ -27,6 +28,8 @@ import {
   type InsertVerificationSession,
   type EmailVerificationCode,
   type InsertEmailVerificationCode,
+  type CommandLog,
+  type InsertCommandLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -129,6 +132,18 @@ export interface IStorage {
   getVerificationSessionByDiscordUserId(discordUserId: string): Promise<VerificationSession | undefined>;
   updateVerificationSession(sessionId: string, updates: Partial<VerificationSession>): Promise<void>;
   completeVerificationSession(sessionId: string, botResponseCode: string): Promise<void>;
+
+  // Command logging
+  logCommand(command: InsertCommandLog): Promise<CommandLog>;
+  getCommandLogs(limit?: number): Promise<CommandLog[]>;
+  getCommandLogsByUser(userId: string, limit?: number): Promise<CommandLog[]>;
+  getCommandLogsByCommand(commandName: string, limit?: number): Promise<CommandLog[]>;
+  getCommandStats(): Promise<{
+    totalCommands: number;
+    uniqueUsers: number;
+    topCommands: { commandName: string; count: number }[];
+    recentCommands: CommandLog[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -655,9 +670,65 @@ export class DatabaseStorage implements IStorage {
       .set({
         botResponseCode,
         status: 'completed',
-        completedAt: new Date(),
       })
       .where(eq(verificationSessions.sessionId, sessionId));
+  }
+
+  // Command logging methods
+  async logCommand(command: InsertCommandLog): Promise<CommandLog> {
+    const [result] = await db.insert(commandLogs).values(command).returning();
+    return result;
+  }
+
+  async getCommandLogs(limit: number = 100): Promise<CommandLog[]> {
+    return await db.select().from(commandLogs)
+      .orderBy(desc(commandLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getCommandLogsByUser(userId: string, limit: number = 50): Promise<CommandLog[]> {
+    return await db.select().from(commandLogs)
+      .where(eq(commandLogs.userId, userId))
+      .orderBy(desc(commandLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getCommandLogsByCommand(commandName: string, limit: number = 50): Promise<CommandLog[]> {
+    return await db.select().from(commandLogs)
+      .where(eq(commandLogs.commandName, commandName))
+      .orderBy(desc(commandLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getCommandStats(): Promise<{
+    totalCommands: number;
+    uniqueUsers: number;
+    topCommands: { commandName: string; count: number }[];
+    recentCommands: CommandLog[];
+  }> {
+    const allCommands = await db.select().from(commandLogs);
+    const totalCommands = allCommands.length;
+    const uniqueUsers = new Set(allCommands.map(c => c.userId)).size;
+    
+    // Count commands by name
+    const commandCounts = new Map<string, number>();
+    allCommands.forEach(cmd => {
+      commandCounts.set(cmd.commandName, (commandCounts.get(cmd.commandName) || 0) + 1);
+    });
+    
+    const topCommands = Array.from(commandCounts.entries())
+      .map(([commandName, count]) => ({ commandName, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const recentCommands = await this.getCommandLogs(20);
+
+    return {
+      totalCommands,
+      uniqueUsers,
+      topCommands,
+      recentCommands,
+    };
   }
 
 

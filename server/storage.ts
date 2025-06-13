@@ -117,6 +117,13 @@ export interface IStorage {
   checkDailyCandy(userId: string): Promise<boolean>;
   claimDailyCandy(userId: string): Promise<number>;
   transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
+
+  // Verification sessions
+  createVerificationSession(session: InsertVerificationSession): Promise<VerificationSession>;
+  getVerificationSession(sessionId: string): Promise<VerificationSession | undefined>;
+  getVerificationSessionByDiscordUserId(discordUserId: string): Promise<VerificationSession | undefined>;
+  updateVerificationSession(sessionId: string, updates: Partial<VerificationSession>): Promise<void>;
+  completeVerificationSession(sessionId: string, botResponseCode: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -576,6 +583,40 @@ export class DatabaseStorage implements IStorage {
       type: 'transfer',
       description: `Transfer from ${fromUserId} to ${toUserId}`,
     });
+  }
+
+  // Verification sessions
+  async createVerificationSession(session: InsertVerificationSession): Promise<VerificationSession> {
+    const [result] = await db.insert(verificationSessions).values(session).returning();
+    return result;
+  }
+
+  async getVerificationSession(sessionId: string): Promise<VerificationSession | undefined> {
+    const [session] = await db.select().from(verificationSessions).where(eq(verificationSessions.sessionId, sessionId));
+    return session;
+  }
+
+  async getVerificationSessionByDiscordUserId(discordUserId: string): Promise<VerificationSession | undefined> {
+    const [session] = await db.select().from(verificationSessions)
+      .where(eq(verificationSessions.discordUserId, discordUserId))
+      .orderBy(desc(verificationSessions.createdAt));
+    return session;
+  }
+
+  async updateVerificationSession(sessionId: string, updates: Partial<VerificationSession>): Promise<void> {
+    await db.update(verificationSessions)
+      .set(updates)
+      .where(eq(verificationSessions.sessionId, sessionId));
+  }
+
+  async completeVerificationSession(sessionId: string, botResponseCode: string): Promise<void> {
+    await db.update(verificationSessions)
+      .set({
+        botResponseCode,
+        status: 'completed',
+        completedAt: new Date(),
+      })
+      .where(eq(verificationSessions.sessionId, sessionId));
   }
 
   // Backup integrity methods

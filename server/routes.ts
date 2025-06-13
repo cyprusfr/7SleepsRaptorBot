@@ -848,6 +848,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verification endpoints for two-way Discord verification
+  app.post('/api/verify-discord', requireAuth, async (req: any, res: any) => {
+    try {
+      const { discordUserId } = req.body;
+      
+      if (!discordUserId) {
+        return res.status(400).json({ error: 'Discord user ID is required' });
+      }
+
+      // Generate unique codes
+      const dashboardCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      
+      const session = await storage.createVerificationSession({
+        sessionId,
+        discordUserId,
+        dashboardCode,
+        status: 'pending',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      });
+
+      res.json({
+        success: true,
+        sessionId,
+        verificationCode: dashboardCode,
+        message: 'Send this code to the Discord bot via DM to receive your verification code',
+      });
+    } catch (error) {
+      console.error('Verification error:', error);
+      res.status(500).json({ error: 'Failed to create verification session' });
+    }
+  });
+
+  // Complete verification with bot response code
+  app.post('/api/verify-discord/complete', requireAuth, async (req: any, res: any) => {
+    try {
+      const { sessionId, botResponseCode } = req.body;
+      
+      if (!sessionId || !botResponseCode) {
+        return res.status(400).json({ error: 'Session ID and bot response code are required' });
+      }
+
+      const session = await storage.getVerificationSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Verification session not found' });
+      }
+
+      if (session.status !== 'bot_responded') {
+        return res.status(400).json({ error: 'Bot has not responded yet or session already completed' });
+      }
+
+      if (session.botResponseCode !== botResponseCode) {
+        return res.status(400).json({ error: 'Invalid verification code' });
+      }
+
+      if (new Date() > session.expiresAt) {
+        return res.status(400).json({ error: 'Verification session expired' });
+      }
+
+      // Complete verification
+      await storage.completeVerificationSession(sessionId, botResponseCode);
+
+      res.json({
+        success: true,
+        message: 'Discord verification completed successfully',
+      });
+    } catch (error) {
+      console.error('Verification completion error:', error);
+      res.status(500).json({ error: 'Failed to complete verification' });
+    }
+  });
+
+  // Check verification status
+  app.get('/api/verify-discord/status/:sessionId', requireAuth, async (req: any, res: any) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const session = await storage.getVerificationSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Verification session not found' });
+      }
+
+      res.json({
+        status: session.status,
+        hasBotResponse: !!session.botResponseCode,
+        expired: new Date() > session.expiresAt,
+      });
+    } catch (error) {
+      console.error('Status check error:', error);
+      res.status(500).json({ error: 'Failed to check verification status' });
+    }
+  });
+
   // Discord keys
   app.get("/api/keys", async (req, res) => {
     try {

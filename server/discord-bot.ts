@@ -86,6 +86,18 @@ export class RaptorBot {
       await storage.updateServerStatus(guild.id, false);
     });
 
+    // Handle direct messages for verification
+    this.client.on('messageCreate', async (message) => {
+      if (message.author.bot) return;
+      if (message.channel.type !== 1) return; // Only handle DMs
+
+      try {
+        await this.handleVerificationMessage(message);
+      } catch (error) {
+        console.error('Error handling verification message:', error);
+      }
+    });
+
     this.client.on('error', (error) => {
       console.error('❌ Discord client error:', error);
     });

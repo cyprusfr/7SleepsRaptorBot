@@ -1,5 +1,8 @@
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
 import { storage } from './storage';
+import { db } from './db';
+import { discordUsers, type DiscordUser } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 import { BackupIntegrityChecker } from './backup-integrity';
 import crypto from 'crypto';
 
@@ -2679,17 +2682,53 @@ export class RaptorBot {
     const user = interaction.options.getString('user');
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Check if key already exists
+      const existingKey = await storage.getDiscordKeyByKeyId(key);
+      if (existingKey) {
+        await interaction.reply({
+          content: `❌ License key \`${key}\` already exists in the system.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Create new key
+      const newKey = await storage.createDiscordKey({
+        keyId: key,
+        userId: user || null,
+        discordUsername: user || null,
+        status: 'active'
+      });
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'key_generated',
+        userId: interaction.user.id,
+        targetId: key,
+        description: `License key ${key} added by ${interaction.user.username}${user ? ` for user ${user}` : ''}`,
+        metadata: { keyId: key, assignedUser: user }
+      });
+
       const embed = {
-        title: '🔑 License Key Added',
-        description: `Added license key: \`${key}\``,
-        fields: user ? [{ name: 'Assigned to', value: user, inline: true }] : [],
+        title: '🔑 License Key Added Successfully',
+        description: `License key has been added to the system`,
+        fields: [
+          { name: 'Key ID', value: `\`${key}\``, inline: true },
+          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Added by', value: interaction.user.username, inline: true },
+          ...(user ? [{ name: 'Assigned to', value: user, inline: true }] : [])
+        ],
         color: 0x00FF00,
+        timestamp: new Date().toISOString(),
       };
 
       await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error adding license key:', error);
       await interaction.reply({
-        content: '❌ Failed to add license key.',
+        content: '❌ Failed to add license key. Please try again.',
         flags: [4096],
       });
     }
@@ -3035,20 +3074,61 @@ export class RaptorBot {
     const user = interaction.options.getUser('user', true);
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Get user's Discord record
+      const discordUser = await storage.getDiscordUserByDiscordId(user.id);
+      if (!discordUser) {
+        await interaction.reply({
+          content: `❌ User ${user.username} not found in the system.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Get all keys linked to this user
+      const userKeys = await storage.getDiscordKeysByUserId(user.id);
+      const hwidKeys = userKeys.filter(key => key.hwid);
+      const uniqueHwids = Array.from(new Set(hwidKeys.map(key => key.hwid).filter(Boolean)));
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'hwid_info_user',
+        userId: interaction.user.id,
+        targetId: user.id,
+        description: `HWID information requested for user ${user.username} by ${interaction.user.username}`,
+        metadata: { targetUsername: user.username, hwidCount: uniqueHwids.length }
+      });
+
       const embed = {
         title: '🖥️ User HWID Information',
-        description: `User: ${user.username}`,
+        description: `HWID data for user: ${user.username}`,
         fields: [
-          { name: 'HWID Count', value: '1', inline: true },
-          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Discord ID', value: user.id, inline: true },
+          { name: 'Username', value: user.username, inline: true },
+          { name: 'Total Keys', value: userKeys.length.toString(), inline: true },
+          { name: 'Keys with HWID', value: hwidKeys.length.toString(), inline: true },
+          { name: 'Unique HWIDs', value: uniqueHwids.length.toString(), inline: true },
+          { name: 'Last Seen', value: discordUser.lastSeen.toLocaleDateString(), inline: true },
         ],
-        color: 0x5865F2,
+        color: uniqueHwids.length > 0 ? 0x00FF00 : 0xFFFF00,
+        thumbnail: { url: user.displayAvatarURL() },
+        timestamp: new Date().toISOString(),
       };
+
+      if (uniqueHwids.length > 0) {
+        embed.fields.push({
+          name: 'HWID List',
+          value: uniqueHwids.map((hwid, index) => `${index + 1}. \`${hwid?.substring(0, 16)}...\``).join('\n'),
+          inline: false
+        });
+      }
 
       await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error getting user HWID information:', error);
       await interaction.reply({
-        content: '❌ Failed to get user HWID information.',
+        content: '❌ Failed to retrieve user HWID information. Please try again.',
         flags: [4096],
       });
     }
@@ -3058,21 +3138,58 @@ export class RaptorBot {
     const key = interaction.options.getString('key', true);
 
     try {
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Get key information from database
+      const keyData = await storage.getDiscordKeyByKeyId(key);
+      
+      if (!keyData) {
+        await interaction.reply({
+          content: `❌ License key \`${key}\` not found in the system.`,
+          flags: [4096],
+        });
+        return;
+      }
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'key_info',
+        userId: interaction.user.id,
+        targetId: key,
+        description: `Key information requested for ${key} by ${interaction.user.username}`,
+        metadata: { keyId: key, status: keyData.status }
+      });
+
+      const statusColor = keyData.status === 'active' ? 0x00FF00 : 
+                         keyData.status === 'revoked' ? 0xFF0000 : 0xFFFF00;
+
       const embed = {
         title: '🔑 License Key Information',
-        description: `Key: \`${key}\``,
+        description: `Details for key: \`${key}\``,
         fields: [
-          { name: 'Status', value: 'Active', inline: true },
-          { name: 'Created', value: new Date().toLocaleDateString(), inline: true },
-          { name: 'Expires', value: 'Never', inline: true },
+          { name: 'Key ID', value: `\`${keyData.keyId}\``, inline: true },
+          { name: 'Status', value: keyData.status.toUpperCase(), inline: true },
+          { name: 'Created', value: keyData.createdAt.toLocaleDateString(), inline: true },
+          { name: 'Assigned User', value: keyData.userId || 'Unassigned', inline: true },
+          { name: 'Discord Username', value: keyData.discordUsername || 'None', inline: true },
+          { name: 'HWID', value: keyData.hwid || 'Not linked', inline: true },
+          ...(keyData.revokedAt ? [
+            { name: 'Revoked At', value: keyData.revokedAt.toLocaleDateString(), inline: true },
+            { name: 'Revoked By', value: keyData.revokedBy || 'Unknown', inline: true }
+          ] : [])
         ],
-        color: 0x5865F2,
+        color: statusColor,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: `Requested by ${interaction.user.username}`
+        }
       };
 
       await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error getting key information:', error);
       await interaction.reply({
-        content: '❌ Failed to get key information.',
+        content: '❌ Failed to retrieve key information. Please try again.',
         flags: [4096],
       });
     }
@@ -3395,13 +3512,55 @@ export class RaptorBot {
     const user = interaction.options.getUser('user', true);
 
     try {
-      await interaction.reply({
-        content: `✅ Added ${user.username} to whitelist`,
-        flags: [4096],
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Get or create Discord user record
+      const discordUser = await storage.upsertDiscordUser({
+        discordId: user.id,
+        username: user.username,
+        discriminator: user.discriminator || '0',
+        avatarUrl: user.displayAvatarURL(),
       });
+
+      // Update user metadata to include whitelist status
+      const currentMetadata = discordUser.metadata as any || {};
+      currentMetadata.whitelisted = true;
+      currentMetadata.whitelistedBy = interaction.user.username;
+      currentMetadata.whitelistedAt = new Date().toISOString();
+
+      await db.update(discordUsers)
+        .set({ 
+          metadata: currentMetadata,
+          lastSeen: new Date()
+        })
+        .where(eq(discordUsers.discordId, user.id));
+
+      // Log the activity
+      await storage.logActivity({
+        type: 'user_whitelisted',
+        userId: interaction.user.id,
+        targetId: user.id,
+        description: `${user.username} added to whitelist by ${interaction.user.username}`,
+        metadata: { targetUsername: user.username, action: 'whitelist_add' }
+      });
+
+      const embed = {
+        title: '✅ User Whitelisted',
+        description: `${user.username} has been added to the whitelist`,
+        fields: [
+          { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+          { name: 'Added by', value: interaction.user.username, inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: true },
+        ],
+        color: 0x00FF00,
+        thumbnail: { url: user.displayAvatarURL() },
+      };
+
+      await interaction.reply({ embeds: [embed], flags: [4096] });
     } catch (error) {
+      console.error('Error adding user to whitelist:', error);
       await interaction.reply({
-        content: '❌ Failed to add user to whitelist.',
+        content: '❌ Failed to add user to whitelist. Please try again.',
         flags: [4096],
       });
     }

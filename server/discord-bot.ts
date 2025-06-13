@@ -5849,8 +5849,8 @@ Please purchase using PayPal on the website.`,
         content: `🧪 **Test Results Summary**\n\n📊 ${passedTests}/${totalTestsCompleted} passed (${successRate}%)\n⚡ Average: ${avgTime}ms\n\n✅ Passed: ${passedTests} | ❌ Failed: ${failedTests} | ⚠️ Errors: ${erroredTests}\n\nDetailed results loading...`
       });
 
-      // Create multiple pages with 10 commands each to avoid character limits
-      const commandsPerPage = 10;
+      // Create multiple text-only pages with 15 commands each (no embeds)
+      const commandsPerPage = 15;
       const totalPages = Math.ceil(testResults.length / commandsPerPage);
 
       for (let page = 0; page < totalPages; page++) {
@@ -5858,48 +5858,35 @@ Please purchase using PayPal on the website.`,
         const endIndex = Math.min(startIndex + commandsPerPage, testResults.length);
         const pageResults = testResults.slice(startIndex, endIndex);
 
-        // Create simple page content
+        // Create simple text content (no embeds to avoid limits)
         const pageContent = pageResults.map(result => {
-          return `${result.status} **${result.command}** (${result.executionTime})\n└ ${result.result.substring(0, 80)}${result.result.length > 80 ? '...' : ''}`;
-        }).join('\n\n');
+          return `${result.status} ${result.command} (${result.executionTime}) - ${result.result.substring(0, 60)}${result.result.length > 60 ? '...' : ''}`;
+        }).join('\n');
 
-        const pageEmbed = {
-          title: `📋 Test Results - Page ${page + 1}/${totalPages}`,
-          description: pageContent,
-          color: 0x00AAFF,
-          footer: {
-            text: `Commands ${startIndex + 1}-${endIndex} of ${testResults.length}`
-          }
-        };
+        const pageText = `**📋 Test Results - Page ${page + 1}/${totalPages}**\n\`\`\`\n${pageContent}\n\`\`\`\n*Commands ${startIndex + 1}-${endIndex} of ${testResults.length}*`;
 
         await interaction.followUp({
-          embeds: [pageEmbed],
+          content: pageText.substring(0, 1980), // Stay well under 2000 char limit
           flags: [4096]
         });
 
         // Delay between pages
         if (page < totalPages - 1) {
-          await new Promise(resolve => setTimeout(resolve, 800));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
-      // Send error summary if there are any failures
+      // Send simple error summary if there are any failures
       const failedResults = testResults.filter(r => r.status !== '✅ PASS');
-      if (failedResults.length > 0) {
-        const errorSummary = failedResults.map(result => {
-          return `${result.status} **${result.command}**${result.error ? ` - ${result.error.substring(0, 50)}...` : ''}`;
+      if (failedResults.length > 0 && failedResults.length <= 10) {
+        const errorText = failedResults.map(result => {
+          return `${result.status} ${result.command}${result.error ? ` - ${result.error.substring(0, 40)}...` : ''}`;
         }).join('\n');
 
-        if (errorSummary.length <= 4000) {
-          await interaction.followUp({
-            embeds: [{
-              title: '⚠️ Issues Summary',
-              description: errorSummary,
-              color: 0xFF6600
-            }],
-            flags: [4096]
-          });
-        }
+        await interaction.followUp({
+          content: `**⚠️ Issues Found:**\n\`\`\`\n${errorText}\n\`\`\``,
+          flags: [4096]
+        });
       }
 
       // Log comprehensive test execution

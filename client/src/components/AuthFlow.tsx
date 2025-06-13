@@ -8,15 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Mail, MessageSquare, Key, Shield, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 type AuthStep = 'google' | 'discord' | 'verification' | 'dashboard' | 'consent' | 'complete';
-
-interface GoogleUser {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-}
 
 interface VerificationData {
   discordUserId: string;
@@ -43,39 +37,35 @@ interface AuthFlowProps {
 
 export default function AuthFlow({ onComplete }: AuthFlowProps) {
   const [step, setStep] = useState<AuthStep>('google');
-  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [discordId, setDiscordId] = useState('');
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [linkClicked, setLinkClicked] = useState(false);
   const [dashboardKey, setDashboardKey] = useState('');
   const [dashboardKeyData, setDashboardKeyData] = useState<DashboardKeyData | null>(null);
-  const [consent, setConsent] = useState<ConsentData>({
-    storeEmail: true,
+  const [consentData, setConsentData] = useState<ConsentData>({
+    storeEmail: false,
     storeIP: false,
-    storeDiscordId: true,
-    storeDashboardKey: true
+    storeDiscordId: false,
+    storeDashboardKey: false,
   });
 
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
 
-  // Listen for verification link clicks and poll for verification status
+  // Auto-advance to Discord step if user is already authenticated
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'DISCORD_VERIFIED') {
-        setLinkClicked(true);
-        toast({
-          title: "Discord Verified!",
-          description: "You can now confirm your Discord account",
-        });
-      }
-    };
+    if (isAuthenticated && user && step === 'google') {
+      setStep('discord');
+    }
+  }, [isAuthenticated, user, step]);
 
-    window.addEventListener('message', handleMessage);
-
-    // Poll for verification status if we're on the verification step
+  // Verification polling effect
+  useEffect(() => {
     let pollInterval: NodeJS.Timeout;
+    
     if (step === 'verification' && verificationData && !linkClicked) {
       console.log('Starting verification polling for Discord ID:', verificationData.discordUserId);
+      
       pollInterval = setInterval(async () => {
         try {
           console.log('Polling verification status for:', verificationData.discordUserId);
@@ -84,6 +74,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
           });
           const data = await response.json() as { verified: boolean; discordUserId: string };
           console.log('Verification poll response:', data);
+          
           if (data.verified) {
             console.log('Discord verification detected - enabling button');
             setLinkClicked(true);
@@ -96,18 +87,16 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
         } catch (error) {
           console.error('Verification polling error:', error);
         }
-      }, 2000); // Poll every 2 seconds
+      }, 2000);
     }
 
     return () => {
-      window.removeEventListener('message', handleMessage);
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [toast, step, verificationData, linkClicked]);
+  }, [step, verificationData, linkClicked, toast]);
 
-  // Google OAuth login
+  // Handle Google login redirect
   const handleGoogleLogin = () => {
-    // Redirect to Replit OAuth
     window.location.href = '/api/login';
   };
 
@@ -118,7 +107,6 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     },
     onSuccess: (data: any) => {
       setVerificationData(data as VerificationData);
-      setLinkClicked(false); // Reset link clicked state
       setStep('verification');
       toast({
         title: "Verification Link Sent",
@@ -134,61 +122,98 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   });
 
-  // Verify Discord account
-  const verifyDiscordMutation = useMutation({
+  // Handle Discord link
+  const handleDiscordLink = () => {
+    if (!discordId.trim()) {
+      toast({
+        title: "Discord ID Required",
+        description: "Please enter your Discord ID",
+        variant: "destructive",
+      });
+      return;
+    }
+    linkDiscordMutation.mutate(discordId.trim());
+  };
+
+  // Confirm Discord verification
+  const confirmVerificationMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/auth/verify-discord", "POST", {});
+      return await apiRequest("/api/auth/confirm-discord", "POST", {
+        discordUserId: verificationData?.discordUserId
+      });
     },
     onSuccess: () => {
       setStep('dashboard');
       toast({
-        title: "Discord Verified",
-        description: "Please enter your dashboard key",
+        title: "Discord Confirmed",
+        description: "Now enter your dashboard key",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Verification Failed",
-        description: error.message || "Discord verification failed",
+        title: "Confirmation Failed",
+        description: error.message || "Failed to confirm Discord",
         variant: "destructive",
       });
     }
   });
 
-  // Validate dashboard key
-  const validateKeyMutation = useMutation({
-    mutationFn: async (keyId: string) => {
-      return await apiRequest("/api/dashboard-keys/validate", "POST", { keyId });
+  // Verify dashboard key
+  const verifyKeyMutation = useMutation({
+    mutationFn: async (key: string) => {
+      return await apiRequest("/api/dashboard-keys/verify", "POST", { 
+        keyId: key,
+        discordUserId: verificationData?.discordUserId 
+      });
     },
     onSuccess: (data: any) => {
       setDashboardKeyData(data as DashboardKeyData);
       setStep('consent');
       toast({
-        title: "Dashboard Key Valid",
-        description: "Please review data storage consent",
+        title: "Dashboard Key Verified",
+        description: "Please review and accept the consent terms",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Invalid Key",
-        description: error.message || "Dashboard key is invalid",
+        title: "Invalid Dashboard Key",
+        description: error.message || "The dashboard key is invalid or expired",
         variant: "destructive",
       });
     }
   });
 
+  // Handle dashboard key verification
+  const handleDashboardKeyVerification = () => {
+    if (!dashboardKey.trim()) {
+      toast({
+        title: "Dashboard Key Required",
+        description: "Please enter your dashboard key",
+        variant: "destructive",
+      });
+      return;
+    }
+    verifyKeyMutation.mutate(dashboardKey.trim());
+  };
+
   // Complete authentication
   const completeAuthMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/auth/complete", "POST", { consent });
+      return await apiRequest("/api/auth/complete", "POST", {
+        consentData,
+        dashboardKeyId: dashboardKey,
+        discordUserId: verificationData?.discordUserId
+      });
     },
     onSuccess: () => {
       setStep('complete');
       toast({
         title: "Authentication Complete",
-        description: "Welcome to the dashboard!",
+        description: "Welcome to the Raptor Dashboard!",
       });
-      setTimeout(() => onComplete(), 1500);
+      setTimeout(() => {
+        onComplete();
+      }, 2000);
     },
     onError: (error: any) => {
       toast({
@@ -199,40 +224,12 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   });
 
-
-
-  const handleDiscordLink = () => {
-    if (!discordId.trim()) {
-      toast({
-        title: "Discord ID Required",
-        description: "Please enter your Discord ID",
-        variant: "destructive",
-      });
-      return;
-    }
-    linkDiscordMutation.mutate(discordId);
-  };
-
-  const handleVerifyDiscord = () => {
-    verifyDiscordMutation.mutate();
-  };
-
-  const handleValidateKey = () => {
-    if (!dashboardKey.trim()) {
-      toast({
-        title: "Dashboard Key Required",
-        description: "Please enter your dashboard key",
-        variant: "destructive",
-      });
-      return;
-    }
-    validateKeyMutation.mutate(dashboardKey);
-  };
-
-  const handleCompleteAuth = () => {
+  // Handle final completion
+  const handleComplete = () => {
     completeAuthMutation.mutate();
   };
 
+  // Render current step
   const renderStep = () => {
     switch (step) {
       case 'google':
@@ -242,7 +239,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
               <CardTitle>Welcome to Raptor Dashboard</CardTitle>
               <CardDescription>
-                Sign in with your Google account to begin the authentication process
+                Sign in with your account to begin the authentication process
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -265,23 +262,22 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
               <CardTitle>Link Discord Account</CardTitle>
               <CardDescription>
-                Enter your Discord User ID to receive a verification code
+                {user ? `Signed in as ${user.email}` : 'Enter your Discord User ID to receive a verification code'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {googleUser && (
-                <div className="text-sm text-muted-foreground text-center">
-                  Signed in as: {googleUser.email}
-                </div>
-              )}
               <div className="space-y-2">
-                <Label htmlFor="discord-id">Discord User ID</Label>
+                <Label htmlFor="discordId">Discord User ID</Label>
                 <Input
-                  id="discord-id"
-                  placeholder="Enter your Discord ID (e.g., 123456789012345678)"
+                  id="discordId"
+                  type="text"
+                  placeholder="e.g., 123456789012345678"
                   value={discordId}
                   onChange={(e) => setDiscordId(e.target.value)}
                 />
+                <p className="text-sm text-gray-500">
+                  Right-click your profile in Discord and select "Copy User ID"
+                </p>
               </div>
             </CardContent>
             <CardFooter>
@@ -293,10 +289,10 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                 {linkDiscordMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Linking...
+                    Sending verification...
                   </>
                 ) : (
-                  "Send Verification Code"
+                  "Send Verification Link"
                 )}
               </Button>
             </CardFooter>
@@ -307,41 +303,48 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
         return (
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <Shield className="mx-auto h-12 w-12 text-green-600 mb-4" />
-              <CardTitle>Verify Discord Account</CardTitle>
+              <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Check Your Discord DMs</CardTitle>
               <CardDescription>
-                Check your Discord DMs for a verification code
+                We've sent a verification link to your Discord account
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {verificationData && (
-                <div className="text-sm text-center space-y-4">
-                  <p><strong>Discord:</strong> {verificationData.discordUsername}</p>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border">
-                    <p className="font-medium mb-2">Verification Link Sent!</p>
-                    <p className="text-muted-foreground">
-                      Check your Discord DMs and click the verification link to continue.
-                    </p>
+              <div className="text-center space-y-2">
+                <p className="text-sm">
+                  <strong>Discord Username:</strong> {verificationData?.discordUsername}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Click the verification link in your Discord DMs, then confirm below
+                </p>
+                {!linkClicked && (
+                  <div className="flex items-center justify-center mt-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-gray-500">
+                      Waiting for verification...
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    The "Confirm Discord Account" button will be enabled after you click the verification link.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleVerifyDiscord}
-                disabled={verifyDiscordMutation.isPending || !linkClicked}
+                onClick={() => confirmVerificationMutation.mutate()}
+                disabled={!linkClicked || confirmVerificationMutation.isPending}
                 className="w-full"
               >
-                {verifyDiscordMutation.isPending ? (
+                {confirmVerificationMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    Confirming...
+                  </>
+                ) : linkClicked ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Confirm Discord Account
                   </>
                 ) : (
-                  "Confirm Discord Account"
+                  "Click verification link first"
                 )}
               </Button>
             </CardFooter>
@@ -352,17 +355,18 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
         return (
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <Key className="mx-auto h-12 w-12 text-amber-600 mb-4" />
-              <CardTitle>Dashboard Key</CardTitle>
+              <Key className="mx-auto h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Enter Dashboard Key</CardTitle>
               <CardDescription>
-                Enter your dashboard access key to continue
+                Enter your dashboard key to access the admin panel
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="dashboard-key">Dashboard Key</Label>
+                <Label htmlFor="dashboardKey">Dashboard Key</Label>
                 <Input
-                  id="dashboard-key"
+                  id="dashboardKey"
+                  type="text"
                   placeholder="Enter your dashboard key"
                   value={dashboardKey}
                   onChange={(e) => setDashboardKey(e.target.value)}
@@ -371,17 +375,17 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleValidateKey}
-                disabled={validateKeyMutation.isPending}
+                onClick={handleDashboardKeyVerification}
+                disabled={verifyKeyMutation.isPending}
                 className="w-full"
               >
-                {validateKeyMutation.isPending ? (
+                {verifyKeyMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validating...
+                    Verifying...
                   </>
                 ) : (
-                  "Validate Key"
+                  "Verify Dashboard Key"
                 )}
               </Button>
             </CardFooter>
@@ -392,78 +396,68 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
         return (
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <Shield className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+              <Shield className="mx-auto h-12 w-12 text-orange-600 mb-4" />
               <CardTitle>Data Storage Consent</CardTitle>
               <CardDescription>
-                Please review what data we will store
+                Please review and accept the data storage permissions
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {dashboardKeyData && (
-                <div className="text-sm text-center mb-4">
-                  <p><strong>Key:</strong> {dashboardKeyData.keyId}</p>
-                  <p><strong>Discord:</strong> {dashboardKeyData.discordUsername}</p>
-                </div>
-              )}
-              
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="store-email"
-                    checked={consent.storeEmail}
+                    id="storeEmail"
+                    checked={consentData.storeEmail}
                     onCheckedChange={(checked) => 
-                      setConsent(prev => ({ ...prev, storeEmail: checked as boolean }))
+                      setConsentData(prev => ({ ...prev, storeEmail: !!checked }))
                     }
                   />
-                  <Label htmlFor="store-email" className="text-sm">
-                    Store email address (required for account recovery)
+                  <Label htmlFor="storeEmail" className="text-sm">
+                    Store email address for account management
                   </Label>
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="store-ip"
-                    checked={consent.storeIP}
+                    id="storeIP"
+                    checked={consentData.storeIP}
                     onCheckedChange={(checked) => 
-                      setConsent(prev => ({ ...prev, storeIP: checked as boolean }))
+                      setConsentData(prev => ({ ...prev, storeIP: !!checked }))
                     }
                   />
-                  <Label htmlFor="store-ip" className="text-sm">
-                    Store IP address (optional, for security monitoring)
+                  <Label htmlFor="storeIP" className="text-sm">
+                    Store IP address for security monitoring
                   </Label>
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="store-discord"
-                    checked={consent.storeDiscordId}
+                    id="storeDiscordId"
+                    checked={consentData.storeDiscordId}
                     onCheckedChange={(checked) => 
-                      setConsent(prev => ({ ...prev, storeDiscordId: checked as boolean }))
+                      setConsentData(prev => ({ ...prev, storeDiscordId: !!checked }))
                     }
                   />
-                  <Label htmlFor="store-discord" className="text-sm">
-                    Store Discord ID (required for bot functionality)
+                  <Label htmlFor="storeDiscordId" className="text-sm">
+                    Store Discord ID for bot integration
                   </Label>
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="store-key"
-                    checked={consent.storeDashboardKey}
+                    id="storeDashboardKey"
+                    checked={consentData.storeDashboardKey}
                     onCheckedChange={(checked) => 
-                      setConsent(prev => ({ ...prev, storeDashboardKey: checked as boolean }))
+                      setConsentData(prev => ({ ...prev, storeDashboardKey: !!checked }))
                     }
                   />
-                  <Label htmlFor="store-key" className="text-sm">
-                    Store dashboard key (required for access)
+                  <Label htmlFor="storeDashboardKey" className="text-sm">
+                    Store dashboard key for session management
                   </Label>
                 </div>
               </div>
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleCompleteAuth}
-                disabled={completeAuthMutation.isPending || !consent.storeEmail || !consent.storeDiscordId || !consent.storeDashboardKey}
+                onClick={handleComplete}
+                disabled={completeAuthMutation.isPending || !Object.values(consentData).some(Boolean)}
                 className="w-full"
               >
                 {completeAuthMutation.isPending ? (
@@ -472,7 +466,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                     Completing...
                   </>
                 ) : (
-                  "Complete Authentication"
+                  "Accept & Complete Setup"
                 )}
               </Button>
             </CardFooter>
@@ -486,13 +480,11 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
               <CardTitle>Authentication Complete!</CardTitle>
               <CardDescription>
-                Welcome to the Raptor Dashboard
+                Welcome to the Raptor Dashboard. Redirecting...
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Redirecting to dashboard...
-              </p>
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-green-600" />
             </CardContent>
           </Card>
         );

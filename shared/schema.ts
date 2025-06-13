@@ -26,6 +26,19 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Two-way verification sessions table
+export const verificationSessions = pgTable("verification_sessions", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id", { length: 36 }).notNull().unique(), // UUID
+  discordUserId: varchar("discord_user_id").notNull(),
+  dashboardCode: varchar("dashboard_code", { length: 8 }).notNull(), // Code user sends to bot
+  botResponseCode: varchar("bot_response_code", { length: 8 }), // Code bot sends back
+  status: varchar("status", { length: 20 }).default("pending"), // pending, bot_verified, completed, expired
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
 export const userSettings = pgTable("user_settings", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
@@ -222,6 +235,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Verification session types
+export type InsertVerificationSession = typeof verificationSessions.$inferInsert;
+export type VerificationSession = typeof verificationSessions.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type InsertUserSettings = typeof userSettings.$inferInsert;
 

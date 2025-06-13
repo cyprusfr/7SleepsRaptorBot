@@ -8,6 +8,7 @@ import {
   dashboardKeys,
   backupIntegrity,
   candyTransactions,
+  verificationSessions,
   type User,
   type UpsertUser,
   type DiscordKey,
@@ -21,6 +22,8 @@ import {
   type BotSetting,
   type DashboardKey,
   type InsertDashboardKey,
+  type VerificationSession,
+  type InsertVerificationSession,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";

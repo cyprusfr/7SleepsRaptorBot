@@ -25,9 +25,10 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true, // Always use secure cookies on Replit
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
     },
   }));
 
@@ -50,9 +51,9 @@ export function setupAuth(app: Express) {
         // Upsert user in database
         const user = await storage.upsertUser({
           id: profile.id,
-          email: profile.emails?.[0]?.value,
-          name: profile.displayName,
-          picture: profile.photos?.[0]?.value,
+          email: profile.emails?.[0]?.value || null,
+          name: profile.displayName || null,
+          picture: profile.photos?.[0]?.value || null,
         });
         return done(null, user);
       } catch (error) {

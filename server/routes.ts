@@ -941,6 +941,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Command logs API endpoints
+  app.get("/api/command-logs", requireAuth, async (req, res) => {
+    try {
+      const { limit = 100, user, command } = req.query;
+      let logs;
+      
+      if (user) {
+        logs = await storage.getCommandLogsByUser(user as string, Number(limit));
+      } else if (command) {
+        logs = await storage.getCommandLogsByCommand(command as string, Number(limit));
+      } else {
+        logs = await storage.getCommandLogs(Number(limit));
+      }
+      
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching command logs:", error);
+      res.status(500).json({ error: "Failed to fetch command logs" });
+    }
+  });
+
+  // Command statistics API
+  app.get("/api/command-stats", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getCommandStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching command stats:", error);
+      res.status(500).json({ error: "Failed to fetch command stats" });
+    }
+  });
+
   // Rate limit status endpoint
   app.get('/api/rate-limits/status', requireAuth, async (req: any, res) => {
     try {

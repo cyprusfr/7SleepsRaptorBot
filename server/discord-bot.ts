@@ -895,10 +895,15 @@ export class RaptorBot {
 
   private async handleCommand(interaction: ChatInputCommandInteraction) {
     const { commandName, user, member, guild } = interaction;
+    const startTime = Date.now();
 
     try {
+      // Store user data first
+      await this.storeUserData(user, member, guild);
+
       // Check permissions
       if (!this.hasRequiredPermissions(interaction)) {
+        await this.logCommandUsage(interaction, startTime, false, 'Insufficient permissions');
         await interaction.reply({
           content: '❌ You do not have permission to use this command.',
           flags: [4096],
@@ -908,6 +913,7 @@ export class RaptorBot {
 
       // Rate limiting check
       if (await this.isRateLimited(user.id)) {
+        await this.logCommandUsage(interaction, startTime, false, 'Rate limited');
         await interaction.reply({
           content: '⏰ You are being rate limited. Please wait before using commands again.',
           flags: [4096],
@@ -915,8 +921,8 @@ export class RaptorBot {
         return;
       }
 
-      // Store user data
-      await this.storeUserData(user, member, guild);
+      // Log successful command execution
+      await this.logCommandUsage(interaction, startTime, true);
 
       switch (commandName) {
         case 'verify':
@@ -1196,6 +1202,62 @@ export class RaptorBot {
     
     await storage.setRateLimit(key, count + 1, 60); // 60 seconds TTL
     return false;
+  }
+
+  private rateLimitMap = new Map<string, number[]>();
+
+  private async isRateLimited(userId: string): Promise<boolean> {
+    if (this.getSetting('rate_limit_enabled') !== 'true') return false;
+    
+    // Shorter rate limits: 10 commands per 30 seconds
+    const now = Date.now();
+    const userKey = `ratelimit:${userId}`;
+    
+    const userLimits = this.rateLimitMap.get(userKey) || [];
+    const recentCommands = userLimits.filter(timestamp => now - timestamp < 30000); // 30 seconds
+    
+    if (recentCommands.length >= 10) {
+      return true;
+    }
+    
+    recentCommands.push(now);
+    this.rateLimitMap.set(userKey, recentCommands);
+    
+    return false;
+  }
+
+  private async logCommandUsage(interaction: ChatInputCommandInteraction, startTime: number, success: boolean = true, errorMessage?: string): Promise<void> {
+    try {
+      const executionTime = Date.now() - startTime;
+      
+      // Collect command arguments
+      const args: any = {};
+      interaction.options.data.forEach(option => {
+        args[option.name] = option.value;
+      });
+
+      await storage.logCommand({
+        commandName: interaction.commandName,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        serverId: interaction.guild?.id || null,
+        serverName: interaction.guild?.name || null,
+        channelId: interaction.channel?.id || null,
+        channelName: (interaction.channel as any)?.name || null,
+        arguments: args,
+        executionTime: executionTime,
+        success: success,
+        errorMessage: errorMessage || null,
+        metadata: {
+          userTag: interaction.user.tag,
+          userDisplayName: interaction.user.displayName,
+          memberRoles: interaction.member ? (interaction.member as any).roles?.cache?.map((role: any) => role.name) : [],
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Failed to log command usage:', error);
+    }
   }
 
   private async storeUserData(user: any, member: any, guild: any) {

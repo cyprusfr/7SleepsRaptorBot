@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Mail, MessageSquare, Key, Shield, CheckCircle } from "lucide-react";
+import { Loader2, Mail, MessageSquare, Key, Shield, CheckCircle, Copy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 type AuthStep = 'google' | 'discord' | 'verification' | 'dashboard' | 'consent' | 'complete';
@@ -53,6 +53,23 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
 
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+
+  // Copy verification code to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied!",
+        description: "Verification code copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Auto-advance to Discord step if user is already authenticated
   useEffect(() => {
@@ -320,10 +337,19 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
               <div className="space-y-4">
                 <div className="bg-blue-50 p-4 rounded-lg border">
                   <h4 className="font-semibold text-sm mb-2">Step 1: Send this code to the bot</h4>
-                  <div className="bg-white p-2 rounded border text-center">
-                    <span className="font-mono text-lg font-bold text-blue-600">
-                      {verificationData?.verificationCode}
+                  <div className="bg-white p-2 rounded border flex items-center justify-between">
+                    <span className="font-mono text-lg font-bold text-blue-600 flex-1 text-center">
+                      {verificationData?.verificationCode || 'Loading...'}
                     </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(verificationData?.verificationCode || '')}
+                      disabled={!verificationData?.verificationCode}
+                      className="ml-2"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
                   </div>
                   <p className="text-xs text-gray-600 mt-2">
                     DM this code to the Raptor bot on Discord

@@ -51,9 +51,12 @@ export function setupAuth(app: Express) {
         // Upsert user in database
         const user = await storage.upsertUser({
           id: profile.id,
-          email: profile.emails?.[0]?.value || null,
-          name: profile.displayName || null,
-          picture: profile.photos?.[0]?.value || null,
+          email: profile.emails?.[0]?.value,
+          name: profile.displayName,
+          picture: profile.photos?.[0]?.value,
+          isApproved: false,
+          role: "pending",
+          permissions: {},
         });
         return done(null, user);
       } catch (error) {

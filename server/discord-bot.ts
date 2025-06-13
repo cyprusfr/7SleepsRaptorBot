@@ -5461,6 +5461,17 @@ Please purchase using PayPal on the website.`,
         flags: [4096]
       });
 
+      let completedTests = 0;
+      const totalTestsCount = commandTests.length;
+      
+      // Function to create progress bar
+      const createProgressBar = (current: number, total: number, width: number = 20) => {
+        const percentage = Math.round((current / total) * 100);
+        const filled = Math.round((current / total) * width);
+        const empty = width - filled;
+        return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${percentage}% (${current}/${total})`;
+      };
+
       // Test each command
       for (const test of commandTests) {
         try {
@@ -5794,10 +5805,20 @@ Please purchase using PayPal on the website.`,
             command: test.name,
             description: test.description,
             status: success ? '✅ PASS' : '❌ FAIL',
-            result,
+            result: result.length > 100 ? result.substring(0, 100) + '...' : result,
             executionTime: `${executionTime}ms`,
             error: null
           });
+
+          completedTests++;
+          
+          // Update progress every 10 tests or on completion
+          if (completedTests % 10 === 0 || completedTests === totalTestsCount) {
+            const progressBar = createProgressBar(completedTests, totalTestsCount);
+            await interaction.editReply({
+              content: `🧪 Testing bot commands...\n\n${progressBar}\n\n${completedTests === totalTestsCount ? 'Processing results...' : `Currently testing: ${test.name}`}`
+            });
+          }
           
         } catch (error) {
           testResults.push({
@@ -5808,19 +5829,21 @@ Please purchase using PayPal on the website.`,
             executionTime: 'N/A',
             error: error instanceof Error ? error.message : String(error)
           });
+          
+          completedTests++;
         }
       }
 
       // Generate comprehensive test report
-      const totalTests = testResults.length;
       const passedTests = testResults.filter(r => r.status === '✅ PASS').length;
       const failedTests = testResults.filter(r => r.status === '❌ FAIL').length;
       const erroredTests = testResults.filter(r => r.status === '❌ ERROR').length;
 
       // Create detailed embed with results
+      const totalTestsCompleted = testResults.length;
       const embed = {
         title: '🧪 Discord Bot Command Test Results',
-        description: `Comprehensive testing of ${totalTests} commands completed`,
+        description: `Comprehensive testing of ${totalTestsCompleted} commands completed`,
         fields: [
           {
             name: '📊 Test Summary',
@@ -5829,16 +5852,16 @@ Please purchase using PayPal on the website.`,
           },
           {
             name: '⚡ Performance',
-            value: `Average execution time: ${Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTests)}ms`,
+            value: `Average execution time: ${Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTestsCompleted)}ms`,
             inline: true
           },
           {
             name: '🎯 Success Rate',
-            value: `${Math.round((passedTests / totalTests) * 100)}%`,
+            value: `${Math.round((passedTests / totalTestsCompleted) * 100)}%`,
             inline: true
           }
         ],
-        color: passedTests === totalTests ? 0x00FF00 : failedTests > 0 ? 0xFF6600 : 0xFF0000,
+        color: passedTests === totalTestsCompleted ? 0x00FF00 : failedTests > 0 ? 0xFF6600 : 0xFF0000,
         timestamp: new Date().toISOString()
       };
 

@@ -42,6 +42,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
   const [linkClicked, setLinkClicked] = useState(false);
   const [dashboardKey, setDashboardKey] = useState('');
+  const [botResponseCode, setBotResponseCode] = useState('');
   const [dashboardKeyData, setDashboardKeyData] = useState<DashboardKeyData | null>(null);
   const [consentData, setConsentData] = useState<ConsentData>({
     storeEmail: false,
@@ -104,12 +105,12 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   // Link Discord account
   const linkDiscordMutation = useMutation({
     mutationFn: async (discordUserId: string) => {
-      return await apiRequest("/api/start-verification", "POST", { discordUserId });
+      return await apiRequest("/api/verify-discord", "POST", { discordUserId });
     },
     onSuccess: (data: any) => {
       setVerificationData({
-        discordUserId: data.discordUserId,
-        discordUsername: data.discordUsername || 'Unknown',
+        discordUserId: discordId,
+        discordUsername: 'Unknown',
         verificationCode: data.verificationCode,
         sessionId: data.sessionId
       });
@@ -144,7 +145,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   // Confirm Discord verification with bot response code
   const confirmVerificationMutation = useMutation({
     mutationFn: async (botResponseCode: string) => {
-      return await apiRequest("/api/complete-verification", "POST", {
+      return await apiRequest("/api/verify-discord/complete", "POST", {
         sessionId: verificationData?.sessionId,
         botResponseCode
       });

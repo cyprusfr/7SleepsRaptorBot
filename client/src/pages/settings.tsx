@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Settings as SettingsIcon, Database, Bot, Activity, Key, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import Sidebar from "@/components/sidebar";
 
 interface UserSettings {
   id: string;
@@ -119,14 +120,20 @@ export default function Settings() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <SettingsIcon className="w-6 h-6" />
-        <h1 className="text-3xl font-bold">User Settings</h1>
-      </div>
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar
+        botStatus="online"
+        lastSync="3 minutes ago"
+      />
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="flex items-center gap-3">
+            <SettingsIcon className="w-6 h-6" />
+            <h1 className="text-3xl font-bold">User Settings</h1>
+          </div>
 
-      {/* Data Connection Settings */}
-      <Card>
+          {/* Data Connection Settings */}
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="w-5 h-5" />
@@ -383,6 +390,8 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import Landing from "@/components/Landing";
+import { useState, useEffect } from "react";
+import AuthFlow from "@/components/AuthFlow";
 import Dashboard from "@/pages/dashboard";
 import KeyManagement from "@/pages/key-management";
 import Users from "@/pages/users";
@@ -16,7 +17,22 @@ import AdminPanel from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [dashboardKeyAuthenticated, setDashboardKeyAuthenticated] = useState(false);
+  const [authFlowComplete, setAuthFlowComplete] = useState(false);
+
+  // Check dashboard key status
+  const { data: keyStatus } = useQuery({
+    queryKey: ["/api/dashboard-keys/auth-status"],
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (keyStatus && typeof keyStatus === 'object' && 'authenticated' in keyStatus && keyStatus.authenticated) {
+      setDashboardKeyAuthenticated(true);
+      setAuthFlowComplete(true);
+    }
+  }, [keyStatus]);
 
   if (isLoading) {
     return (
@@ -29,8 +45,16 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Landing />;
+  // If not authenticated with Google, or not completed auth flow
+  if (!isAuthenticated || (!authFlowComplete && !dashboardKeyAuthenticated)) {
+    return (
+      <AuthFlow 
+        onComplete={() => {
+          setAuthFlowComplete(true);
+          setDashboardKeyAuthenticated(true);
+        }} 
+      />
+    );
   }
 
   return (

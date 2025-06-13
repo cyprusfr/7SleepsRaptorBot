@@ -458,15 +458,5 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const handleAuthComplete = () => {
-    setIsAuthenticated(true);
-  };
-
-  if (!isAuthenticated) {
-    return <AuthFlow onComplete={handleAuthComplete} />;
-  }
-
   return <DashboardContent />;
 }

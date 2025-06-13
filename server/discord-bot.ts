@@ -5456,9 +5456,10 @@ Please purchase using PayPal on the website.`,
         { name: 'announce', args: { title: 'Test Announcement', message: 'Test announcement message', color: '#FF0000' }, description: 'Send announcement' },
       ];
 
-      await interaction.reply({
-        content: '🧪 Starting comprehensive command testing...\nThis may take a moment.',
-        flags: [4096]
+      await interaction.deferReply({ ephemeral: true });
+      
+      await interaction.editReply({
+        content: '🧪 Starting comprehensive command testing...\nThis may take a moment.'
       });
 
       let completedTests = 0;
@@ -5905,7 +5906,7 @@ Please purchase using PayPal on the website.`,
         try {
           await interaction.followUp({
             content: pageText.substring(0, 1980), // Stay well under 2000 char limit
-            flags: [4096]
+            ephemeral: true
           });
         } catch (pageError) {
           console.error(`Page ${page + 1} failed:`, pageError);
@@ -5928,7 +5929,7 @@ Please purchase using PayPal on the website.`,
         try {
           await interaction.followUp({
             content: `**⚠️ Issues Found:**\n\`\`\`\n${errorText}\n\`\`\``,
-            flags: [4096]
+            ephemeral: true
           });
         } catch (errorSummaryError) {
           console.error('Error summary failed:', errorSummaryError);
@@ -5952,9 +5953,16 @@ Please purchase using PayPal on the website.`,
     } catch (error) {
       console.error('Error running comprehensive test:', error);
       try {
-        await interaction.editReply({
-          content: `❌ Test execution failed: ${error instanceof Error ? error.message : String(error)}`
-        });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: `❌ Test execution failed: ${error instanceof Error ? error.message : String(error)}`,
+            ephemeral: true
+          });
+        } else {
+          await interaction.editReply({
+            content: `❌ Test execution failed: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
       } catch (editError) {
         console.error('Error updating test failure message:', editError);
       }

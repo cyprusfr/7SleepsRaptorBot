@@ -738,6 +738,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard Key Verification Endpoint
+  app.post("/api/dashboard-keys/verify", async (req, res) => {
+    try {
+      const { keyId } = req.body;
+      
+      if (!keyId || !keyId.startsWith('dash_')) {
+        return res.status(400).json({ error: "Invalid key format" });
+      }
+
+      const dashboardKey = await storage.getDashboardKeyByKeyId(keyId);
+      if (!dashboardKey || dashboardKey.status !== 'active') {
+        return res.status(401).json({ error: "Invalid or revoked dashboard key" });
+      }
+
+      // Update last access time
+      await storage.updateDashboardKeyLastAccess(dashboardKey.keyId);
+
+      res.json({
+        success: true,
+        keyId: dashboardKey.keyId,
+        discordUsername: dashboardKey.discordUsername,
+        isLinked: !!dashboardKey.userId
+      });
+    } catch (error) {
+      console.error("Error verifying dashboard key:", error);
+      res.status(500).json({ error: "Failed to verify dashboard key" });
+    }
+  });
+
   // Dashboard Key Validation for Flow
   app.post("/api/dashboard-keys/validate-flow", requireAuth, async (req, res) => {
     try {

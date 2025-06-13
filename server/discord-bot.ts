@@ -103,6 +103,64 @@ export class RaptorBot {
     });
   }
 
+  private async handleVerificationMessage(message: any) {
+    const content = message.content.trim().toUpperCase();
+    const userId = message.author.id;
+
+    // Check if message is a 6-character verification code
+    if (!/^[A-Z0-9]{6}$/.test(content)) {
+      await message.reply('Please send a valid 6-character verification code from the dashboard.');
+      return;
+    }
+
+    try {
+      // Find verification session with this dashboard code
+      const session = await storage.getVerificationSessionByDiscordUserId(userId);
+      
+      if (!session) {
+        await message.reply('No active verification session found. Please start verification from the dashboard first.');
+        return;
+      }
+
+      if (session.status !== 'pending') {
+        await message.reply('This verification session is no longer active.');
+        return;
+      }
+
+      if (new Date() > session.expiresAt) {
+        await message.reply('Your verification session has expired. Please start a new verification from the dashboard.');
+        return;
+      }
+
+      if (session.dashboardCode !== content) {
+        await message.reply('Invalid verification code. Please check the code from your dashboard.');
+        return;
+      }
+
+      // Generate bot response code
+      const botResponseCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      // Update session with bot response
+      await storage.updateVerificationSession(session.sessionId, {
+        botResponseCode,
+        status: 'bot_responded',
+      });
+
+      await message.reply(`✅ Verification code received! Your verification code is: **${botResponseCode}**\n\nEnter this code in the dashboard to complete verification.`);
+
+      // Log the verification attempt
+      await storage.logActivity({
+        type: 'verification',
+        description: `Bot responded to verification request from user ${userId}`,
+        metadata: { userId, sessionId: session.sessionId },
+      });
+
+    } catch (error) {
+      console.error('Error processing verification:', error);
+      await message.reply('An error occurred while processing your verification. Please try again.');
+    }
+  }
+
   private async registerCommands() {
     const commands = [
       new SlashCommandBuilder()

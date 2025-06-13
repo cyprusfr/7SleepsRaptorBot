@@ -15,7 +15,8 @@ type AuthStep = 'google' | 'discord' | 'verification' | 'dashboard' | 'consent' 
 interface VerificationData {
   discordUserId: string;
   discordUsername: string;
-  verificationLink: string;
+  verificationCode: string;
+  sessionId: string;
 }
 
 interface DashboardKeyData {
@@ -103,20 +104,25 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
   // Link Discord account
   const linkDiscordMutation = useMutation({
     mutationFn: async (discordUserId: string) => {
-      return await apiRequest("/api/auth/link-discord", "POST", { discordUserId });
+      return await apiRequest("/api/start-verification", "POST", { discordUserId });
     },
     onSuccess: (data: any) => {
-      setVerificationData(data as VerificationData);
+      setVerificationData({
+        discordUserId: data.discordUserId,
+        discordUsername: data.discordUsername || 'Unknown',
+        verificationCode: data.verificationCode,
+        sessionId: data.sessionId
+      });
       setStep('verification');
       toast({
-        title: "Verification Link Sent",
-        description: "Check your Discord DMs for the verification link",
+        title: "Verification Started",
+        description: "Send the code to the bot via DM",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Discord Link Failed",
-        description: error.message || "Failed to link Discord account",
+        description: error.message || "Failed to start verification",
         variant: "destructive",
       });
     }
@@ -135,24 +141,25 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     linkDiscordMutation.mutate(discordId.trim());
   };
 
-  // Confirm Discord verification
+  // Confirm Discord verification with bot response code
   const confirmVerificationMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("/api/auth/confirm-discord", "POST", {
-        discordUserId: verificationData?.discordUserId
+    mutationFn: async (botResponseCode: string) => {
+      return await apiRequest("/api/complete-verification", "POST", {
+        sessionId: verificationData?.sessionId,
+        botResponseCode
       });
     },
     onSuccess: () => {
       setStep('dashboard');
       toast({
-        title: "Discord Confirmed",
+        title: "Verification Complete",
         description: "Now enter your dashboard key",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Confirmation Failed",
-        description: error.message || "Failed to confirm Discord",
+        title: "Verification Failed",
+        description: error.message || "Failed to complete verification",
         variant: "destructive",
       });
     }
@@ -304,47 +311,57 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
               <MessageSquare className="mx-auto h-12 w-12 text-purple-600 mb-4" />
-              <CardTitle>Check Your Discord DMs</CardTitle>
+              <CardTitle>Discord Verification</CardTitle>
               <CardDescription>
-                We've sent a verification link to your Discord account
+                Complete the two-way verification process
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center space-y-2">
-                <p className="text-sm">
-                  <strong>Discord Username:</strong> {verificationData?.discordUsername}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Click the verification link in your Discord DMs, then confirm below
-                </p>
-                {!linkClicked && (
-                  <div className="flex items-center justify-center mt-4">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span className="text-sm text-gray-500">
-                      Waiting for verification...
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg border">
+                  <h4 className="font-semibold text-sm mb-2">Step 1: Send this code to the bot</h4>
+                  <div className="bg-white p-2 rounded border text-center">
+                    <span className="font-mono text-lg font-bold text-blue-600">
+                      {verificationData?.verificationCode}
                     </span>
                   </div>
-                )}
+                  <p className="text-xs text-gray-600 mt-2">
+                    DM this code to the Raptor bot on Discord
+                  </p>
+                </div>
+                
+                <div className="bg-green-50 p-4 rounded-lg border">
+                  <h4 className="font-semibold text-sm mb-2">Step 2: Enter bot's response</h4>
+                  <Input
+                    type="text"
+                    placeholder="Enter bot response code"
+                    value={botResponseCode}
+                    onChange={(e) => setBotResponseCode(e.target.value.toUpperCase())}
+                    className="text-center font-mono"
+                    maxLength={6}
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    The bot will reply with a 6-character code
+                  </p>
+                </div>
               </div>
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={() => confirmVerificationMutation.mutate()}
-                disabled={!linkClicked || confirmVerificationMutation.isPending}
+                onClick={() => confirmVerificationMutation.mutate(botResponseCode)}
+                disabled={!botResponseCode || botResponseCode.length !== 6 || confirmVerificationMutation.isPending}
                 className="w-full"
               >
                 {confirmVerificationMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Confirming...
-                  </>
-                ) : linkClicked ? (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Confirm Discord Account
+                    Verifying...
                   </>
                 ) : (
-                  "Click verification link first"
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Complete Verification
+                  </>
                 )}
               </Button>
             </CardFooter>

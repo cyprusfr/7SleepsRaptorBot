@@ -159,6 +159,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check Discord verification status
+  app.post("/api/auth/check-verification", async (req, res) => {
+    try {
+      const { discordUserId } = req.body;
+      
+      if (!discordUserId) {
+        return res.status(400).json({ error: "Discord user ID required" });
+      }
+
+      // Check if user exists in database (indicating verification was completed)
+      const user = await storage.getUserByDiscordId(discordUserId);
+      
+      res.json({ 
+        verified: !!user,
+        discordUserId 
+      });
+    } catch (error) {
+      console.error("Error checking verification status:", error);
+      res.status(500).json({ error: "Failed to check verification status" });
+    }
+  });
+
   // Force clear all authentication state
   app.post("/api/auth/force-clear", async (req, res) => {
     try {

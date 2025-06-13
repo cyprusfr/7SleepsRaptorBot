@@ -58,7 +58,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
 
   const { toast } = useToast();
 
-  // Listen for verification link clicks
+  // Listen for verification link clicks and poll for verification status
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'DISCORD_VERIFIED') {
@@ -71,8 +71,34 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [toast]);
+
+    // Poll for verification status if we're on the verification step
+    let pollInterval: NodeJS.Timeout;
+    if (step === 'verification' && verificationData && !linkClicked) {
+      pollInterval = setInterval(async () => {
+        try {
+          const response = await apiRequest('/api/auth/check-verification', 'POST', {
+            discordUserId: verificationData.discordUserId
+          });
+          const data = await response.json();
+          if (data.verified) {
+            setLinkClicked(true);
+            toast({
+              title: "Discord Verified!",
+              description: "You can now confirm your Discord account",
+            });
+          }
+        } catch (error) {
+          // Ignore errors during polling
+        }
+      }, 2000); // Poll every 2 seconds
+    }
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [toast, step, verificationData, linkClicked]);
 
   // Google OAuth login
   const googleLoginMutation = useMutation({

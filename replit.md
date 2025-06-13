@@ -49,6 +49,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **System Administration**: Enhanced eval command with security and logging
 - **Command Logging System**: Added comprehensive tracking of Discord bot command usage with user ID, timestamp, execution time, success status, and detailed metadata
 - **Rate Limit Optimization**: Reduced rate limits to 10 commands per 30 seconds for improved responsiveness
+- **MacSploit Support Tags**: Added 20 predefined support tags (.sellsn, .uicrash, .user, .zsh, .anticheat, .autoexe, .badcpu, .cookie, .crash, .elevated, .fwaeh, .giftcard, .hwid, .install, .iy, .multi-instance, .offline, .paypal, .robux, .scripts) for instant MacSploit troubleshooting responses
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

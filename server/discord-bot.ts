@@ -74,6 +74,22 @@ export class RaptorBot {
       this.client.user?.setActivity('Managing Keys | /help', { type: 0 });
     });
 
+    this.client.on('messageCreate', async (message) => {
+      if (message.author.bot) return;
+
+      // Handle predefined support tags
+      const messageContent = message.content.trim().toLowerCase();
+      if (this.predefinedTags[messageContent]) {
+        await this.handlePredefinedTag(message, messageContent);
+        return;
+      }
+
+      // Handle verification codes in DMs
+      if (message.channel.type === 1) { // DM channel
+        await this.handleVerificationMessage(message);
+      }
+    });
+
     this.client.on('interactionCreate', async (interaction) => {
       if (!interaction.isChatInputCommand()) return;
       await this.handleCommand(interaction);
@@ -88,9 +104,6 @@ export class RaptorBot {
       console.log(`📤 Left server: ${guild.name}`);
       await storage.updateServerStatus(guild.id, false);
     });
-
-    // Note: DM verification disabled due to MessageContent intent limitations
-    // Using slash command verification instead
 
     this.client.on('error', (error) => {
       console.error('❌ Discord client error:', error);
@@ -4217,21 +4230,311 @@ export class RaptorBot {
     }
   }
 
-  private async handleTagManager(interaction: ChatInputCommandInteraction) {
+  // Predefined MacSploit support tags
+  private predefinedTags = {
+    '.sellsn': {
+      title: '🛒 SellSN Store',
+      description: 'Access the official MacSploit store',
+      content: 'https://macsploit.sellsn.io/',
+      color: 0x00D4AA
+    },
+    '.uicrash': {
+      title: '💥 MacSploit UI Crash',
+      description: 'Fix for MacSploit UI crashes',
+      content: `**MacSploit UI Crash Fix:**
+
+Try reinstalling both Roblox and MacSploit
+Give MacSploit access: System Settings → Privacy & Security → Files & Folders → MacSploit`,
+      color: 0xFF6B6B
+    },
+    '.user': {
+      title: '👤 User Installation',
+      description: 'Installation for users without admin permissions',
+      content: `**Note:** This is only to be used when you don't have administrator permissions on your Mac. It is recommended to use the main branch.
+
+\`\`\`bash
+cd ~/ && curl -s "https://git.raptor.fun/user/install.sh" | bash </dev/tty
+\`\`\``,
+      color: 0x4ECDC4
+    },
+    '.zsh': {
+      title: '⚠️ ZSH Command Not Found',
+      description: 'Fix for ZSH shell issues',
+      content: `**ZSH Command Not Found Fix:**
+
+Run this command in terminal:
+\`\`\`bash
+chsh -s /bin/zsh
+\`\`\`
+
+Try checking your MacBook version - MacSploit doesn't work for versions below macOS 11`,
+      color: 0xFFE66D
+    },
+    '.anticheat': {
+      title: '🛡️ Anticheat Update',
+      description: 'Current status regarding Roblox anticheat',
+      content: `**Anticheat Notice:**
+
+Due to a new Roblox Anticheat update, all executors including MacSploit are currently detected and could get your account banned. Please bear with us while we find a fix! 🙂`,
+      color: 0xFF4757
+    },
+    '.autoexe': {
+      title: '🔄 Auto Execute',
+      description: 'Auto execute guide',
+      content: 'A5XGQ2d.mov',
+      color: 0x5F27CD
+    },
+    '.badcpu': {
+      title: '💻 CPU Compatibility',
+      description: 'Fix for CPU compatibility issues',
+      content: `**CPU Compatibility Fix:**
+
+Run this command to install Rosetta:
+\`\`\`bash
+softwareupdate --install-rosetta --agree-to-license
+\`\`\``,
+      color: 0x00D2D3
+    },
+    '.cookie': {
+      title: '🍪 Cookie Guide',
+      description: 'Cookie-related assistance',
+      content: 'O2vbMdP.mov',
+      color: 0xFFA502
+    },
+    '.crash': {
+      title: '💥 Roblox Crash',
+      description: 'Fix for Roblox crashes',
+      content: `**Roblox Crash Fix:**
+
+1. Before anything, try reinstalling Roblox
+2. Delete roblox_session.txt from downloads
+3. Try running the elevated installer in terminal
+4. Toggle Your iCloud: System Settings → Click Your Profile → iCloud Mail On
+
+\`\`\`bash
+sudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer
+\`\`\`
+
+**Important Note:** When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.`,
+      color: 0xFF3838
+    },
+    '.elevated': {
+      title: '🔐 Elevated Installation',
+      description: 'Elevated installer with admin privileges',
+      content: `**Important Note:**
+When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.
+
+\`\`\`bash
+sudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty
+\`\`\``,
+      color: 0xF79F1F
+    },
+    '.fwaeh': {
+      title: '🤔 FWAEH',
+      description: 'FWAEH response',
+      content: 'fwaeh',
+      color: 0x833471
+    },
+    '.giftcard': {
+      title: '🎁 Gift Card',
+      description: 'PayPal gift card link',
+      content: 'https://www.g2a.com/paypal-gift-card-15-usd-by-rewarble-global-i10000339995026',
+      color: 0x00A8FF
+    },
+    '.hwid': {
+      title: '🆔 HWID Check',
+      description: 'Get your hardware ID',
+      content: `**Get Your HWID:**
+
+Paste this into terminal and it will give your HWID:
+\`\`\`bash
+curl -s "https://raw.githubusercontent.com/ZackDaQuack/duck/main/quack.sh" | bash
+\`\`\``,
+      color: 0x8C7AE6
+    },
+    '.install': {
+      title: '⬇️ Installation',
+      description: 'Standard MacSploit installation',
+      content: `**MacSploit Installation:**
+
+\`\`\`bash
+cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | bash </dev/tty
+\`\`\``,
+      color: 0x2ED573
+    },
+    '.iy': {
+      title: '♾️ Infinite Yield',
+      description: 'Infinite Yield script',
+      content: `**Infinite Yield Script:**
+
+Paste this somewhere:
+\`\`\`lua
+loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+\`\`\``,
+      color: 0x1DD1A1
+    },
+    '.multi-instance': {
+      title: '📱 Multi Instance',
+      description: 'Multiple Roblox instances guide',
+      content: 'https://www.youtube.com/watch?v=wIVGp_QIcTs',
+      color: 0xFF6348
+    },
+    '.offline': {
+      title: '📡 MacSploit Offline',
+      description: 'Fix for MacSploit offline issues',
+      content: `**MacSploit Offline Fix:**
+
+1. Delete MacSploit, do NOT delete Roblox, then reinstall
+2. Join a Roblox game then go through the ports
+3. If there is not an available port, please run this command in terminal:
+
+\`\`\`bash
+sudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer
+\`\`\`
+
+**Important Note:** When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.`,
+      color: 0xFFA726
+    },
+    '.paypal': {
+      title: '💳 PayPal Purchase',
+      description: 'PayPal purchase instructions',
+      content: `**PayPal Purchase:**
+
+https://raptor.fun/
+Please purchase using PayPal on the website.`,
+      color: 0x0070BA
+    },
+    '.robux': {
+      title: '💎 Robux',
+      description: 'Robux-related command',
+      content: 'Use the `/roblox` command via Raptor bot.',
+      color: 0x00B2FF
+    },
+    '.scripts': {
+      title: '📝 Script Resources',
+      description: 'Popular script websites',
+      content: `**Script Resources:**
+
+• https://robloxscripts.com/
+• https://rbxscript.com/
+• https://scriptblox.com/?mode=free
+• https://rscripts.net/`,
+      color: 0x9C88FF
+    }
+  };
+
+  // Handler for predefined tag messages
+  private async handlePredefinedTag(message: any, tagName: string) {
     try {
+      const tag = this.predefinedTags[tagName];
+      if (!tag) return;
+
       const embed = {
-        title: '🏷️ Tags Manager',
-        description: 'Manage your server tags',
+        title: tag.title,
+        description: tag.description,
+        color: tag.color,
         fields: [
-          { name: 'Available Commands', value: 'Create, Edit, Delete, List', inline: false },
+          {
+            name: 'Response',
+            value: tag.content,
+            inline: false
+          }
         ],
-        color: 0x5865F2,
+        footer: {
+          text: `Tag: ${tagName} | Requested by ${message.author.username}`
+        },
+        timestamp: new Date().toISOString()
       };
 
-      await interaction.reply({ embeds: [embed], flags: [4096] });
+      await message.reply({ embeds: [embed] });
+
+      // Log tag usage
+      await storage.logActivity({
+        type: 'support_tag_used',
+        userId: message.author.id,
+        description: `User ${message.author.username} used support tag: ${tagName}`,
+        metadata: { 
+          tagName,
+          serverId: message.guild?.id,
+          channelId: message.channel.id
+        }
+      });
+
     } catch (error) {
+      console.error('Error handling predefined tag:', error);
+      await message.reply('❌ Failed to process support tag.');
+    }
+  }
+
+  private async handleTagManager(interaction: ChatInputCommandInteraction) {
+    const tagName = interaction.options.getString('tag');
+    
+    try {
+      // If no tag specified, show all available tags
+      if (!tagName) {
+        const tagList = Object.keys(this.predefinedTags).join(', ');
+        const embed = {
+          title: '🏷️ Available MacSploit Support Tags',
+          description: 'Use any of these tags for instant support responses:',
+          fields: [
+            { 
+              name: 'Available Tags', 
+              value: `\`${tagList}\``, 
+              inline: false 
+            },
+            {
+              name: 'Usage',
+              value: 'Type any tag name (e.g., `.install`) to get instant help',
+              inline: false
+            }
+          ],
+          color: 0x5865F2,
+          footer: {
+            text: `${Object.keys(this.predefinedTags).length} tags available`
+          }
+        };
+
+        await interaction.reply({ embeds: [embed] });
+        return;
+      }
+
+      // Check if the tag exists
+      const tag = this.predefinedTags[tagName.toLowerCase()];
+      if (!tag) {
+        await interaction.reply({
+          content: `❌ Tag \`${tagName}\` not found. Use \`/tag-manager\` to see all available tags.`,
+          flags: [4096]
+        });
+        return;
+      }
+
+      // Send the predefined tag response
+      const embed = {
+        title: tag.title,
+        description: tag.description,
+        color: tag.color,
+        fields: [
+          {
+            name: 'Response',
+            value: tag.content,
+            inline: false
+          }
+        ],
+        footer: {
+          text: `Tag: ${tagName} | Requested by ${interaction.user.username}`
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      await interaction.reply({ embeds: [embed] });
+
+      // Log tag usage
+      await this.logCommandUsage(interaction, Date.now(), true);
+      
+    } catch (error) {
+      console.error('Error handling tag manager:', error);
       await interaction.reply({
-        content: '❌ Failed to open tags manager.',
+        content: '❌ Failed to process tag request.',
         flags: [4096],
       });
     }

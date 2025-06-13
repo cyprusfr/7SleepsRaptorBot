@@ -99,7 +99,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
 
   // Handle Google login redirect
   const handleGoogleLogin = () => {
-    window.location.href = '/api/login';
+    window.location.href = '/api/auth/google';
   };
 
   // Link Discord account

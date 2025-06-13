@@ -239,7 +239,6 @@ export class DatabaseStorage implements IStorage {
         status: 'revoked',
         revokedAt: new Date(),
         revokedBy,
-        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }
@@ -250,7 +249,6 @@ export class DatabaseStorage implements IStorage {
       .set({
         userId,
         discordUsername: username,
-        updatedAt: new Date(),
       })
       .where(eq(discordKeys.keyId, keyId));
   }
@@ -258,7 +256,7 @@ export class DatabaseStorage implements IStorage {
   async updateDiscordKey(id: number, updates: Partial<DiscordKey>): Promise<void> {
     await db
       .update(discordKeys)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updates)
       .where(eq(discordKeys.id, id));
   }
 

@@ -36,6 +36,10 @@ export interface IStorage {
 
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Email authentication
+  createEmailUser(email: string, passwordHash: string, name?: string): Promise<User>;
+  authenticateEmailUser(email: string, password: string): Promise<User | null>;
 
   // Discord Keys
   createDiscordKey(key: InsertDiscordKey): Promise<DiscordKey>;
@@ -152,6 +156,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Email authentication methods
+  async createEmailUser(email: string, passwordHash: string, name?: string): Promise<User> {
+    const bcrypt = await import('bcrypt');
+    const hashedPassword = await bcrypt.hash(passwordHash, 10);
+    
+    // Generate UUID for email users
+    const { randomUUID } = await import('crypto');
+    const userId = randomUUID();
+    
+    const userData = {
+      id: userId,
+      email,
+      name: name || email.split('@')[0],
+      passwordHash: hashedPassword,
+      authMethod: 'email' as const,
+      isApproved: false,
+      role: 'pending',
+      permissions: {},
+    };
+
     const [user] = await db
       .insert(users)
       .values(insertUser)

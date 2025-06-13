@@ -13,12 +13,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Updated users table for Google OAuth with role-based permissions
+// Updated users table for Google OAuth and email/password authentication with role-based permissions
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(), // Google user ID
+  id: varchar("id").primaryKey().notNull(), // Google user ID or generated UUID for email users
   email: varchar("email").unique(),
   name: varchar("name"),
   picture: varchar("picture"),
+  passwordHash: varchar("password_hash"), // For email authentication
+  authMethod: varchar("auth_method", { length: 20 }).default("google"), // "google" or "email"
   isApproved: boolean("is_approved").default(false),
   role: varchar("role", { length: 50 }).default("pending"), // owner, server_management, head_admin, admin, pending
   permissions: jsonb("permissions").default({}),

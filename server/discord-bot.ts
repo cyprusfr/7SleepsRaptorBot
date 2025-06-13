@@ -712,7 +712,12 @@ export class RaptorBot {
 
       new SlashCommandBuilder()
         .setName('tag-manager')
-        .setDescription('Opens the tags manager'),
+        .setDescription('Manage MacSploit support tags')
+        .addStringOption(option =>
+          option.setName('tag')
+            .setDescription('Specific tag to display (optional)')
+            .setRequired(false)
+        ),
 
       new SlashCommandBuilder()
         .setName('transfer')

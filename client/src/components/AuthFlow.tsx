@@ -71,19 +71,18 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
       pollInterval = setInterval(async () => {
         try {
           console.log('Polling verification status for:', verificationData.discordUserId);
-          const response = await apiRequest('/api/auth/check-verification', 'POST', {
+          const data = await apiRequest('/api/auth/check-verification', 'POST', {
             discordUserId: verificationData.discordUserId
           });
-          const data = await response.json() as { verified: boolean; discordUserId: string };
           console.log('Verification poll response:', data);
           
           if (data.verified) {
-            console.log('Discord verification detected - enabling button');
+            console.log('Discord verification detected - bot sent response code');
             setLinkClicked(true);
             clearInterval(pollInterval);
             toast({
-              title: "Discord Verified!",
-              description: "You can now confirm your Discord account",
+              title: "Bot Response Received!",
+              description: "The bot has sent you a verification code. Enter it below to continue.",
             });
           }
         } catch (error) {
@@ -245,7 +244,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
               <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
-              <CardTitle>Welcome to Raptor Dashboard</CardTitle>
+              <CardTitle>Raptor Bot Dashboard</CardTitle>
               <CardDescription>
                 Sign in with your account to begin the authentication process
               </CardDescription>
@@ -300,7 +299,7 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                     Sending verification...
                   </>
                 ) : (
-                  "Send Verification Link"
+                  "Proceed"
                 )}
               </Button>
             </CardFooter>
@@ -331,40 +330,60 @@ export default function AuthFlow({ onComplete }: AuthFlowProps) {
                   </p>
                 </div>
                 
-                <div className="bg-green-50 p-4 rounded-lg border">
-                  <h4 className="font-semibold text-sm mb-2">Step 2: Enter bot's response</h4>
-                  <Input
-                    type="text"
-                    placeholder="Enter bot response code"
-                    value={botResponseCode}
-                    onChange={(e) => setBotResponseCode(e.target.value.toUpperCase())}
-                    className="text-center font-mono"
-                    maxLength={6}
-                  />
-                  <p className="text-xs text-gray-600 mt-2">
-                    The bot will reply with a 6-character code
-                  </p>
-                </div>
+                {!linkClicked && (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-800">
+                      Waiting for you to send the code to the bot...
+                    </p>
+                  </div>
+                )}
+                
+                {linkClicked && (
+                  <div className="bg-green-50 p-4 rounded-lg border">
+                    <h4 className="font-semibold text-sm mb-2">Step 2: Enter bot's response</h4>
+                    <Input
+                      type="text"
+                      placeholder="Enter bot response code"
+                      value={botResponseCode}
+                      onChange={(e) => setBotResponseCode(e.target.value.toUpperCase())}
+                      className="text-center font-mono"
+                      maxLength={6}
+                    />
+                    <p className="text-xs text-gray-600 mt-2">
+                      The bot will reply with a 6-character code
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={() => confirmVerificationMutation.mutate(botResponseCode)}
-                disabled={!botResponseCode || botResponseCode.length !== 6 || confirmVerificationMutation.isPending}
-                className="w-full"
-              >
-                {confirmVerificationMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Complete Verification
-                  </>
-                )}
-              </Button>
+              {!linkClicked ? (
+                <Button 
+                  disabled
+                  className="w-full"
+                  variant="outline"
+                >
+                  Waiting for bot response...
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => confirmVerificationMutation.mutate(botResponseCode)}
+                  disabled={!botResponseCode || botResponseCode.length !== 6 || confirmVerificationMutation.isPending}
+                  className="w-full"
+                >
+                  {confirmVerificationMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Complete Verification
+                    </>
+                  )}
+                </Button>
+              )}
             </CardFooter>
           </Card>
         );

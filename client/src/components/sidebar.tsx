@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bot, ChartLine, Key, Users, Server, ClipboardList, Settings, Database, Clock } from "lucide-react";
+import { Bot, ChartLine, Key, Users, Server, ClipboardList, Settings, Database, Clock, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/components/UserProfile";
 
@@ -10,7 +10,8 @@ const navigation = [
   { name: "Server Data", href: "/servers", icon: Server },
   { name: "Server Backups", href: "/backups", icon: Database },
   { name: "Activity Logs", href: "/activity", icon: ClipboardList },
-  { name: "Bot Settings", href: "/settings", icon: Settings },
+  { name: "User Settings", href: "/settings", icon: Settings },
+  { name: "Bot Settings", href: "/bot-settings", icon: Wrench },
 ];
 
 interface SidebarProps {

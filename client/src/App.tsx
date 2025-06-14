@@ -12,6 +12,7 @@ import Users from "@/pages/users";
 import Servers from "@/pages/servers";
 import ActivityLogs from "@/pages/activity-logs";
 import Settings from "@/pages/settings";
+import BotSettings from "@/pages/bot-settings";
 import BackupsPage from "@/pages/backups";
 import AdminPanel from "@/pages/admin";
 import NotFound from "@/pages/not-found";
@@ -89,6 +90,7 @@ function Router() {
       <Route path="/backups" component={BackupsPage} />
       <Route path="/activity" component={ActivityLogs} />
       <Route path="/settings" component={Settings} />
+      <Route path="/bot-settings" component={BotSettings} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

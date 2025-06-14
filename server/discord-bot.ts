@@ -2310,28 +2310,17 @@ export class RaptorBot {
 
     try {
       const userId = interaction.user.id;
-      let user = await storage.getDiscordUserByDiscordId(userId);
       
-      if (!user) {
-        user = await storage.upsertDiscordUser({
-          username: interaction.user.username,
-          discordId: userId,
-          candyBalance: 0,
-          candyBank: 0,
-          isWhitelisted: false,
-          logs: 0,
-          lastDaily: null,
-          lastBeg: null,
-          lastScam: null
-        });
-      }
+      // Get candy balance from the candy_balances table
+      const candyBalance = await storage.getCandyBalance(userId);
+      const currentBalance = candyBalance?.balance || 0;
 
-      if (user.candyBalance < amount) {
+      if (currentBalance < amount) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Insufficient Funds')
-          .setDescription(`You only have ${user.candyBalance.toLocaleString()} candies in your wallet!`)
+          .setDescription(`You only have ${currentBalance.toLocaleString()} candies in your wallet!`)
           .addFields(
-            { name: '💰 Your Balance', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+            { name: '💰 Your Balance', value: `${currentBalance.toLocaleString()} candies`, inline: true },
             { name: '🎰 Tried to Gamble', value: `${amount.toLocaleString()} candies`, inline: true }
           )
           .setColor(0xff0000)
@@ -2351,11 +2340,13 @@ export class RaptorBot {
         const winnings = Math.floor(amount * multiplier);
         const profit = winnings - amount;
 
-        await storage.updateDiscordUser(userId, {
-          candyBalance: user.candyBalance + profit
-        });
+        await storage.addCandy(userId, profit);
 
         await this.logActivity('candy_gamble_win', `${interaction.user.username} won ${profit} candies gambling ${amount} candies`);
+
+        // Get updated balance
+        const updatedBalance = await storage.getCandyBalance(userId);
+        const newBalance = updatedBalance?.balance || 0;
 
         const embed = new EmbedBuilder()
           .setTitle('🎰 You Won!')
@@ -2364,7 +2355,7 @@ export class RaptorBot {
             { name: '🎲 Bet', value: `${amount.toLocaleString()} candies`, inline: true },
             { name: '💰 Won', value: `${winnings.toLocaleString()} candies`, inline: true },
             { name: '📈 Profit', value: `+${profit.toLocaleString()} candies`, inline: true },
-            { name: '🍭 New Balance', value: `${(user.candyBalance + profit).toLocaleString()} candies`, inline: false },
+            { name: '🍭 New Balance', value: `${newBalance.toLocaleString()} candies`, inline: false },
             { name: '🎯 Multiplier', value: `${multiplier.toFixed(2)}x`, inline: true }
           )
           .setColor(0x00ff00)
@@ -2374,11 +2365,13 @@ export class RaptorBot {
 
       } else {
         // Lose: lose the entire bet
-        await storage.updateDiscordUser(userId, {
-          candyBalance: user.candyBalance - amount
-        });
+        await storage.subtractCandy(userId, amount);
 
         await this.logActivity('candy_gamble_loss', `${interaction.user.username} lost ${amount} candies gambling`);
+
+        // Get updated balance
+        const updatedBalance = await storage.getCandyBalance(userId);
+        const newBalance = updatedBalance?.balance || 0;
 
         const embed = new EmbedBuilder()
           .setTitle('🎰 You Lost!')
@@ -2387,7 +2380,7 @@ export class RaptorBot {
             { name: '🎲 Bet', value: `${amount.toLocaleString()} candies`, inline: true },
             { name: '💸 Lost', value: `${amount.toLocaleString()} candies`, inline: true },
             { name: '📉 Profit', value: `-${amount.toLocaleString()} candies`, inline: true },
-            { name: '🍭 New Balance', value: `${(user.candyBalance - amount).toLocaleString()} candies`, inline: false },
+            { name: '🍭 New Balance', value: `${newBalance.toLocaleString()} candies`, inline: false },
             { name: '🎯 Win Rate', value: '47%', inline: true }
           )
           .setColor(0xff0000)

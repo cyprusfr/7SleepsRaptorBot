@@ -16,6 +16,18 @@ export class RaptorBot {
   private rateLimiter: Map<string, { count: number; resetTime: number }> = new Map();
   private backupChecker: BackupIntegrityChecker;
 
+  // Channels where image posts automatically add logs
+  private logChannels: Set<string> = new Set([
+    '1339001416383070229', // admin
+    '1315558587065569280', // whitelists
+    '1315558586302201886', // moderator
+    '1315558584888590367', // trial mod
+    '1315558583290826856', // support
+    '1315558581352792119', // trial support
+    '1315558579662487552', // purchases
+    '1383552724079087758'  // testing
+  ]);
+
   // MacSploit Support Tags - Exact Content
   private predefinedTags: { [key: string]: string } = {
     '.anticheat': 'Due to a new roblox Anticheat update all executors including macsploit are currently detected and could get your account banned. Please bear with us whiles we find a fix! :)',
@@ -162,6 +174,11 @@ export class RaptorBot {
 
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
+
+      // Check for image posts in log channels and automatically add logs
+      if (this.logChannels.has(message.channel.id)) {
+        await this.handleLogChannelMessage(message);
+      }
 
       // Handle predefined support tags
       const messageContent = message.content.trim().toLowerCase();
@@ -3426,6 +3443,39 @@ export class RaptorBot {
       
     } catch (error) {
       console.error('Error sending predefined tag response:', error);
+    }
+  }
+
+  private async handleLogChannelMessage(message: any) {
+    try {
+      // Check if message contains images (attachments or embeds with images)
+      const hasImages = message.attachments.size > 0 || 
+        message.embeds.some((embed: any) => embed.image || embed.thumbnail);
+
+      if (!hasImages) return;
+
+      // Get or create discord user
+      const discordUser = await storage.getDiscordUser(message.author.id);
+      if (!discordUser) {
+        await storage.createDiscordUser({
+          discordId: message.author.id,
+          username: message.author.username,
+          discriminator: message.author.discriminator || '0000',
+          isWhitelisted: false
+        });
+      }
+
+      // Add 1 log to the user
+      await storage.addUserLogs(message.author.id, 1, `Auto-log: Image posted in ${message.channel.name}`);
+
+      // Log the activity
+      await this.logActivity('auto_log_added', 
+        `Auto-log added to ${message.author.username} for image post in ${message.channel.name}`);
+
+      console.log(`🖼️ Auto-log added to ${message.author.username} for image in #${message.channel.name}`);
+
+    } catch (error) {
+      console.error('Error handling log channel message:', error);
     }
   }
 

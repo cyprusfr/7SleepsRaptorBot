@@ -82,6 +82,7 @@ export interface IStorage {
   getBugReport(reportId: string): Promise<any | undefined>;
 
   addUserLog(userId: string, message: string): Promise<void>;
+  addUserLogs(userId: string, count: number, reason: string): Promise<void>;
   getUserLogs(userId: string): Promise<any[]>;
 
   addToWhitelist(userId: string): Promise<void>;
@@ -537,6 +538,19 @@ export class DatabaseStorage implements IStorage {
       userId,
       logCount: 1
     });
+  }
+
+  async addUserLogs(userId: string, count: number, reason: string): Promise<void> {
+    // Add multiple log entries for the user
+    for (let i = 0; i < count; i++) {
+      await db.insert(userLogs).values({
+        userId,
+        logCount: 1
+      });
+    }
+    
+    // Log the activity
+    await this.logActivity('user_logs_added', `${count} logs added to user ${userId}: ${reason}`);
   }
 
   async getUserLogs(userId: string): Promise<any[]> {

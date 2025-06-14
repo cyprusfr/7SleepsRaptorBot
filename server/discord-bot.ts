@@ -1972,10 +1972,8 @@ export class RaptorBot {
       const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
       const finalAmount = Math.floor(dailyAmount * multiplier);
 
-      await storage.updateDiscordUser(userId, {
-        candyBalance: user.candyBalance + finalAmount,
-        lastDaily: now
-      });
+      await storage.addCandy(userId, finalAmount);
+      await storage.setLastDaily(userId, now);
 
       await this.logActivity('candy_daily', `${interaction.user.username} claimed daily reward: ${finalAmount} candies`);
 
@@ -2069,10 +2067,8 @@ export class RaptorBot {
       const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
       const finalAmount = Math.floor(randomOutcome.amount * multiplier);
 
-      await storage.updateDiscordUser(userId, {
-        candyBalance: user.candyBalance + finalAmount,
-        lastBeg: now
-      });
+      await storage.addCandy(userId, finalAmount);
+      await storage.updateLastBeg(userId);
 
       if (finalAmount > 0) {
         await this.logActivity('candy_beg', `${interaction.user.username} begged and received ${finalAmount} candies`);
@@ -2554,16 +2550,11 @@ export class RaptorBot {
       }
 
       // Process payment
-      await storage.updateDiscordUser(userId, {
-        candyBalance: user.candyBalance - amount
-      });
-
-      await storage.updateDiscordUser(target.id, {
-        candyBalance: targetUser.candyBalance + amount
-      });
+      await storage.subtractCandy(userId, amount);
+      await storage.addCandy(target.id, amount);
 
       // Log the transaction
-      await storage.logCandyTransaction({
+      await storage.addCandyTransaction({
         type: 'payment',
         amount: amount,
         fromUserId: userId,
@@ -2650,10 +2641,7 @@ export class RaptorBot {
       }
 
       // Process deposit
-      await storage.updateDiscordUser(userId, {
-        candyBalance: user.candyBalance - amount,
-        candyBank: user.candyBank + amount
-      });
+      await storage.depositCandy(userId, amount);
 
       await this.logActivity('candy_deposit', `${interaction.user.username} deposited ${amount} candies to bank`);
 

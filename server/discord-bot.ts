@@ -2612,28 +2612,18 @@ export class RaptorBot {
 
     try {
       const userId = interaction.user.id;
-      let user = await storage.getDiscordUserByDiscordId(userId);
       
-      if (!user) {
-        user = await storage.upsertDiscordUser({
-          username: interaction.user.username,
-          discordId: userId,
-          candyBalance: 0,
-          candyBank: 0,
-          isWhitelisted: false,
-          logs: 0,
-          lastDaily: null,
-          lastBeg: null,
-          lastScam: null
-        });
-      }
+      // Get candy balance from the candy_balances table
+      const candyBalance = await storage.getCandyBalance(userId);
+      const currentBalance = candyBalance?.balance || 0;
+      const currentBankBalance = candyBalance?.bankBalance || 0;
 
-      if (user.candyBalance < amount) {
+      if (currentBalance < amount) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Insufficient Funds')
-          .setDescription(`You only have ${user.candyBalance.toLocaleString()} candies in your wallet!`)
+          .setDescription(`You only have ${currentBalance.toLocaleString()} candies in your wallet!`)
           .addFields(
-            { name: '💰 Wallet Balance', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+            { name: '💰 Wallet Balance', value: `${currentBalance.toLocaleString()} candies`, inline: true },
             { name: '💸 Tried to Deposit', value: `${amount.toLocaleString()} candies`, inline: true }
           )
           .setColor(0xff0000)
@@ -2648,13 +2638,18 @@ export class RaptorBot {
 
       await this.logActivity('candy_deposit', `${interaction.user.username} deposited ${amount} candies to bank`);
 
+      // Get updated balances
+      const updatedBalance = await storage.getCandyBalance(userId);
+      const newWalletBalance = updatedBalance?.balance || 0;
+      const newBankBalance = updatedBalance?.bankBalance || 0;
+
       const embed = new EmbedBuilder()
         .setTitle('🏦 Deposit Successful!')
         .setDescription(`You deposited candies to your bank account!`)
         .addFields(
           { name: '💰 Deposited', value: `${amount.toLocaleString()} candies`, inline: true },
-          { name: '👛 Wallet Balance', value: `${(user.candyBalance - amount).toLocaleString()} candies`, inline: true },
-          { name: '🏦 Bank Balance', value: `${(user.candyBank + amount).toLocaleString()} candies`, inline: true }
+          { name: '👛 Wallet Balance', value: `${newWalletBalance.toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank Balance', value: `${newBankBalance.toLocaleString()} candies`, inline: true }
         )
         .setColor(0x00ff00)
         .setTimestamp();
@@ -2693,28 +2688,18 @@ export class RaptorBot {
 
     try {
       const userId = interaction.user.id;
-      let user = await storage.getDiscordUserByDiscordId(userId);
       
-      if (!user) {
-        user = await storage.upsertDiscordUser({
-          username: interaction.user.username,
-          discordId: userId,
-          candyBalance: 0,
-          candyBank: 0,
-          isWhitelisted: false,
-          logs: 0,
-          lastDaily: null,
-          lastBeg: null,
-          lastScam: null
-        });
-      }
+      // Get candy balance from the candy_balances table
+      const candyBalance = await storage.getCandyBalance(userId);
+      const currentBalance = candyBalance?.balance || 0;
+      const currentBankBalance = candyBalance?.bankBalance || 0;
 
-      if (user.candyBank < amount) {
+      if (currentBankBalance < amount) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Insufficient Funds')
-          .setDescription(`You only have ${user.candyBank.toLocaleString()} candies in your bank!`)
+          .setDescription(`You only have ${currentBankBalance.toLocaleString()} candies in your bank!`)
           .addFields(
-            { name: '🏦 Bank Balance', value: `${user.candyBank.toLocaleString()} candies`, inline: true },
+            { name: '🏦 Bank Balance', value: `${currentBankBalance.toLocaleString()} candies`, inline: true },
             { name: '💸 Tried to Withdraw', value: `${amount.toLocaleString()} candies`, inline: true }
           )
           .setColor(0xff0000)
@@ -2725,20 +2710,22 @@ export class RaptorBot {
       }
 
       // Process withdrawal
-      await storage.updateDiscordUser(userId, {
-        candyBalance: user.candyBalance + amount,
-        candyBank: user.candyBank - amount
-      });
+      await storage.withdrawCandy(userId, amount);
 
       await this.logActivity('candy_withdraw', `${interaction.user.username} withdrew ${amount} candies from bank`);
+
+      // Get updated balances
+      const updatedBalance = await storage.getCandyBalance(userId);
+      const newWalletBalance = updatedBalance?.balance || 0;
+      const newBankBalance = updatedBalance?.bankBalance || 0;
 
       const embed = new EmbedBuilder()
         .setTitle('🏦 Withdrawal Successful!')
         .setDescription(`You withdrew candies from your bank account!`)
         .addFields(
           { name: '💰 Withdrawn', value: `${amount.toLocaleString()} candies`, inline: true },
-          { name: '👛 Wallet Balance', value: `${(user.candyBalance + amount).toLocaleString()} candies`, inline: true },
-          { name: '🏦 Bank Balance', value: `${(user.candyBank - amount).toLocaleString()} candies`, inline: true }
+          { name: '👛 Wallet Balance', value: `${newWalletBalance.toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank Balance', value: `${newBankBalance.toLocaleString()} candies`, inline: true }
         )
         .setColor(0x00ff00)
         .setTimestamp();

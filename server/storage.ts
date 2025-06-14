@@ -60,6 +60,7 @@ export interface IStorage {
   subtractCandy(userId: string, amount: number): Promise<void>;
   addCandyTransaction(transaction: any): Promise<void>;
   depositCandy(userId: string, amount: number): Promise<void>;
+  withdrawCandy(userId: string, amount: number): Promise<void>;
 
   createVerificationSession(session: InsertVerificationSession): Promise<VerificationSession>;
   getVerificationSession(sessionId: string): Promise<VerificationSession | undefined>;
@@ -268,6 +269,34 @@ export class DatabaseStorage implements IStorage {
           totalEarned: 0,
           totalSpent: 0
         });
+    }
+  }
+
+  async depositCandy(userId: string, amount: number): Promise<void> {
+    const existing = await this.getCandyBalance(userId);
+    if (existing) {
+      await db
+        .update(candyBalances)
+        .set({
+          balance: existing.balance - amount,
+          bankBalance: existing.bankBalance + amount,
+          updatedAt: new Date()
+        })
+        .where(eq(candyBalances.userId, userId));
+    }
+  }
+
+  async withdrawCandy(userId: string, amount: number): Promise<void> {
+    const existing = await this.getCandyBalance(userId);
+    if (existing) {
+      await db
+        .update(candyBalances)
+        .set({
+          balance: existing.balance + amount,
+          bankBalance: existing.bankBalance - amount,
+          updatedAt: new Date()
+        })
+        .where(eq(candyBalances.userId, userId));
     }
   }
 

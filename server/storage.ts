@@ -21,43 +21,22 @@ import {
   type UpsertUser,
   type DiscordUser,
   type DiscordKey,
-  type CandyBalance,
-  type CandyTransaction,
-  type ActivityLog,
-  type CommandLog,
-  type LicenseKey,
-  type BugReport,
-  type UserLog,
   type VerificationSession,
   type EmailVerificationCode,
   type DiscordServer,
-  type BotSetting,
-  type UserSetting,
-  type DashboardKey,
-  type BackupIntegrity,
-  type WhitelistEntry,
+  type UserSettings,
   type InsertDiscordUser,
   type InsertDiscordKey,
-  type InsertCandyBalance,
-  type InsertCandyTransaction,
-  type InsertActivityLog,
-  type InsertCommandLog,
-  type InsertLicenseKey,
-  type InsertBugReport,
-  type InsertUserLog,
   type InsertVerificationSession,
   type InsertEmailVerificationCode,
   type InsertDiscordServer,
-  type InsertBotSetting,
-  type InsertUserSetting,
-  type InsertDashboardKey,
-  type InsertBackupIntegrity,
-  type InsertWhitelistEntry
+  type InsertUserSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
+// Interface for storage operations
 export interface IStorage {
   // User operations for authentication
   getUser(id: string): Promise<User | undefined>;
@@ -69,6 +48,8 @@ export interface IStorage {
   // Discord users
   createDiscordUser(insertUser: InsertDiscordUser): Promise<DiscordUser>;
   getDiscordUser(discordId: string): Promise<DiscordUser | undefined>;
+  getDiscordUserByDiscordId(discordId: string): Promise<DiscordUser | undefined>;
+  upsertDiscordUser(user: any): Promise<DiscordUser>;
   updateDiscordUser(discordId: string, updates: Partial<DiscordUser>): Promise<void>;
 
   // Discord keys
@@ -79,14 +60,19 @@ export interface IStorage {
   revokeDiscordKey(keyId: string, revokedBy: string): Promise<void>;
 
   // Candy system
-  getCandyBalance(userId: string): Promise<CandyBalance | undefined>;
+  getCandyBalance(userId: string): Promise<any | undefined>;
   addCandyBalance(userId: string, amount: number): Promise<void>;
   addBankBalance(userId: string, amount: number): Promise<void>;
   transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<boolean>;
-  getCandyLeaderboard(limit: number): Promise<CandyBalance[]>;
+  getCandyLeaderboard(limit: number): Promise<any[]>;
   updateLastDaily(userId: string): Promise<void>;
   updateLastBeg(userId: string): Promise<void>;
   updateLastScam(userId: string): Promise<void>;
+  addCandy(userId: string, amount: number): Promise<void>;
+  setLastDaily(userId: string): Promise<void>;
+  subtractCandy(userId: string, amount: number): Promise<void>;
+  addCandyTransaction(transaction: any): Promise<void>;
+  depositCandy(userId: string, amount: number): Promise<void>;
 
   // Verification sessions
   createVerificationSession(session: InsertVerificationSession): Promise<VerificationSession>;
@@ -102,20 +88,20 @@ export interface IStorage {
   logActivity(type: string, description: string): Promise<void>;
 
   // Command logs
-  logCommand(log: InsertCommandLog): Promise<void>;
+  logCommand(log: any): Promise<void>;
 
   // License keys
-  createLicenseKey(key: InsertLicenseKey): Promise<LicenseKey>;
-  getLicenseKey(keyValue: string): Promise<LicenseKey | undefined>;
-  updateLicenseKey(keyValue: string, updates: Partial<LicenseKey>): Promise<void>;
+  createLicenseKey(key: any): Promise<any>;
+  getLicenseKey(keyValue: string): Promise<any | undefined>;
+  updateLicenseKey(keyValue: string, updates: any): Promise<void>;
 
   // Bug reports
-  createBugReport(report: InsertBugReport): Promise<BugReport>;
-  getBugReport(reportId: string): Promise<BugReport | undefined>;
+  createBugReport(report: any): Promise<any>;
+  getBugReport(reportId: string): Promise<any | undefined>;
 
   // User logs
   addUserLog(userId: string, message: string): Promise<void>;
-  getUserLogs(userId: string): Promise<UserLog[]>;
+  getUserLogs(userId: string): Promise<any[]>;
 
   // Whitelist operations
   addToWhitelist(userId: string): Promise<void>;
@@ -128,7 +114,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations for authentication
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -142,7 +128,6 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           ...userData,
-          updatedAt: new Date(),
         },
       })
       .returning();
@@ -155,19 +140,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEmailUser(email: string, password: string, name?: string): Promise<User> {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = crypto.randomUUID();
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const [user] = await db
       .insert(users)
       .values({
         id: userId,
         email,
-        name,
-        passwordHash: hashedPassword,
-        authMethod: "email",
+        name: name || email.split('@')[0],
+        passwordHash,
+        authMethod: 'email',
         isApproved: false,
-        role: "pending",
+        role: 'pending'
       })
       .returning();
     return user;
@@ -185,10 +170,7 @@ export class DatabaseStorage implements IStorage {
   async createDiscordUser(insertUser: InsertDiscordUser): Promise<DiscordUser> {
     const [user] = await db
       .insert(discordUsers)
-      .values({
-        discordId: insertUser.discordId,
-        username: insertUser.username
-      })
+      .values(insertUser)
       .returning();
     return user;
   }
@@ -196,6 +178,28 @@ export class DatabaseStorage implements IStorage {
   async getDiscordUser(discordId: string): Promise<DiscordUser | undefined> {
     const [user] = await db.select().from(discordUsers).where(eq(discordUsers.discordId, discordId));
     return user;
+  }
+
+  async getDiscordUserByDiscordId(discordId: string): Promise<DiscordUser | undefined> {
+    const [user] = await db.select().from(discordUsers).where(eq(discordUsers.discordId, discordId));
+    return user;
+  }
+
+  async upsertDiscordUser(user: any): Promise<DiscordUser> {
+    const [newUser] = await db
+      .insert(discordUsers)
+      .values({
+        discordId: user.discordId,
+        username: user.username
+      })
+      .onConflictDoUpdate({
+        target: discordUsers.discordId,
+        set: {
+          username: user.username
+        }
+      })
+      .returning();
+    return newUser;
   }
 
   async updateDiscordUser(discordId: string, updates: Partial<DiscordUser>): Promise<void> {
@@ -209,13 +213,7 @@ export class DatabaseStorage implements IStorage {
   async createDiscordKey(insertKey: InsertDiscordKey): Promise<DiscordKey> {
     const [key] = await db
       .insert(discordKeys)
-      .values({
-        keyId: insertKey.keyId,
-        userId: insertKey.userId,
-        discordUsername: insertKey.discordUsername,
-        hwid: insertKey.hwid || '',
-        status: 'active'
-      })
+      .values(insertKey)
       .returning();
     return key;
   }
@@ -226,7 +224,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDiscordKeysByUserId(userId: string): Promise<DiscordKey[]> {
-    return await db.select().from(discordKeys).where(eq(discordKeys.userId, userId));
+    return db.select().from(discordKeys).where(eq(discordKeys.userId, userId));
   }
 
   async updateDiscordKey(keyId: string, updates: Partial<DiscordKey>): Promise<void> {
@@ -240,7 +238,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(discordKeys)
       .set({
-        status: 'revoked',
+        status: "revoked",
         revokedAt: new Date(),
         revokedBy
       })
@@ -248,71 +246,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Candy system
-  async getCandyBalance(userId: string): Promise<CandyBalance | undefined> {
-    const [balance] = await db
-      .select()
-      .from(candyBalances)
-      .where(eq(candyBalances.userId, userId));
+  async getCandyBalance(userId: string): Promise<any | undefined> {
+    const [balance] = await db.select().from(candyBalances).where(eq(candyBalances.userId, userId));
     return balance;
   }
 
   async addCandyBalance(userId: string, amount: number): Promise<void> {
-    const existing = await db
-      .select()
-      .from(candyBalances)
-      .where(eq(candyBalances.userId, userId));
-
-    if (existing.length === 0) {
-      await db.insert(candyBalances).values({
-        userId,
-        balance: Math.max(0, amount),
-        bankBalance: 0,
-        totalEarned: amount > 0 ? amount : 0,
-        totalSpent: amount < 0 ? Math.abs(amount) : 0,
-        lastDaily: null
-      });
-    } else {
-      const current = existing[0];
-      const newBalance = Math.max(0, current.balance + amount);
+    const existingBalance = await this.getCandyBalance(userId);
+    
+    if (existingBalance) {
       await db
         .update(candyBalances)
         .set({
-          balance: newBalance,
-          totalEarned: amount > 0 ? current.totalEarned + amount : current.totalEarned,
-          totalSpent: amount < 0 ? current.totalSpent + Math.abs(amount) : current.totalSpent,
-          updatedAt: new Date()
+          balance: sql`${candyBalances.balance} + ${amount}`,
+          totalEarned: amount > 0 ? sql`${candyBalances.totalEarned} + ${amount}` : candyBalances.totalEarned,
+          totalSpent: amount < 0 ? sql`${candyBalances.totalSpent} + ${Math.abs(amount)}` : candyBalances.totalSpent
         })
         .where(eq(candyBalances.userId, userId));
+    } else {
+      await db
+        .insert(candyBalances)
+        .values({
+          userId,
+          balance: amount,
+          bankBalance: 0,
+          totalEarned: amount > 0 ? amount : 0,
+          totalSpent: amount < 0 ? Math.abs(amount) : 0
+        });
     }
   }
 
   async addBankBalance(userId: string, amount: number): Promise<void> {
-    const existing = await db
-      .select()
-      .from(candyBalances)
-      .where(eq(candyBalances.userId, userId));
-
-    if (existing.length === 0) {
-      await db.insert(candyBalances).values({
-        userId,
-        balance: 0,
-        bankBalance: Math.max(0, amount),
-        totalEarned: amount > 0 ? amount : 0,
-        totalSpent: amount < 0 ? Math.abs(amount) : 0,
-        lastDaily: null
-      });
-    } else {
-      const current = existing[0];
-      const newBankBalance = Math.max(0, current.bankBalance + amount);
+    const existingBalance = await this.getCandyBalance(userId);
+    
+    if (existingBalance) {
       await db
         .update(candyBalances)
         .set({
-          bankBalance: newBankBalance,
-          totalEarned: amount > 0 ? current.totalEarned + amount : current.totalEarned,
-          totalSpent: amount < 0 ? current.totalSpent + Math.abs(amount) : current.totalSpent,
-          updatedAt: new Date()
+          bankBalance: sql`${candyBalances.bankBalance} + ${amount}`
         })
         .where(eq(candyBalances.userId, userId));
+    } else {
+      await db
+        .insert(candyBalances)
+        .values({
+          userId,
+          balance: 0,
+          bankBalance: amount,
+          totalEarned: 0,
+          totalSpent: 0
+        });
     }
   }
 
@@ -324,18 +307,20 @@ export class DatabaseStorage implements IStorage {
 
     await this.addCandyBalance(fromUserId, -amount);
     await this.addCandyBalance(toUserId, amount);
-
-    await db.insert(candyTransactions).values({
-      type: 'transfer',
+    
+    await this.addCandyTransaction({
+      fromUserId,
+      toUserId,
       amount,
-      toUserId
+      type: 'transfer',
+      description: `Transfer from ${fromUserId} to ${toUserId}`
     });
 
     return true;
   }
 
-  async getCandyLeaderboard(limit: number): Promise<CandyBalance[]> {
-    return await db
+  async getCandyLeaderboard(limit: number): Promise<any[]> {
+    return db
       .select()
       .from(candyBalances)
       .orderBy(desc(candyBalances.balance))
@@ -345,16 +330,48 @@ export class DatabaseStorage implements IStorage {
   async updateLastDaily(userId: string): Promise<void> {
     await db
       .update(candyBalances)
-      .set({ lastDaily: new Date(), updatedAt: new Date() })
+      .set({ lastDaily: new Date() })
       .where(eq(candyBalances.userId, userId));
   }
 
   async updateLastBeg(userId: string): Promise<void> {
-    await this.updateDiscordUser(userId, {});
+    // For now, track in Discord users table since that's where we have timestamps
+    await this.updateDiscordUser(userId, { lastBeg: new Date() });
   }
 
   async updateLastScam(userId: string): Promise<void> {
-    await this.updateDiscordUser(userId, {});
+    // For now, track in Discord users table since that's where we have timestamps
+    await this.updateDiscordUser(userId, { lastScam: new Date() });
+  }
+
+  async addCandy(userId: string, amount: number): Promise<void> {
+    await this.addCandyBalance(userId, amount);
+  }
+
+  async setLastDaily(userId: string): Promise<void> {
+    await this.updateLastDaily(userId);
+  }
+
+  async subtractCandy(userId: string, amount: number): Promise<void> {
+    await this.addCandyBalance(userId, -amount);
+  }
+
+  async addCandyTransaction(transaction: any): Promise<void> {
+    await db.insert(candyTransactions).values({
+      fromUserId: transaction.fromUserId,
+      toUserId: transaction.toUserId,
+      amount: transaction.amount,
+      type: transaction.type,
+      description: transaction.description
+    });
+  }
+
+  async depositCandy(userId: string, amount: number): Promise<void> {
+    const balance = await this.getCandyBalance(userId);
+    if (balance && balance.balance >= amount) {
+      await this.addCandyBalance(userId, -amount);
+      await this.addBankBalance(userId, amount);
+    }
   }
 
   // Verification sessions
@@ -395,10 +412,7 @@ export class DatabaseStorage implements IStorage {
   async createDiscordServer(server: InsertDiscordServer): Promise<DiscordServer> {
     const [newServer] = await db
       .insert(discordServers)
-      .values({
-        serverId: server.serverId,
-        serverName: server.serverName
-      })
+      .values(server)
       .returning();
     return newServer;
   }
@@ -406,10 +420,7 @@ export class DatabaseStorage implements IStorage {
   async updateDiscordServer(serverId: string, updates: Partial<DiscordServer>): Promise<void> {
     await db
       .update(discordServers)
-      .set({
-        serverName: updates.serverName || undefined,
-        updatedAt: new Date()
-      })
+      .set(updates)
       .where(eq(discordServers.serverId, serverId));
   }
 
@@ -417,16 +428,17 @@ export class DatabaseStorage implements IStorage {
   async logActivity(type: string, description: string): Promise<void> {
     await db.insert(activityLogs).values({
       type,
-      description
+      description,
+      timestamp: new Date()
     });
   }
 
   // Command logs
-  async logCommand(log: InsertCommandLog): Promise<void> {
+  async logCommand(log: any): Promise<void> {
     await db.insert(commandLogs).values({
+      commandName: log.commandName,
       userId: log.userId,
       username: log.username,
-      commandName: log.commandName,
       serverId: log.serverId,
       serverName: log.serverName,
       channelId: log.channelId,
@@ -440,14 +452,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // License keys
-  async createLicenseKey(key: InsertLicenseKey): Promise<LicenseKey> {
+  async createLicenseKey(key: any): Promise<any> {
     const [newKey] = await db
       .insert(licenseKeys)
       .values({
         keyValue: key.keyValue,
         userId: key.userId,
         hwid: key.hwid,
-        isActive: key.isActive || true,
+        isActive: key.isActive !== undefined ? key.isActive : true,
         expiresAt: key.expiresAt,
         createdBy: key.createdBy,
         notes: key.notes
@@ -456,31 +468,34 @@ export class DatabaseStorage implements IStorage {
     return newKey;
   }
 
-  async getLicenseKey(keyValue: string): Promise<LicenseKey | undefined> {
+  async getLicenseKey(keyValue: string): Promise<any | undefined> {
     const [key] = await db.select().from(licenseKeys).where(eq(licenseKeys.keyValue, keyValue));
     return key;
   }
 
-  async updateLicenseKey(keyValue: string, updates: Partial<LicenseKey>): Promise<void> {
+  async updateLicenseKey(keyValue: string, updates: any): Promise<void> {
     await db
       .update(licenseKeys)
-      .set({
-        ...updates,
-        updatedAt: new Date()
-      })
+      .set(updates)
       .where(eq(licenseKeys.keyValue, keyValue));
   }
 
   // Bug reports
-  async createBugReport(report: InsertBugReport): Promise<BugReport> {
+  async createBugReport(report: any): Promise<any> {
     const [newReport] = await db
       .insert(bugReports)
-      .values(report)
+      .values({
+        reportId: report.reportId,
+        userId: report.userId,
+        description: report.description,
+        steps: report.steps,
+        status: report.status || 'open'
+      })
       .returning();
     return newReport;
   }
 
-  async getBugReport(reportId: string): Promise<BugReport | undefined> {
+  async getBugReport(reportId: string): Promise<any | undefined> {
     const [report] = await db.select().from(bugReports).where(eq(bugReports.reportId, reportId));
     return report;
   }
@@ -489,22 +504,20 @@ export class DatabaseStorage implements IStorage {
   async addUserLog(userId: string, message: string): Promise<void> {
     await db.insert(userLogs).values({
       userId,
-      message
+      logCount: 1
     });
   }
 
-  async getUserLogs(userId: string): Promise<UserLog[]> {
-    return await db
-      .select()
-      .from(userLogs)
-      .where(eq(userLogs.userId, userId))
-      .orderBy(desc(userLogs.createdAt));
+  async getUserLogs(userId: string): Promise<any[]> {
+    return db.select().from(userLogs).where(eq(userLogs.userId, userId));
   }
 
   // Whitelist operations
   async addToWhitelist(userId: string): Promise<void> {
     await db.insert(whitelist).values({
-      userId
+      userId,
+      addedBy: 'system',
+      isAdmin: false
     });
   }
 
@@ -513,19 +526,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async isWhitelisted(userId: string): Promise<boolean> {
-    const [entry] = await db
-      .select()
-      .from(whitelist)
-      .where(eq(whitelist.userId, userId));
+    const [entry] = await db.select().from(whitelist).where(eq(whitelist.userId, userId));
     return !!entry;
   }
 
   // Bot settings
   async getBotSetting(key: string): Promise<string | undefined> {
-    const [setting] = await db
-      .select()
-      .from(botSettings)
-      .where(eq(botSettings.key, key));
+    const [setting] = await db.select().from(botSettings).where(eq(botSettings.key, key));
     return setting?.value;
   }
 
@@ -535,7 +542,7 @@ export class DatabaseStorage implements IStorage {
       .values({ key, value })
       .onConflictDoUpdate({
         target: botSettings.key,
-        set: { value, updatedAt: new Date() }
+        set: { value }
       });
   }
 }

@@ -536,7 +536,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('cashapp')
@@ -549,7 +557,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('custom')
@@ -562,7 +578,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('ethereum')
@@ -575,7 +599,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('paypal')
@@ -588,7 +620,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('robux')
@@ -601,7 +641,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                )))
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('venmo')
@@ -614,7 +662,15 @@ export class RaptorBot {
                   { name: 'booster', value: 'booster' },
                   { name: 'early-access', value: 'early-access' },
                   { name: 'monthly', value: 'monthly' }
-                ))),
+                ))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(false))
+            .addStringOption(option =>
+              option.setName('duration')
+                .setDescription('Key duration')
+                .setRequired(false))),
 
       // Get Command
       new SlashCommandBuilder()

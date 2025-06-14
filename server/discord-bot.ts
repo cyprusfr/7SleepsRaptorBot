@@ -161,28 +161,15 @@ export class RaptorBot {
     });
 
     this.client.on('messageCreate', async (message) => {
-      // Log every message to debug MessageContent intent issue
-      console.log('MESSAGE EVENT:', {
-        author: message.author?.username || 'unknown',
-        content: message.content || 'empty',
-        isBot: message.author?.bot,
-        hasContent: !!message.content,
-        contentLength: message.content?.length || 0
-      });
-      
       if (message.author.bot) return;
 
-      // If we can't read content, try checking for empty content which indicates MessageContent intent issue
-      if (!message.content || message.content.length === 0) {
-        console.log('WARNING: Message content is empty - MessageContent intent may not be enabled');
-        return;
-      }
+      console.log('Message received from', message.author.username, ':', message.content);
 
       // Handle predefined support tags
       const messageContent = message.content.trim().toLowerCase();
       
       if (this.predefinedTags[messageContent]) {
-        console.log('Found tag:', messageContent);
+        console.log('Found support tag:', messageContent);
         await this.handlePredefinedTag(message, messageContent);
         return;
       }
@@ -3571,8 +3558,25 @@ export class RaptorBot {
     try {
       await this.client.login(DISCORD_TOKEN);
       console.log('✅ Discord bot started successfully');
+      
+      // Log intent status once ready
+      this.client.once('ready', () => {
+        console.log('Bot intents enabled:', this.client.options.intents);
+        console.log('MessageContent intent test - if you see message logs when typing .hwid, it works');
+      });
+      
     } catch (error) {
       console.error('❌ Failed to start Discord bot:', error);
+      
+      if (error.message?.includes('disallowed intents')) {
+        console.log('\n🔧 MessageContent Intent Required:');
+        console.log('1. Visit https://discord.com/developers/applications');
+        console.log('2. Select your bot application');  
+        console.log('3. Go to Bot tab > Privileged Gateway Intents');
+        console.log('4. Enable "Message Content Intent"');
+        console.log('5. Save and restart bot\n');
+      }
+      
       throw error;
     }
   }

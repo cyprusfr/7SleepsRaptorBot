@@ -207,6 +207,62 @@ export const commandLogs = pgTable("command_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// License keys table for MacSploit keys
+export const licenseKeys = pgTable("license_keys", {
+  id: serial("id").primaryKey(),
+  keyValue: varchar("key_value", { length: 100 }).notNull().unique(),
+  userId: varchar("user_id"), // Discord user ID
+  hwid: varchar("hwid"), // Hardware ID
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  createdBy: varchar("created_by"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Candy balances table
+export const candyBalances = pgTable("candy_balances", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(), // Discord user ID
+  balance: integer("balance").default(0),
+  bankBalance: integer("bank_balance").default(0),
+  lastDaily: timestamp("last_daily"),
+  totalEarned: integer("total_earned").default(0),
+  totalSpent: integer("total_spent").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bug reports table
+export const bugReports = pgTable("bug_reports", {
+  id: serial("id").primaryKey(),
+  reportId: varchar("report_id", { length: 16 }).notNull().unique(),
+  userId: varchar("user_id").notNull(), // Discord user ID
+  description: text("description").notNull(),
+  steps: text("steps"),
+  status: varchar("status", { length: 20 }).default("open"), // open, investigating, resolved, closed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User logs table for tracking user activity
+export const userLogs = pgTable("user_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(), // Discord user ID
+  logCount: integer("log_count").default(0),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Whitelist table
+export const whitelist = pgTable("whitelist", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(), // Discord user ID
+  addedBy: varchar("added_by"), // Who added them
+  isAdmin: boolean("is_admin").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,

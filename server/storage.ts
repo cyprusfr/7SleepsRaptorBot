@@ -11,6 +11,11 @@ import {
   verificationSessions,
   emailVerificationCodes,
   commandLogs,
+  licenseKeys,
+  candyBalances,
+  bugReports,
+  userLogs,
+  whitelist,
   type User,
   type UpsertUser,
   type DiscordKey,
@@ -175,6 +180,41 @@ export interface IStorage {
     topCommands: { commandName: string; count: number }[];
     recentCommands: CommandLog[];
   }>;
+
+  // License Key Management
+  createLicenseKey(key: { keyValue: string; userId?: string; hwid?: string; expiresAt?: Date; isActive?: boolean; createdBy?: string; notes?: string }): Promise<any>;
+  getLicenseKeyByValue(keyValue: string): Promise<any>;
+  getLicenseKeysByHwid(hwid: string): Promise<any[]>;
+  getLicenseKeysByUserId(userId: string): Promise<any[]>;
+
+  // Candy System Extended
+  addCandyBalance(userId: string, amount: number): Promise<void>;
+  addBankBalance(userId: string, amount: number): Promise<void>;
+  setLastDaily(userId: string, date: Date): Promise<void>;
+  getCandyLeaderboard(): Promise<{ userId: string; balance: number }[]>;
+
+  // Bug Reports
+  createBugReport(report: { reportId: string; userId: string; description: string; steps?: string; status?: string }): Promise<any>;
+
+  // User Logs
+  addUserLogs(userId: string, count: number, reason?: string): Promise<void>;
+  removeUserLogs(userId: string, count: number): Promise<void>;
+  getUserLogs(userId: string): Promise<number>;
+  getLogsLeaderboard(): Promise<{ userId: string; logCount: number }[]>;
+
+  // Whitelist Management
+  addWhitelistAdmin(userId: string): Promise<void>;
+  removeWhitelistAdmin(userId: string): Promise<void>;
+  getWhitelistAdmins(): Promise<{ userId: string }[]>;
+  addToWhitelist(userId: string): Promise<void>;
+  getWhitelistedUsers(): Promise<{ userId: string }[]>;
+
+  // Verification Extended
+  getVerificationByCode(code: string): Promise<any>;
+  completeVerification(code: string, discordUserId: string): Promise<void>;
+
+  // Discord Server Management
+  createDiscordServer(server: { serverId: string; serverName: string; memberCount?: number; isActive?: boolean }): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -658,6 +698,301 @@ export class DatabaseStorage implements IStorage {
 
   async transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void> {
     const fromBalance = await this.getCandyBalance(fromUserId);
+    
+    if (fromBalance.wallet < amount) {
+      throw new Error('Insufficient candy balance');
+    }
+
+    await this.updateCandyBalance(fromUserId, -amount);
+    await this.updateCandyBalance(toUserId, amount);
+    
+    await this.addCandyTransaction({
+      fromUserId,
+      toUserId,
+      amount,
+      type: 'transfer',
+      description: `Transfer from ${fromUserId} to ${toUserId}`,
+    });
+  }
+
+  // License Key Management Implementation
+  async createLicenseKey(key: { keyValue: string; userId?: string; hwid?: string; expiresAt?: Date; isActive?: boolean; createdBy?: string; notes?: string }): Promise<any> {
+    const [licenseKey] = await db
+      .insert(licenseKeys)
+      .values({
+        keyValue: key.keyValue,
+        userId: key.userId || null,
+        hwid: key.hwid || null,
+        expiresAt: key.expiresAt || null,
+        isActive: key.isActive ?? true,
+        createdBy: key.createdBy || null,
+        notes: key.notes || null,
+      })
+      .returning();
+    return licenseKey;
+  }
+
+  async getLicenseKeyByValue(keyValue: string): Promise<any> {
+    const [key] = await db
+      .select()
+      .from(licenseKeys)
+      .where(eq(licenseKeys.keyValue, keyValue));
+    return key || null;
+  }
+
+  async getLicenseKeysByHwid(hwid: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(licenseKeys)
+      .where(eq(licenseKeys.hwid, hwid));
+  }
+
+  async getLicenseKeysByUserId(userId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(licenseKeys)
+      .where(eq(licenseKeys.userId, userId));
+  }
+
+  // Candy System Extended Implementation
+  async addCandyBalance(userId: string, amount: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(candyBalances)
+      .where(eq(candyBalances.userId, userId));
+
+    if (existing.length === 0) {
+      await db.insert(candyBalances).values({
+        userId,
+        balance: Math.max(0, amount),
+        bankBalance: 0,
+        totalEarned: amount > 0 ? amount : 0,
+        totalSpent: amount < 0 ? Math.abs(amount) : 0,
+      });
+    } else {
+      const current = existing[0];
+      const newBalance = Math.max(0, current.balance + amount);
+      await db
+        .update(candyBalances)
+        .set({
+          balance: newBalance,
+          totalEarned: amount > 0 ? current.totalEarned + amount : current.totalEarned,
+          totalSpent: amount < 0 ? current.totalSpent + Math.abs(amount) : current.totalSpent,
+        })
+        .where(eq(candyBalances.userId, userId));
+    }
+  }
+
+  async addBankBalance(userId: string, amount: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(candyBalances)
+      .where(eq(candyBalances.userId, userId));
+
+    if (existing.length === 0) {
+      await db.insert(candyBalances).values({
+        userId,
+        balance: 0,
+        bankBalance: Math.max(0, amount),
+      });
+    } else {
+      const current = existing[0];
+      const newBankBalance = Math.max(0, current.bankBalance + amount);
+      await db
+        .update(candyBalances)
+        .set({ bankBalance: newBankBalance })
+        .where(eq(candyBalances.userId, userId));
+    }
+  }
+
+  async setLastDaily(userId: string, date: Date): Promise<void> {
+    const existing = await db
+      .select()
+      .from(candyBalances)
+      .where(eq(candyBalances.userId, userId));
+
+    if (existing.length === 0) {
+      await db.insert(candyBalances).values({
+        userId,
+        balance: 0,
+        bankBalance: 0,
+        lastDaily: date,
+      });
+    } else {
+      await db
+        .update(candyBalances)
+        .set({ lastDaily: date })
+        .where(eq(candyBalances.userId, userId));
+    }
+  }
+
+  async getCandyLeaderboard(): Promise<{ userId: string; balance: number }[]> {
+    const results = await db
+      .select()
+      .from(candyBalances)
+      .orderBy(desc(candyBalances.balance))
+      .limit(10);
+    
+    return results.map(r => ({ userId: r.userId, balance: r.balance }));
+  }
+
+  async getLastDaily(userId: string): Promise<Date | null> {
+    const [record] = await db
+      .select()
+      .from(candyBalances)
+      .where(eq(candyBalances.userId, userId));
+    
+    return record?.lastDaily || null;
+  }
+
+  // Bug Reports Implementation
+  async createBugReport(report: { reportId: string; userId: string; description: string; steps?: string; status?: string }): Promise<any> {
+    const [bugReport] = await db
+      .insert(bugReports)
+      .values({
+        reportId: report.reportId,
+        userId: report.userId,
+        description: report.description,
+        steps: report.steps || null,
+        status: report.status || 'open',
+      })
+      .returning();
+    return bugReport;
+  }
+
+  // User Logs Implementation
+  async addUserLogs(userId: string, count: number, reason?: string): Promise<void> {
+    const existing = await db
+      .select()
+      .from(userLogs)
+      .where(eq(userLogs.userId, userId));
+
+    if (existing.length === 0) {
+      await db.insert(userLogs).values({
+        userId,
+        logCount: count,
+      });
+    } else {
+      await db
+        .update(userLogs)
+        .set({ 
+          logCount: existing[0].logCount + count,
+          lastUpdated: new Date(),
+        })
+        .where(eq(userLogs.userId, userId));
+    }
+  }
+
+  async removeUserLogs(userId: string, count: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(userLogs)
+      .where(eq(userLogs.userId, userId));
+
+    if (existing.length > 0) {
+      const newCount = Math.max(0, existing[0].logCount - count);
+      await db
+        .update(userLogs)
+        .set({ 
+          logCount: newCount,
+          lastUpdated: new Date(),
+        })
+        .where(eq(userLogs.userId, userId));
+    }
+  }
+
+  async getUserLogs(userId: string): Promise<number> {
+    const [record] = await db
+      .select()
+      .from(userLogs)
+      .where(eq(userLogs.userId, userId));
+    
+    return record?.logCount || 0;
+  }
+
+  async getLogsLeaderboard(): Promise<{ userId: string; logCount: number }[]> {
+    const results = await db
+      .select()
+      .from(userLogs)
+      .orderBy(desc(userLogs.logCount))
+      .limit(10);
+    
+    return results.map(r => ({ userId: r.userId, logCount: r.logCount }));
+  }
+
+  // Whitelist Management Implementation
+  async addWhitelistAdmin(userId: string): Promise<void> {
+    await db.insert(whitelist).values({
+      userId,
+      isAdmin: true,
+      addedBy: 'system',
+    });
+  }
+
+  async removeWhitelistAdmin(userId: string): Promise<void> {
+    await db
+      .update(whitelist)
+      .set({ isAdmin: false })
+      .where(eq(whitelist.userId, userId));
+  }
+
+  async getWhitelistAdmins(): Promise<{ userId: string }[]> {
+    const results = await db
+      .select()
+      .from(whitelist)
+      .where(eq(whitelist.isAdmin, true));
+    
+    return results.map(r => ({ userId: r.userId }));
+  }
+
+  async addToWhitelist(userId: string): Promise<void> {
+    await db.insert(whitelist).values({
+      userId,
+      isAdmin: false,
+      addedBy: 'system',
+    });
+  }
+
+  async getWhitelistedUsers(): Promise<{ userId: string }[]> {
+    const results = await db
+      .select()
+      .from(whitelist);
+    
+    return results.map(r => ({ userId: r.userId }));
+  }
+
+  // Verification Extended Implementation
+  async getVerificationByCode(code: string): Promise<any> {
+    const [verification] = await db
+      .select()
+      .from(verificationSessions)
+      .where(eq(verificationSessions.dashboardCode, code));
+    
+    return verification || null;
+  }
+
+  async completeVerification(code: string, discordUserId: string): Promise<void> {
+    await db
+      .update(verificationSessions)
+      .set({ 
+        status: 'completed',
+        completedAt: new Date(),
+      })
+      .where(eq(verificationSessions.dashboardCode, code));
+  }
+
+  // Discord Server Management Implementation
+  async createDiscordServer(server: { serverId: string; serverName: string; memberCount?: number; isActive?: boolean }): Promise<any> {
+    const [discordServer] = await db
+      .insert(discordServers)
+      .values({
+        serverId: server.serverId,
+        serverName: server.serverName,
+        memberCount: server.memberCount || 0,
+        isActive: server.isActive ?? true,
+      })
+      .returning();
+    return discordServer;
 
     if (fromBalance.wallet < amount) {
       throw new Error('Insufficient candy balance');

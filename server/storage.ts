@@ -69,6 +69,7 @@ export interface IStorage {
 
   createDiscordServer(server: InsertDiscordServer): Promise<DiscordServer>;
   updateDiscordServer(serverId: string, updates: Partial<DiscordServer>): Promise<void>;
+  updateServerStatus(serverId: string, isActive: boolean): Promise<void>;
 
   logActivity(type: string, description: string): Promise<void>;
   logCommand(log: any): Promise<void>;
@@ -576,6 +577,13 @@ export class DatabaseStorage implements IStorage {
 
   async getAllBotSettings(): Promise<any[]> {
     return db.select().from(botSettings);
+  }
+
+  async updateServerStatus(serverId: string, isActive: boolean): Promise<void> {
+    await db
+      .update(discordServers)
+      .set({ isActive })
+      .where(eq(discordServers.serverId, serverId));
   }
 }
 

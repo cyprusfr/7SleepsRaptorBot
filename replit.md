@@ -71,6 +71,9 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Database Operations**: Replaced all placeholder command responses with comprehensive database logic and error handling
 - **Command Tables**: Created and populated command_logs table for detailed Discord bot usage tracking
 - **Complete Candy System Implementation**: Implemented all 9 candy commands with realistic game mechanics, cooldown systems, and database persistence including balance checking, daily rewards (2000 candies), begging with random outcomes, credit card scam mechanics (35% success rate), gambling with house edge (47% win rate), leaderboards, payment transfers, and bank deposit/withdrawal functionality
+- **MessageContent Intent Resolution**: User enabled MessageContent intent in Discord Developer Portal enabling message-based support tags (.hwid format)
+- **Support Tag Format Updates**: Removed Discord embeds per user request, implemented plain text responses and intelligent script detection
+- **Smart Script Detection**: Implemented automatic language detection for .scripts tag - bash scripts (sudo, curl commands) use bash code blocks, Lua scripts (game:, loadstring) use lua code blocks with proper syntax highlighting
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

@@ -3464,13 +3464,25 @@ export class RaptorBot {
     }
     
     try {
-      // Handle scripts tag as Lua code block
+      // Detect script type and use appropriate code block
+      let formattedResponse = response;
+      
       if (tag === '.scripts') {
-        await message.channel.send(`\`\`\`lua\n${response}\n\`\`\``);
-      } else {
-        // All other tags as regular text, no reply
-        await message.channel.send(response);
+        // Check if it contains Lua code patterns
+        if (response.includes('loadstring') || response.includes('game:') || response.includes('local ')) {
+          formattedResponse = `\`\`\`lua\n${response}\n\`\`\``;
+        }
+        // Check if it contains bash/shell patterns  
+        else if (response.includes('sudo ') || response.includes('curl ') || response.includes('cd ~/') || response.includes('bash ')) {
+          formattedResponse = `\`\`\`bash\n${response}\n\`\`\``;
+        }
+        // Default to lua for scripts
+        else {
+          formattedResponse = `\`\`\`lua\n${response}\n\`\`\``;
+        }
       }
+      
+      await message.channel.send(formattedResponse);
       
       // Log tag usage
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
@@ -3670,9 +3682,22 @@ export class RaptorBot {
         return;
       }
 
-      // Handle scripts tag as Lua code block
+      // Detect script type and use appropriate code block
       if (tagKey === '.scripts') {
-        await interaction.reply(`\`\`\`lua\n${tagContent}\n\`\`\``);
+        let formattedContent;
+        // Check if it contains Lua code patterns
+        if (tagContent.includes('loadstring') || tagContent.includes('game:') || tagContent.includes('local ')) {
+          formattedContent = `\`\`\`lua\n${tagContent}\n\`\`\``;
+        }
+        // Check if it contains bash/shell patterns  
+        else if (tagContent.includes('sudo ') || tagContent.includes('curl ') || tagContent.includes('cd ~/') || tagContent.includes('bash ')) {
+          formattedContent = `\`\`\`bash\n${tagContent}\n\`\`\``;
+        }
+        // Default to lua for scripts
+        else {
+          formattedContent = `\`\`\`lua\n${tagContent}\n\`\`\``;
+        }
+        await interaction.reply(formattedContent);
       } else {
         // All other tags as regular text
         await interaction.reply(tagContent);

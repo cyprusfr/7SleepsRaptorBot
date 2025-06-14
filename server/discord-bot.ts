@@ -3464,19 +3464,19 @@ export class RaptorBot {
     }
     
     try {
-      await message.reply(`\`\`\`\n${response}\n\`\`\``);
+      // Handle scripts tag as Lua code block
+      if (tag === '.scripts') {
+        await message.channel.send(`\`\`\`lua\n${response}\n\`\`\``);
+      } else {
+        // All other tags as regular text, no reply
+        await message.channel.send(response);
+      }
       
       // Log tag usage
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
       
     } catch (error) {
       console.error('Error sending predefined tag response:', error);
-      // Try sending a simple message as fallback
-      try {
-        await message.channel.send(`**${tag.toUpperCase()}**\n\n${response}`);
-      } catch (fallbackError) {
-        console.error('Fallback message also failed:', fallbackError);
-      }
     }
   }
 
@@ -3670,7 +3670,13 @@ export class RaptorBot {
         return;
       }
 
-      await interaction.reply(`\`\`\`\n${tagContent}\n\`\`\``);
+      // Handle scripts tag as Lua code block
+      if (tagKey === '.scripts') {
+        await interaction.reply(`\`\`\`lua\n${tagContent}\n\`\`\``);
+      } else {
+        // All other tags as regular text
+        await interaction.reply(tagContent);
+      }
       success = true;
 
       // Log the support tag usage

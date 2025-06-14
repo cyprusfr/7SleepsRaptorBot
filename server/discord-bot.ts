@@ -528,149 +528,254 @@ export class RaptorBot {
           subcommand
             .setName('bitcoin')
             .setDescription('Generate a key for a bitcoin payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('cashapp')
             .setDescription('Generate a key for a cashapp payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('custom')
             .setDescription('Generate a custom key')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('ethereum')
             .setDescription('Generate a key for an ethereum payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('paypal')
             .setDescription('Generate a key for a paypal payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('robux')
             .setDescription('Generate a key for a robux payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false)))
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('venmo')
             .setDescription('Generate a key for a venmo payment')
-            .addStringOption(option =>
-              option.setName('type')
-                .setDescription('Key type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'booster', value: 'booster' },
-                  { name: 'early-access', value: 'early-access' },
-                  { name: 'monthly', value: 'monthly' }
-                ))
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
             .addStringOption(option =>
               option.setName('note')
                 .setDescription('Additional note')
-                .setRequired(false))
+                .setRequired(true))
             .addStringOption(option =>
-              option.setName('duration')
-                .setDescription('Key duration')
-                .setRequired(false))),
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))),
 
       // Get Command
       new SlashCommandBuilder()
@@ -2868,11 +2973,19 @@ export class RaptorBot {
     await interaction.deferReply();
     
     const subcommand = interaction.options.getSubcommand();
-    const keyType = interaction.options.getString('type') || 'standard';
+    const user = interaction.options.getUser('user')!;
+    const note = interaction.options.getString('note')!;
+    const booster = interaction.options.getString('booster') === 'yes';
+    const earlyAccess = interaction.options.getString('early-access') === 'yes';
+    const monthly = interaction.options.getString('monthly') === 'yes';
     
     try {
-      // Generate unique key ID with type prefix if specified
-      const typePrefix = keyType !== 'standard' ? keyType.toUpperCase().replace('-', '') + '-' : '';
+      // Generate unique key ID with feature prefixes
+      let typePrefix = '';
+      if (booster) typePrefix += 'BOOST-';
+      if (earlyAccess) typePrefix += 'EA-';
+      if (monthly) typePrefix += 'MONTH-';
+      
       const keyId = `MSK-${typePrefix}${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
       
@@ -2928,30 +3041,37 @@ export class RaptorBot {
           throw new Error('Invalid payment method');
       }
       
+      // Generate features display
+      const features = [];
+      if (booster) features.push('Booster Access');
+      if (earlyAccess) features.push('Early Access');
+      if (monthly) features.push('Monthly Subscription');
+      const featuresDisplay = features.length > 0 ? features.join(', ') : 'Standard Access';
+      
       // Store key in database
       const keyData = {
         keyValue: keyId,
-        userId: interaction.user.id,
+        userId: user.id,
         hwid: null,
         isActive: true,
         expiresAt,
         createdBy: interaction.user.username,
-        notes: `${paymentMethod} ${keyType !== 'standard' ? keyType + ' ' : ''}payment key - ${paymentAmount}`
+        notes: `${paymentMethod} payment key for ${user.username} - ${note} - Features: ${featuresDisplay}`
       };
       
       await storage.createLicenseKey(keyData);
-      await this.logActivity('key_generated', `${interaction.user.username} generated ${subcommand} payment key: ${keyId}`);
-      
-      const keyTypeDisplay = keyType !== 'standard' ? ` (${keyType.toUpperCase()})` : '';
+      await this.logActivity('key_generated', `${interaction.user.username} generated ${subcommand} payment key: ${keyId} for ${user.username}`);
       
       const embed = new EmbedBuilder()
-        .setTitle(`🔑 Payment Key Generated${keyTypeDisplay}`)
-        .setDescription(`Your ${paymentMethod}${keyType !== 'standard' ? ` ${keyType}` : ''} payment key has been generated successfully.`)
+        .setTitle(`🔑 Payment Key Generated`)
+        .setDescription(`${paymentMethod} payment key has been generated successfully.`)
         .addFields(
           { name: '🆔 Key ID', value: `\`${keyId}\``, inline: false },
+          { name: '👤 Generated For', value: `<@${user.id}>`, inline: true },
           { name: '💰 Payment Method', value: paymentMethod, inline: true },
-          { name: '🎫 Key Type', value: keyType === 'standard' ? 'Standard' : keyType.charAt(0).toUpperCase() + keyType.slice(1), inline: true },
           { name: '💵 Amount', value: paymentAmount, inline: true },
+          { name: '📝 Note', value: note, inline: false },
+          { name: '🎯 Features', value: featuresDisplay, inline: false },
           { name: '📍 Send Payment To', value: `\`${paymentAddress}\``, inline: false },
           { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:F>`, inline: true },
           { name: '📋 Status', value: '⏳ Pending Payment', inline: true },

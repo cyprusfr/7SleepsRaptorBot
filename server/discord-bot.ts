@@ -47,7 +47,6 @@ export class RaptorBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
       ],
     });
@@ -163,18 +162,8 @@ export class RaptorBot {
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
 
-      console.log('Message received from', message.author.username, ':', message.content);
-
-      // Handle predefined support tags
-      const messageContent = message.content.trim().toLowerCase();
-      
-      if (this.predefinedTags[messageContent]) {
-        console.log('Found support tag:', messageContent);
-        await this.handlePredefinedTag(message, messageContent);
-        return;
-      }
-
-      // Handle verification codes in DMs
+      // Without MessageContent intent, we can't read message content
+      // But we can still handle verification codes in DMs
       if (message.channel.type === ChannelType.DM) {
         await this.handleVerificationMessage(message);
       }
@@ -3562,7 +3551,9 @@ export class RaptorBot {
       // Log intent status once ready
       this.client.once('ready', () => {
         console.log('Bot intents enabled:', this.client.options.intents);
-        console.log('MessageContent intent test - if you see message logs when typing .hwid, it works');
+        console.log('Bot ready! Testing message handling...');
+        console.log('Available support tags:', Object.keys(this.predefinedTags));
+        console.log('Type .hwid in Discord to test');
       });
       
     } catch (error) {

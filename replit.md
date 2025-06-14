@@ -50,6 +50,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Candy Balance Display Fix**: Fixed critical issue where bot showed 0 candies despite 15k+ actual balance - updated all commands to read from candy_balances table instead of discordUsers table
 - **Complete Candy Banking System Fix**: Fixed deposit/withdraw commands to use correct candy_balances table with proper balance validation and real-time updates
 - **Generate Key Commands Replacement**: Replaced complex payment key commands with simplified interface matching user screenshots - removed required parameters for clean autocomplete display while maintaining full database integration and professional Discord embeds
+- **Optional Type Parameter Implementation**: Added booster/early-access/monthly choices to all generate key commands with enhanced key ID generation, database integration, and Discord embed display matching exact user specifications
 - **Complete Discord Bot Command Implementation**: Added full database functionality to all 60+ commands
 - **Payment Key Generation**: Implemented real database storage for Bitcoin, Ethereum, PayPal, CashApp, Venmo, Robux keys
 - **HWID Management**: Added comprehensive hardware ID tracking and key association

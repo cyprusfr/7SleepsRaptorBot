@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Sidebar from "@/components/sidebar";
@@ -20,7 +21,11 @@ interface BotSettings {
   moderationEnabled: boolean;
   candySystemEnabled: boolean;
   welcomeMessage: string;
+  welcomeMessageEnabled: boolean;
   maintenanceMode: boolean;
+  botStatus: 'online' | 'idle' | 'dnd' | 'invisible';
+  activityType: 'playing' | 'watching' | 'listening' | 'competing';
+  activityText: string;
 }
 
 export default function BotSettings() {
@@ -128,9 +133,97 @@ export default function BotSettings() {
                     value={settings.welcomeMessage}
                     onChange={(e) => handleSettingChange('welcomeMessage', e.target.value)}
                     placeholder="Welcome to the server!"
+                    disabled={!settings.welcomeMessageEnabled}
                   />
                   <p className="text-sm text-muted-foreground">
                     Message sent to new server members
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="welcome-enabled">Enable Welcome Messages</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Send welcome messages to new server members
+                  </p>
+                </div>
+                <Switch
+                  id="welcome-enabled"
+                  checked={settings.welcomeMessageEnabled}
+                  onCheckedChange={(checked) => 
+                    handleSettingChange('welcomeMessageEnabled', checked)
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bot Appearance */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5" />
+                Bot Appearance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="bot-status">Bot Status</Label>
+                  <Select
+                    value={settings.botStatus}
+                    onValueChange={(value) => handleSettingChange('botStatus', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="online">🟢 Online</SelectItem>
+                      <SelectItem value="idle">🟡 Idle</SelectItem>
+                      <SelectItem value="dnd">🔴 Do Not Disturb</SelectItem>
+                      <SelectItem value="invisible">⚫ Invisible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Bot's Discord status indicator
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="activity-type">Activity Type</Label>
+                  <Select
+                    value={settings.activityType}
+                    onValueChange={(value) => handleSettingChange('activityType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select activity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playing">🎮 Playing</SelectItem>
+                      <SelectItem value="watching">👀 Watching</SelectItem>
+                      <SelectItem value="listening">🎵 Listening to</SelectItem>
+                      <SelectItem value="competing">🏆 Competing in</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Type of activity to display
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="activity-text">Activity Text</Label>
+                  <Input
+                    id="activity-text"
+                    value={settings.activityText}
+                    onChange={(e) => handleSettingChange('activityText', e.target.value)}
+                    placeholder="MacSploit Support"
+                    maxLength={50}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Text shown in bot's activity
                   </p>
                 </div>
               </div>

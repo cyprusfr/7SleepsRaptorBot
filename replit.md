@@ -48,6 +48,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Daily Command Cooldown Fix**: Fixed critical bug allowing multiple daily reward claims - corrected database table reference from candyBalances to discordUsers for lastDaily timestamp tracking
 - **Daily Cooldown Implementation Complete**: Resolved database schema mismatch preventing lastDaily timestamp saves, daily command now properly enforces 24-hour cooldown preventing multiple reward claims
 - **Candy Balance Display Fix**: Fixed critical issue where bot showed 0 candies despite 15k+ actual balance - updated all commands to read from candy_balances table instead of discordUsers table
+- **Complete Candy Banking System Fix**: Fixed deposit/withdraw commands to use correct candy_balances table with proper balance validation and real-time updates
 - **Complete Discord Bot Command Implementation**: Added full database functionality to all 60+ commands
 - **Payment Key Generation**: Implemented real database storage for Bitcoin, Ethereum, PayPal, CashApp, Venmo, Robux keys
 - **HWID Management**: Added comprehensive hardware ID tracking and key association

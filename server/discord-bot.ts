@@ -1981,7 +1981,7 @@ export class RaptorBot {
       const finalAmount = Math.floor(dailyAmount * multiplier);
 
       await storage.addCandy(userId, finalAmount);
-      await storage.setLastDaily(userId, now);
+      await storage.updateLastDaily(userId);
 
       await this.logActivity('candy_daily', `${interaction.user.username} claimed daily reward: ${finalAmount} candies`);
 

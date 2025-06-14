@@ -301,9 +301,9 @@ export class DatabaseStorage implements IStorage {
 
   async updateLastDaily(userId: string): Promise<void> {
     await db
-      .update(candyBalances)
+      .update(discordUsers)
       .set({ lastDaily: new Date() })
-      .where(eq(candyBalances.userId, userId));
+      .where(eq(discordUsers.discordId, userId));
   }
 
   async updateLastBeg(userId: string): Promise<void> {

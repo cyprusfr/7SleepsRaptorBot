@@ -58,6 +58,7 @@ export interface IStorage {
   updateDiscordUserLastSeen(discordId: string): Promise<void>;
 
   // Discord Servers
+  addServer(server: { serverId: string; serverName: string; memberCount?: number; isActive?: boolean }): Promise<DiscordServer>;
   upsertDiscordServer(server: InsertDiscordServer): Promise<DiscordServer>;
   getDiscordServer(id: number): Promise<DiscordServer | undefined>;
   getDiscordServerByServerId(serverId: string): Promise<DiscordServer | undefined>;

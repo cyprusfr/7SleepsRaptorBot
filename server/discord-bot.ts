@@ -3456,42 +3456,6 @@ export class RaptorBot {
     await interaction.reply({ content: 'Whitelist command not yet fully implemented', ephemeral: true });
   }
 
-  private async handleSupportTagCommand(interaction: ChatInputCommandInteraction) {
-    const tagName = interaction.commandName;
-    const response = this.predefinedTags[`.${tagName}`];
-    
-    if (!response) {
-      await interaction.reply({ 
-        content: 'Support tag not found.', 
-        ephemeral: true 
-      });
-      return;
-    }
-
-    try {
-      const embed = new EmbedBuilder()
-        .setTitle('🔧 MacSploit Support')
-        .setDescription(response)
-        .setColor(0x0099ff)
-        .setFooter({ text: 'MacSploit Support System' })
-        .setTimestamp();
-
-      await interaction.reply({ embeds: [embed] });
-      
-      // Log tag usage
-      await this.logActivity('support_tag_used', `Support tag used: .${tagName} by ${interaction.user.username}`);
-      
-    } catch (error) {
-      console.error('Error handling support tag command:', error);
-      await interaction.reply({ 
-        content: 'Failed to process support tag.', 
-        ephemeral: true 
-      });
-    }
-  }
-
-
-
   private async handlePredefinedTag(message: any, tag: string) {
     const response = this.predefinedTags[tag];
     
@@ -3598,24 +3562,19 @@ export class RaptorBot {
             'Miscellaneous': ['.nigger']
           };
 
-          const embed = new EmbedBuilder()
-            .setTitle('📋 MacSploit Support Tags Manager')
-            .setDescription(`Total Tags: **${allTags.length}**\n\nUse \`/tag-manager view tag:<name>\` to see content`)
-            .setColor(0x00ff00)
-            .setTimestamp();
+          let listResponse = `**📋 MacSploit Support Tags Manager**\n`;
+          listResponse += `Total Tags: **${allTags.length}**\n\n`;
+          listResponse += `Use \`/tag-manager view tag:<name>\` to see content\n\n`;
 
           Object.entries(tagsByCategory).forEach(([category, tags]) => {
             const validTags = tags.filter(tag => this.predefinedTags[tag]);
             if (validTags.length > 0) {
-              embed.addFields({
-                name: category,
-                value: validTags.map(tag => `\`${tag}\``).join(', '),
-                inline: false
-              });
+              listResponse += `**${category}:**\n`;
+              listResponse += validTags.map(tag => `\`${tag}\``).join(', ') + '\n\n';
             }
           });
 
-          await interaction.reply({ embeds: [embed] });
+          await interaction.reply(listResponse);
           success = true;
           break;
 
@@ -3639,14 +3598,9 @@ export class RaptorBot {
             return;
           }
 
-          const viewEmbed = new EmbedBuilder()
-            .setTitle(`📄 Support Tag: ${fullTagName}`)
-            .setDescription(`\`\`\`\n${tagContent}\n\`\`\``)
-            .setColor(0x0099ff)
-            .setFooter({ text: `Usage: Type ${fullTagName} in chat` })
-            .setTimestamp();
+          const viewResponse = `**📄 Support Tag: ${fullTagName}**\n\n\`\`\`\n${tagContent}\n\`\`\`\n\n*Usage: Type ${fullTagName} in chat*`;
 
-          await interaction.reply({ embeds: [viewEmbed] });
+          await interaction.reply(viewResponse);
           success = true;
           break;
 
@@ -3674,22 +3628,15 @@ export class RaptorBot {
             return;
           }
 
-          const searchEmbed = new EmbedBuilder()
-            .setTitle(`🔍 Search Results for "${query}"`)
-            .setDescription(`Found ${searchResults.length} matching tags:`)
-            .setColor(0xffaa00)
-            .setTimestamp();
+          let searchResponse = `**🔍 Search Results for "${query}"**\n\n`;
+          searchResponse += `Found ${searchResults.length} matching tags:\n\n`;
 
           searchResults.forEach(([tag, content]) => {
             const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-            searchEmbed.addFields({
-              name: tag,
-              value: `\`\`\`${preview}\`\`\``,
-              inline: false
-            });
+            searchResponse += `**${tag}**\n\`\`\`${preview}\`\`\`\n\n`;
           });
 
-          await interaction.reply({ embeds: [searchEmbed] });
+          await interaction.reply(searchResponse);
           success = true;
           break;
 
@@ -3730,14 +3677,9 @@ export class RaptorBot {
         return;
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle(`📋 MacSploit Support: ${tagKey}`)
-        .setDescription(tagContent)
-        .setColor(0x00ff00)
-        .setFooter({ text: 'MacSploit Support System' })
-        .setTimestamp();
+      const response = `**📋 MacSploit Support: ${tagKey}**\n\n${tagContent}\n\n*MacSploit Support System*`;
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply(response);
       success = true;
 
       // Log the support tag usage

@@ -3464,8 +3464,7 @@ export class RaptorBot {
     }
     
     try {
-      const replyText = `**🔧 MacSploit Support**\n\n${response}\n\n*MacSploit Support System*`;
-      await message.reply(replyText);
+      await message.reply(`\`\`\`\n${response}\n\`\`\``);;
       
       // Log tag usage
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);

@@ -251,7 +251,13 @@ export class DatabaseStorage implements IStorage {
   async createDiscordKey(insertKey: InsertDiscordKey): Promise<DiscordKey> {
     const [key] = await db
       .insert(discordKeys)
-      .values(insertKey)
+      .values({
+        keyId: insertKey.keyId,
+        userId: insertKey.userId,
+        discordUsername: insertKey.discordUsername,
+        hwid: insertKey.hwid,
+        status: insertKey.status || 'active'
+      })
       .returning();
     return key;
   }
@@ -309,12 +315,34 @@ export class DatabaseStorage implements IStorage {
   async upsertDiscordUser(insertUser: InsertDiscordUser): Promise<DiscordUser> {
     const [user] = await db
       .insert(discordUsers)
-      .values(insertUser)
+      .values({
+        discordId: insertUser.discordId,
+        username: insertUser.username,
+        discriminator: insertUser.discriminator,
+        avatarUrl: insertUser.avatarUrl,
+        roles: insertUser.roles,
+        metadata: insertUser.metadata,
+        candyBalance: insertUser.candyBalance,
+        candyBank: insertUser.candyBank,
+        lastDaily: insertUser.lastDaily,
+        lastBeg: insertUser.lastBeg,
+        lastScam: insertUser.lastScam,
+        isWhitelisted: insertUser.isWhitelisted
+      })
       .onConflictDoUpdate({
         target: discordUsers.discordId,
         set: {
-          ...insertUser,
-          lastSeen: new Date(),
+          username: insertUser.username || discordUsers.username,
+          discriminator: insertUser.discriminator,
+          avatarUrl: insertUser.avatarUrl,
+          roles: insertUser.roles,
+          metadata: insertUser.metadata,
+          candyBalance: insertUser.candyBalance,
+          candyBank: insertUser.candyBank,
+          lastDaily: insertUser.lastDaily,
+          lastBeg: insertUser.lastBeg,
+          lastScam: insertUser.lastScam,
+          isWhitelisted: insertUser.isWhitelisted
         },
       })
       .returning();
@@ -801,6 +829,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Additional candy system methods needed by Discord bot
+  async getCandyBalance(userId: string): Promise<{ wallet: number; bank: number; total: number }> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    if (!user) {
+      await this.upsertDiscordUser({ discordId: userId, username: 'unknown' });
+      return { wallet: 0, bank: 0, total: 0 };
+    }
+    const wallet = user.candyBalance || 0;
+    const bank = user.candyBank || 0;
+    return { wallet, bank, total: wallet + bank };
+  }
+
+  async depositCandy(userId: string, amount: number): Promise<void> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    if (user && (user.candyBalance || 0) >= amount) {
+      await db.update(discordUsers)
+        .set({ 
+          candyBalance: (user.candyBalance || 0) - amount,
+          candyBank: (user.candyBank || 0) + amount
+        })
+        .where(eq(discordUsers.discordId, userId));
+    }
+  }
+
   async addCandy(userId: string, amount: number): Promise<void> {
     await this.upsertDiscordUser({ discordId: userId, username: 'unknown' });
     const user = await this.getDiscordUserByDiscordId(userId);

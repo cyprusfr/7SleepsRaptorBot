@@ -948,7 +948,7 @@ export class RaptorBot {
     const reason = interaction.options.getString('reason', true);
 
     try {
-      const existingKey = await storage.getDiscordKey(key);
+      const existingKey = await storage.getDiscordKeyByKeyId(key);
       if (existingKey) {
         await interaction.reply({ content: '❌ This key already exists in the database.', ephemeral: true });
         return;
@@ -996,7 +996,7 @@ export class RaptorBot {
     const key = interaction.options.getString('key', true);
 
     try {
-      const keyData = await storage.getDiscordKey(key);
+      const keyData = await storage.getDiscordKeyByKeyId(key);
       
       if (!keyData) {
         await interaction.reply({ content: '❌ License key not found.', ephemeral: true });

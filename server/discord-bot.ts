@@ -1576,7 +1576,8 @@ export class RaptorBot {
 
   private async syncServerData() {
     try {
-      for (const guild of this.client.guilds.cache.values()) {
+      const guilds = Array.from(this.client.guilds.cache.values());
+      for (const guild of guilds) {
         await this.addServer(guild);
       }
     } catch (error) {

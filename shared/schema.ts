@@ -102,6 +102,11 @@ export const discordUsers = pgTable("discord_users", {
   roles: jsonb("roles").default([]),
   metadata: jsonb("metadata").default({}),
   candyBalance: integer("candy_balance").default(0).notNull(),
+  candyBank: integer("candy_bank").default(0).notNull(),
+  lastDaily: timestamp("last_daily"),
+  lastBeg: timestamp("last_beg"),
+  lastScam: timestamp("last_scam"),
+  isWhitelisted: boolean("is_whitelisted").default(false),
 });
 
 export const discordServers = pgTable("discord_servers", {

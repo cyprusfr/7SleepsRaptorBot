@@ -121,12 +121,41 @@ export interface IStorage {
   updateCandyBalance(userId: string, amount: number): Promise<void>;
   depositCandy(userId: string, amount: number): Promise<void>;
   withdrawCandy(userId: string, amount: number): Promise<void>;
+  addCandy(userId: string, amount: number): Promise<void>;
+  subtractCandy(userId: string, amount: number): Promise<void>;
+  transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
+  getLastDaily(userId: string): Promise<Date | null>;
+  updateLastDaily(userId: string): Promise<void>;
+  getLastBeg(userId: string): Promise<Date | null>;
+  updateLastBeg(userId: string): Promise<void>;
+  getLastScam(userId: string): Promise<Date | null>;
+  updateLastScam(userId: string): Promise<void>;
+  getTopCandyUsers(limit: number): Promise<{ discordId: string; candyBalance: number }[]>;
   addCandyTransaction(transaction: any): Promise<void>;
   getCandyTransactions(userId: string, limit: number): Promise<any[]>;
   getCandyLeaderboard(limit: number): Promise<any[]>;
   checkDailyCandy(userId: string): Promise<boolean>;
   claimDailyCandy(userId: string): Promise<number>;
-  transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void>;
+
+  // Whitelist system
+  addUserToWhitelist(userId: string): Promise<void>;
+  removeUserFromWhitelist(userId: string): Promise<void>;
+  isUserWhitelisted(userId: string): Promise<boolean>;
+
+  // Key management
+  getDiscordKey(keyId: string): Promise<DiscordKey | undefined>;
+  updateDiscordKeyUser(keyId: string, newUserId: string): Promise<void>;
+
+  // Command logging
+  logCommandUsage(data: {
+    username: string;
+    userId: string;
+    commandName: string;
+    subcommand?: string | null;
+    executionTime: number;
+    success: boolean;
+    errorMessage?: string;
+  }): Promise<void>;
 
   // Verification sessions
   createVerificationSession(session: InsertVerificationSession): Promise<VerificationSession>;
@@ -555,17 +584,6 @@ export class DatabaseStorage implements IStorage {
     return permissions[role as keyof typeof permissions] || {};
   }
 
-  async getCandyBalance(userId: string): Promise<{ wallet: number; bank: number; total: number }> {
-    const user = await this.getDiscordUserByDiscordId(userId);
-    const candyBalance = user?.candyBalance || 0;
-    // For now, treat all candy as wallet balance. Can be extended later.
-    return {
-      wallet: candyBalance,
-      bank: 0,
-      total: candyBalance
-    };
-  }
-
   async updateCandyBalance(userId: string, amount: number): Promise<void> {
     const currentBalance = await this.getCandyBalance(userId);
     const newBalance = Math.max(0, currentBalance.wallet + amount);
@@ -574,11 +592,6 @@ export class DatabaseStorage implements IStorage {
       .update(discordUsers)
       .set({ candyBalance: newBalance })
       .where(eq(discordUsers.discordId, userId));
-  }
-
-  async depositCandy(userId: string, amount: number): Promise<void> {
-    // Placeholder for wallet to bank transfer
-    await this.updateCandyBalance(userId, 0); // No change for now
   }
 
   async withdrawCandy(userId: string, amount: number): Promise<void> {
@@ -785,6 +798,113 @@ export class DatabaseStorage implements IStorage {
   async getAllBackups(): Promise<any[]> {
     // Return empty array for now as backup data structure is not defined
     return [];
+  }
+
+  // Additional candy system methods needed by Discord bot
+  async addCandy(userId: string, amount: number): Promise<void> {
+    await this.upsertDiscordUser({ discordId: userId, username: 'unknown' });
+    const user = await this.getDiscordUserByDiscordId(userId);
+    if (user) {
+      await db.update(discordUsers)
+        .set({ candyBalance: (user.candyBalance || 0) + amount })
+        .where(eq(discordUsers.discordId, userId));
+    }
+  }
+
+  async subtractCandy(userId: string, amount: number): Promise<void> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    if (user) {
+      const newBalance = Math.max(0, (user.candyBalance || 0) - amount);
+      await db.update(discordUsers)
+        .set({ candyBalance: newBalance })
+        .where(eq(discordUsers.discordId, userId));
+    }
+  }
+
+  async getLastDaily(userId: string): Promise<Date | null> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    return user?.lastDaily || null;
+  }
+
+  async updateLastDaily(userId: string): Promise<void> {
+    await db.update(discordUsers)
+      .set({ lastDaily: new Date() })
+      .where(eq(discordUsers.discordId, userId));
+  }
+
+  async getLastBeg(userId: string): Promise<Date | null> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    return user?.lastBeg || null;
+  }
+
+  async updateLastBeg(userId: string): Promise<void> {
+    await db.update(discordUsers)
+      .set({ lastBeg: new Date() })
+      .where(eq(discordUsers.discordId, userId));
+  }
+
+  async getLastScam(userId: string): Promise<Date | null> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    return user?.lastScam || null;
+  }
+
+  async updateLastScam(userId: string): Promise<void> {
+    await db.update(discordUsers)
+      .set({ lastScam: new Date() })
+      .where(eq(discordUsers.discordId, userId));
+  }
+
+  async getTopCandyUsers(limit: number): Promise<{ discordId: string; candyBalance: number }[]> {
+    const users = await db.select()
+      .from(discordUsers)
+      .where(eq(discordUsers.candyBalance, discordUsers.candyBalance))
+      .orderBy(desc(discordUsers.candyBalance))
+      .limit(limit);
+    
+    return users.map(user => ({
+      discordId: user.discordId,
+      candyBalance: user.candyBalance || 0
+    }));
+  }
+
+  async addUserToWhitelist(userId: string): Promise<void> {
+    await this.upsertDiscordUser({ discordId: userId, username: 'unknown', isWhitelisted: true });
+  }
+
+  async removeUserFromWhitelist(userId: string): Promise<void> {
+    await db.update(discordUsers)
+      .set({ isWhitelisted: false })
+      .where(eq(discordUsers.discordId, userId));
+  }
+
+  async isUserWhitelisted(userId: string): Promise<boolean> {
+    const user = await this.getDiscordUserByDiscordId(userId);
+    return user?.isWhitelisted || false;
+  }
+
+  async updateDiscordKeyUser(keyId: string, newUserId: string): Promise<void> {
+    await db.update(discordKeys)
+      .set({ userId: newUserId })
+      .where(eq(discordKeys.keyId, keyId));
+  }
+
+  async logCommandUsage(data: {
+    username: string;
+    userId: string;
+    commandName: string;
+    subcommand?: string | null;
+    executionTime: number;
+    success: boolean;
+    errorMessage?: string;
+  }): Promise<void> {
+    await db.insert(commandLogs).values({
+      userId: data.userId,
+      commandName: data.commandName,
+      executionTime: data.executionTime,
+      success: data.success,
+      errorMessage: data.errorMessage,
+      timestamp: new Date()
+    });
   }
 }
 

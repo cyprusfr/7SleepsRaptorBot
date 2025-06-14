@@ -3464,24 +3464,7 @@ export class RaptorBot {
     }
     
     try {
-      // Detect script type and use appropriate code block
-      let formattedResponse = response;
-      
-      if (tag === '.scripts') {
-        // Check if it contains Lua code patterns
-        if (response.includes('loadstring') || response.includes('game:') || response.includes('local ')) {
-          formattedResponse = `\`\`\`lua\n${response}\n\`\`\``;
-        }
-        // Check if it contains bash/shell patterns  
-        else if (response.includes('sudo ') || response.includes('curl ') || response.includes('cd ~/') || response.includes('bash ')) {
-          formattedResponse = `\`\`\`bash\n${response}\n\`\`\``;
-        }
-        // Default to lua for scripts
-        else {
-          formattedResponse = `\`\`\`lua\n${response}\n\`\`\``;
-        }
-      }
-      
+      let formattedResponse = this.formatTagResponse(response, tag);
       await message.channel.send(formattedResponse);
       
       // Log tag usage
@@ -3490,6 +3473,57 @@ export class RaptorBot {
     } catch (error) {
       console.error('Error sending predefined tag response:', error);
     }
+  }
+
+  private formatTagResponse(content: string, tag: string): string {
+    // Check if content contains bash commands
+    const bashPatterns = [
+      /sudo\s+[^\n]+/g,
+      /curl\s+[^\n]+/g,
+      /cd\s+[^\n]+/g,
+      /bash\s+[^\n]+/g,
+      /chsh\s+[^\n]+/g,
+      /softwareupdate\s+[^\n]+/g
+    ];
+
+    let bashCommands: string[] = [];
+    let plainText = content;
+
+    // Extract bash commands
+    for (const pattern of bashPatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        bashCommands.push(...matches);
+        // Remove bash commands from plain text
+        plainText = plainText.replace(pattern, '');
+      }
+    }
+
+    // Clean up plain text (remove extra spaces and newlines)
+    plainText = plainText.replace(/\n\s*\n/g, '\n').trim();
+
+    // For .scripts tag, check if it's Lua or bash
+    if (tag === '.scripts') {
+      if (content.includes('loadstring') || content.includes('game:') || content.includes('local ')) {
+        return `\`\`\`lua\n${content}\n\`\`\``;
+      } else if (bashCommands.length > 0) {
+        return `\`\`\`bash\n${content}\n\`\`\``;
+      } else {
+        return `\`\`\`lua\n${content}\n\`\`\``;
+      }
+    }
+
+    // For other tags, show plain text + bash commands in separate blocks
+    if (bashCommands.length > 0) {
+      let result = plainText;
+      if (result && bashCommands.length > 0) {
+        result += '\n\n';
+      }
+      result += '```bash\n' + bashCommands.join('\n') + '\n```';
+      return result;
+    }
+
+    return plainText;
   }
 
   private async handleVerificationMessage(message: any) {
@@ -3682,26 +3716,9 @@ export class RaptorBot {
         return;
       }
 
-      // Detect script type and use appropriate code block
-      if (tagKey === '.scripts') {
-        let formattedContent;
-        // Check if it contains Lua code patterns
-        if (tagContent.includes('loadstring') || tagContent.includes('game:') || tagContent.includes('local ')) {
-          formattedContent = `\`\`\`lua\n${tagContent}\n\`\`\``;
-        }
-        // Check if it contains bash/shell patterns  
-        else if (tagContent.includes('sudo ') || tagContent.includes('curl ') || tagContent.includes('cd ~/') || tagContent.includes('bash ')) {
-          formattedContent = `\`\`\`bash\n${tagContent}\n\`\`\``;
-        }
-        // Default to lua for scripts
-        else {
-          formattedContent = `\`\`\`lua\n${tagContent}\n\`\`\``;
-        }
-        await interaction.reply(formattedContent);
-      } else {
-        // All other tags as regular text
-        await interaction.reply(tagContent);
-      }
+      // Format the tag response with proper bash script separation
+      let formattedContent = this.formatTagResponse(tagContent, tagKey);
+      await interaction.reply(formattedContent);
       success = true;
 
       // Log the support tag usage

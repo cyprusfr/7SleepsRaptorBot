@@ -3498,7 +3498,7 @@ export class RaptorBot {
       }
 
       let logText = '';
-      for (const log of logs.slice(0, 15)) { // Limit to 15 entries for embed size
+      for (const log of logs.slice(0, 10)) { // Limit to 10 entries to prevent overflow
         const timestamp = new Date(log.timestamp);
         const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
         
@@ -3506,19 +3506,38 @@ export class RaptorBot {
           // Command log
           const status = log.success ? '✅' : '❌';
           const duration = log.executionTime ? ` (${log.executionTime}ms)` : '';
-          logText += `${status} \`/${log.commandName}\` by ${log.userId}${duration} - ${timeStr}\n`;
+          const entry = `${status} \`/${log.commandName}\` by ${log.userId}${duration} - ${timeStr}\n`;
+          
+          // Check if adding this entry would exceed the limit
+          if ((logText + entry).length > 900) break;
+          logText += entry;
         } else {
           // Activity log
           const typeIcon = log.type === 'error' ? '🚨' : '📊';
-          logText += `${typeIcon} ${log.type}: ${log.description.substring(0, 60)}... - ${timeStr}\n`;
+          const description = log.description.length > 40 ? log.description.substring(0, 40) + '...' : log.description;
+          const entry = `${typeIcon} ${log.type}: ${description} - ${timeStr}\n`;
+          
+          // Check if adding this entry would exceed the limit
+          if ((logText + entry).length > 900) break;
+          logText += entry;
         }
+      }
+
+      // Ensure logText fits Discord's 1024 character limit for embed fields
+      if (!logText || logText.trim().length === 0) {
+        logText = 'No recent logs found';
+      }
+      
+      // Truncate if too long (Discord limit is 1024 characters)
+      if (logText.length > 1020) {
+        logText = logText.substring(0, 1000) + '\n...truncated';
       }
 
       const embed = new EmbedBuilder()
         .setTitle(title)
         .setDescription(description)
-        .addFields({ name: 'Recent Entries', value: logText || 'No entries found', inline: false })
-        .setFooter({ text: `Showing ${Math.min(logs.length, 15)} of ${logs.length} entries` })
+        .addFields({ name: 'Recent Entries', value: logText, inline: false })
+        .setFooter({ text: `Showing ${Math.min(logs.length, 10)} of ${logs.length} entries` })
         .setColor(0x0099ff)
         .setTimestamp();
 

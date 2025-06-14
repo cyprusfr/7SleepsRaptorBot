@@ -88,6 +88,13 @@ export interface IStorage {
   getUserLogLeaderboard(limit: number): Promise<any[]>;
   clearUserLogs(userId: string): Promise<void>;
 
+  getActivityLogs(limit: number): Promise<any[]>;
+  getCommandLogs(limit: number): Promise<any[]>;
+  getErrorLogs(limit: number): Promise<any[]>;
+  clearActivityLogs(): Promise<number>;
+  clearCommandLogs(): Promise<number>;
+  clearErrorLogs(): Promise<number>;
+
   addToWhitelist(userId: string): Promise<void>;
   removeFromWhitelist(userId: string): Promise<void>;
   isWhitelisted(userId: string): Promise<boolean>;
@@ -592,6 +599,49 @@ export class DatabaseStorage implements IStorage {
 
   async getUserLogs(userId: string): Promise<any[]> {
     return db.select().from(userLogs).where(eq(userLogs.userId, userId));
+  }
+
+  async getActivityLogs(limit: number): Promise<any[]> {
+    const logs = await db
+      .select()
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+    return logs;
+  }
+
+  async getCommandLogs(limit: number): Promise<any[]> {
+    const logs = await db
+      .select()
+      .from(commandLogs)
+      .orderBy(desc(commandLogs.timestamp))
+      .limit(limit);
+    return logs;
+  }
+
+  async getErrorLogs(limit: number): Promise<any[]> {
+    const logs = await db
+      .select()
+      .from(activityLogs)
+      .where(eq(activityLogs.type, 'error'))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+    return logs;
+  }
+
+  async clearActivityLogs(): Promise<number> {
+    const result = await db.delete(activityLogs);
+    return result.rowCount || 0;
+  }
+
+  async clearCommandLogs(): Promise<number> {
+    const result = await db.delete(commandLogs);
+    return result.rowCount || 0;
+  }
+
+  async clearErrorLogs(): Promise<number> {
+    const result = await db.delete(activityLogs).where(eq(activityLogs.type, 'error'));
+    return result.rowCount || 0;
   }
 
   async addToWhitelist(userId: string): Promise<void> {

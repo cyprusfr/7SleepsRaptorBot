@@ -3406,7 +3406,208 @@ export class RaptorBot {
   }
 
   private async handleLogsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Logs command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const subcommand = interaction.options.getSubcommand();
+
+      switch (subcommand) {
+        case 'view':
+          await this.handleLogsView(interaction);
+          break;
+        case 'clear':
+          await this.handleLogsClear(interaction);
+          break;
+        default:
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Unknown Subcommand')
+            .setDescription('Please use a valid logs subcommand.')
+            .setColor(0xff0000)
+            .setTimestamp();
+          
+          await interaction.reply({ embeds: [embed], ephemeral: true });
+          return;
+      }
+
+      success = true;
+    } catch (error: any) {
+      await this.logCommandUsage(interaction, startTime, false, error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Command Failed')
+        .setDescription('An error occurred while processing the logs command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    await this.logCommandUsage(interaction, startTime, success, null);
+  }
+
+  private async handleLogsView(interaction: ChatInputCommandInteraction) {
+    const type = interaction.options.getString('type') || 'all';
+    const limit = interaction.options.getInteger('limit') || 20;
+    const maxLimit = Math.min(limit, 50);
+
+    await interaction.deferReply();
+
+    try {
+      let logs: any[] = [];
+      let title = '';
+      let description = '';
+
+      switch (type) {
+        case 'activity':
+          logs = await storage.getActivityLogs(maxLimit);
+          title = '📊 Activity Logs';
+          description = 'Recent system activity and operations';
+          break;
+        case 'commands':
+          logs = await storage.getCommandLogs(maxLimit);
+          title = '⚡ Command Logs';
+          description = 'Recent Discord command usage';
+          break;
+        case 'errors':
+          logs = await storage.getErrorLogs(maxLimit);
+          title = '🚨 Error Logs';
+          description = 'Recent system errors and failures';
+          break;
+        case 'all':
+        default:
+          const activityLogs = await storage.getActivityLogs(Math.floor(maxLimit / 2));
+          const commandLogs = await storage.getCommandLogs(Math.floor(maxLimit / 2));
+          logs = [...activityLogs, ...commandLogs].sort((a, b) => 
+            new Date(b.createdAt || b.timestamp).getTime() - new Date(a.createdAt || a.timestamp).getTime()
+          ).slice(0, maxLimit);
+          title = '📋 System Logs';
+          description = 'Recent system activity and commands';
+          break;
+      }
+
+      if (logs.length === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle(title)
+          .setDescription('No logs found for the specified type.')
+          .setColor(0x0099ff)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      let logText = '';
+      for (const log of logs.slice(0, 15)) { // Limit to 15 entries for embed size
+        const timestamp = new Date(log.createdAt || log.timestamp);
+        const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
+        
+        if (log.commandName) {
+          // Command log
+          const status = log.success ? '✅' : '❌';
+          const duration = log.executionTime ? ` (${log.executionTime}ms)` : '';
+          logText += `${status} \`/${log.commandName}\` by ${log.userId}${duration} - ${timeStr}\n`;
+        } else {
+          // Activity log
+          const typeIcon = log.type === 'error' ? '🚨' : '📊';
+          logText += `${typeIcon} ${log.type}: ${log.description.substring(0, 60)}... - ${timeStr}\n`;
+        }
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(description)
+        .addFields({ name: 'Recent Entries', value: logText || 'No entries found', inline: false })
+        .setFooter({ text: `Showing ${Math.min(logs.length, 15)} of ${logs.length} entries` })
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (error) {
+      console.error('Error viewing logs:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to retrieve system logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleLogsClear(interaction: ChatInputCommandInteraction) {
+    const type = interaction.options.getString('type', true);
+    const confirm = interaction.options.getBoolean('confirm', true);
+
+    if (!confirm) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Confirmation Required')
+        .setDescription('You must confirm to clear system logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      let cleared = 0;
+      let description = '';
+
+      switch (type) {
+        case 'activity':
+          cleared = await storage.clearActivityLogs();
+          description = `Cleared ${cleared} activity log entries`;
+          break;
+        case 'commands':
+          cleared = await storage.clearCommandLogs();
+          description = `Cleared ${cleared} command log entries`;
+          break;
+        case 'errors':
+          cleared = await storage.clearErrorLogs();
+          description = `Cleared ${cleared} error log entries`;
+          break;
+        default:
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Invalid Type')
+            .setDescription('Please specify a valid log type to clear.')
+            .setColor(0xff0000)
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Logs Cleared')
+        .setDescription(description)
+        .addFields(
+          { name: 'Type', value: type, inline: true },
+          { name: 'Entries Cleared', value: cleared.toString(), inline: true },
+          { name: 'Moderator', value: `<@${interaction.user.id}>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+      // Log the clear action
+      await this.logActivity('logs_cleared', 
+        `${type} logs cleared by ${interaction.user.username} (${cleared} entries)`);
+    } catch (error) {
+      console.error('Error clearing logs:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to clear system logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
   }
 
   private async handleNicknameCommand(interaction: ChatInputCommandInteraction) {

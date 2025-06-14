@@ -683,8 +683,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No pending Discord verification" });
       }
 
-      // Check if verification expired (10 minutes)
-      if (Date.now() - pending.timestamp > 10 * 60 * 1000) {
+      // Check if verification expired (30 minutes)
+      if (Date.now() - pending.timestamp > 30 * 60 * 1000) {
         delete (req.session as any).pendingDiscordVerification;
         return res.status(400).json({ error: "Verification expired. Please try again." });
       }
@@ -1034,7 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId,
         discordUserId,
         dashboardCode,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
       });
 
       res.json({

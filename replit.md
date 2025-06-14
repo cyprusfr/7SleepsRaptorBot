@@ -36,6 +36,8 @@ Discord bot management system with Google OAuth authentication and comprehensive
 ## Recent Changes
 
 ### June 14, 2025
+- **Express Server Startup Fix**: Resolved Discord bot async initialization blocking HTTP server port binding
+- **Verification Session Timeout Extension**: Extended Discord verification session from 10 to 30 minutes for user convenience
 - **Discord Bot File Replacement**: Replaced 2k-line discord-bot.ts with complete 6.5k-line implementation
 - **Discord Bot File Cleanup**: Completely replaced corrupted discord-bot.ts with clean, working implementation
 - **Complete Discord Bot Command Implementation**: Added full database functionality to all 60+ commands

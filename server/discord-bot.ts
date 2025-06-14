@@ -527,31 +527,94 @@ export class RaptorBot {
         .addSubcommand(subcommand =>
           subcommand
             .setName('bitcoin')
-            .setDescription('Generate a key for a bitcoin payment'))
+            .setDescription('Generate a key for a bitcoin payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('cashapp')
-            .setDescription('Generate a key for a cashapp payment'))
+            .setDescription('Generate a key for a cashapp payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('custom')
-            .setDescription('Generate a custom key'))
+            .setDescription('Generate a custom key')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('ethereum')
-            .setDescription('Generate a key for an ethereum payment'))
+            .setDescription('Generate a key for an ethereum payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('paypal')
-            .setDescription('Generate a key for a paypal payment'))
+            .setDescription('Generate a key for a paypal payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('robux')
-            .setDescription('Generate a key for a robux payment'))
+            .setDescription('Generate a key for a robux payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )))
         .addSubcommand(subcommand =>
           subcommand
             .setName('venmo')
-            .setDescription('Generate a key for a venmo payment')),
+            .setDescription('Generate a key for a venmo payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                ))),
 
       // Get Command
       new SlashCommandBuilder()
@@ -2729,10 +2792,12 @@ export class RaptorBot {
     await interaction.deferReply();
     
     const subcommand = interaction.options.getSubcommand();
+    const keyType = interaction.options.getString('type') || 'standard';
     
     try {
-      // Generate unique key ID
-      const keyId = this.generateKeyId();
+      // Generate unique key ID with type prefix if specified
+      const typePrefix = keyType !== 'standard' ? keyType.toUpperCase().replace('-', '') + '-' : '';
+      const keyId = `MSK-${typePrefix}${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
       
       let paymentMethod = '';
@@ -2789,32 +2854,27 @@ export class RaptorBot {
       
       // Store key in database
       const keyData = {
-        keyId,
-        paymentMethod: subcommand,
-        status: 'pending',
-        generatedBy: interaction.user.id,
-        generatedAt: new Date(),
-        expiresAt,
-        isActive: true,
-        usedBy: null,
-        usedAt: null,
+        keyValue: keyId,
+        userId: interaction.user.id,
         hwid: null,
-        metadata: {
-          amount: paymentAmount,
-          address: paymentAddress,
-          username: interaction.user.username
-        }
+        isActive: true,
+        expiresAt,
+        createdBy: interaction.user.username,
+        notes: `${paymentMethod} ${keyType !== 'standard' ? keyType + ' ' : ''}payment key - ${paymentAmount}`
       };
       
       await storage.createLicenseKey(keyData);
       await this.logActivity('key_generated', `${interaction.user.username} generated ${subcommand} payment key: ${keyId}`);
       
+      const keyTypeDisplay = keyType !== 'standard' ? ` (${keyType.toUpperCase()})` : '';
+      
       const embed = new EmbedBuilder()
-        .setTitle('🔑 Payment Key Generated')
-        .setDescription(`Your ${paymentMethod} payment key has been generated successfully.`)
+        .setTitle(`🔑 Payment Key Generated${keyTypeDisplay}`)
+        .setDescription(`Your ${paymentMethod}${keyType !== 'standard' ? ` ${keyType}` : ''} payment key has been generated successfully.`)
         .addFields(
           { name: '🆔 Key ID', value: `\`${keyId}\``, inline: false },
           { name: '💰 Payment Method', value: paymentMethod, inline: true },
+          { name: '🎫 Key Type', value: keyType === 'standard' ? 'Standard' : keyType.charAt(0).toUpperCase() + keyType.slice(1), inline: true },
           { name: '💵 Amount', value: paymentAmount, inline: true },
           { name: '📍 Send Payment To', value: `\`${paymentAddress}\``, inline: false },
           { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:F>`, inline: true },

@@ -117,8 +117,10 @@ export interface IStorage {
   getRolePermissions(role: string): any;
 
   // Candy system
-  getCandyBalance(userId: string): Promise<number>;
-  updateCandyBalance(userId: string, newBalance: number): Promise<void>;
+  getCandyBalance(userId: string): Promise<{ wallet: number; bank: number; total: number }>;
+  updateCandyBalance(userId: string, amount: number): Promise<void>;
+  depositCandy(userId: string, amount: number): Promise<void>;
+  withdrawCandy(userId: string, amount: number): Promise<void>;
   addCandyTransaction(transaction: any): Promise<void>;
   getCandyTransactions(userId: string, limit: number): Promise<any[]>;
   getCandyLeaderboard(limit: number): Promise<any[]>;
@@ -553,16 +555,35 @@ export class DatabaseStorage implements IStorage {
     return permissions[role as keyof typeof permissions] || {};
   }
 
-  async getCandyBalance(userId: string): Promise<number> {
+  async getCandyBalance(userId: string): Promise<{ wallet: number; bank: number; total: number }> {
     const user = await this.getDiscordUserByDiscordId(userId);
-    return user?.candyBalance || 0;
+    const candyBalance = user?.candyBalance || 0;
+    // For now, treat all candy as wallet balance. Can be extended later.
+    return {
+      wallet: candyBalance,
+      bank: 0,
+      total: candyBalance
+    };
   }
 
-  async updateCandyBalance(userId: string, newBalance: number): Promise<void> {
+  async updateCandyBalance(userId: string, amount: number): Promise<void> {
+    const currentBalance = await this.getCandyBalance(userId);
+    const newBalance = Math.max(0, currentBalance.wallet + amount);
+    
     await db
       .update(discordUsers)
       .set({ candyBalance: newBalance })
       .where(eq(discordUsers.discordId, userId));
+  }
+
+  async depositCandy(userId: string, amount: number): Promise<void> {
+    // Placeholder for wallet to bank transfer
+    await this.updateCandyBalance(userId, 0); // No change for now
+  }
+
+  async withdrawCandy(userId: string, amount: number): Promise<void> {
+    // Placeholder for bank to wallet transfer
+    await this.updateCandyBalance(userId, 0); // No change for now
   }
 
   async addCandyTransaction(transaction: any): Promise<void> {
@@ -607,10 +628,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async claimDailyCandy(userId: string): Promise<number> {
-    const amount = Math.floor(Math.random() * 50) + 10; // 10-59 candy
-    const currentBalance = await this.getCandyBalance(userId);
+    const amount = 2000; // Fixed 2000 candy daily reward as shown in screenshots
     
-    await this.updateCandyBalance(userId, currentBalance + amount);
+    await this.updateCandyBalance(userId, amount);
     await this.addCandyTransaction({
       toUserId: userId,
       amount,
@@ -623,14 +643,13 @@ export class DatabaseStorage implements IStorage {
 
   async transferCandy(fromUserId: string, toUserId: string, amount: number): Promise<void> {
     const fromBalance = await this.getCandyBalance(fromUserId);
-    const toBalance = await this.getCandyBalance(toUserId);
 
-    if (fromBalance < amount) {
+    if (fromBalance.wallet < amount) {
       throw new Error('Insufficient candy balance');
     }
 
-    await this.updateCandyBalance(fromUserId, fromBalance - amount);
-    await this.updateCandyBalance(toUserId, toBalance + amount);
+    await this.updateCandyBalance(fromUserId, -amount);
+    await this.updateCandyBalance(toUserId, amount);
 
     await this.addCandyTransaction({
       fromUserId,

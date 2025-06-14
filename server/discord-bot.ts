@@ -3464,7 +3464,7 @@ export class RaptorBot {
     }
     
     try {
-      await message.reply(`\`\`\`\n${response}\n\`\`\``);;
+      await message.reply(`\`\`\`\n${response}\n\`\`\``);
       
       // Log tag usage
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
@@ -3670,9 +3670,7 @@ export class RaptorBot {
         return;
       }
 
-      const response = `**📋 MacSploit Support: ${tagKey}**\n\n${tagContent}\n\n*MacSploit Support System*`;
-
-      await interaction.reply(response);
+      await interaction.reply(`\`\`\`\n${tagContent}\n\`\`\``);
       success = true;
 
       // Log the support tag usage

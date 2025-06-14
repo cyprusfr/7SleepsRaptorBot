@@ -76,6 +76,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Smart Script Detection**: Implemented automatic language detection for .scripts tag - bash scripts (sudo, curl commands) use bash code blocks, Lua scripts (game:, loadstring) use lua code blocks with proper syntax highlighting
 - **Support Tag Slash Commands Removal**: Removed all individual slash commands (/hwid, /crash, etc.) per user request, keeping only message-based support tags (.hwid format)
 - **Scripts Tag Plain Text**: Updated .scripts tag to return plain text without code blocks as requested
+- **Automatic Log Tracking**: Implemented image post detection in 8 specified channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing) that automatically adds 1 log to users when they post images
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

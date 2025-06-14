@@ -553,6 +553,40 @@ export class DatabaseStorage implements IStorage {
     await this.logActivity('user_logs_added', `${count} logs added to user ${userId}: ${reason}`);
   }
 
+  async removeUserLogs(userId: string, count: number, reason: string): Promise<void> {
+    // Get existing logs to remove
+    const existingLogs = await db.select().from(userLogs).where(eq(userLogs.userId, userId)).limit(count);
+    
+    // Remove the specified number of log entries
+    for (const log of existingLogs) {
+      await db.delete(userLogs).where(eq(userLogs.id, log.id));
+    }
+    
+    // Log the activity
+    await this.logActivity('user_logs_removed', `${count} logs removed from user ${userId}: ${reason}`);
+  }
+
+  async getUserLogLeaderboard(limit: number): Promise<any[]> {
+    const result = await db
+      .select({
+        userId: userLogs.userId,
+        totalLogs: sql<number>`SUM(${userLogs.logCount})`.as('totalLogs')
+      })
+      .from(userLogs)
+      .groupBy(userLogs.userId)
+      .orderBy(sql`SUM(${userLogs.logCount}) DESC`)
+      .limit(limit);
+    
+    return result;
+  }
+
+  async clearUserLogs(userId: string): Promise<void> {
+    await db.delete(userLogs).where(eq(userLogs.userId, userId));
+    
+    // Log the activity
+    await this.logActivity('user_logs_cleared', `All logs cleared for user ${userId}`);
+  }
+
   async getUserLogs(userId: string): Promise<any[]> {
     return db.select().from(userLogs).where(eq(userLogs.userId, userId));
   }

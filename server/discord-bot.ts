@@ -921,14 +921,14 @@ export class RaptorBot {
             .setName('servers')
             .setDescription('List connected servers')),
 
-      // Log Management
+      // Log Management  
       new SlashCommandBuilder()
         .setName('logs')
         .setDescription('Log management commands')
         .addSubcommand(subcommand =>
           subcommand
             .setName('view')
-            .setDescription('View logs')
+            .setDescription('View system logs')
             .addStringOption(option => 
               option.setName('type')
                 .setDescription('Log type')
@@ -943,7 +943,7 @@ export class RaptorBot {
         .addSubcommand(subcommand =>
           subcommand
             .setName('clear')
-            .setDescription('Clear logs')
+            .setDescription('Clear system logs')
             .addStringOption(option => 
               option.setName('type')
                 .setDescription('Log type to clear')
@@ -954,6 +954,41 @@ export class RaptorBot {
                   { name: 'errors', value: 'errors' }
                 ))
             .addBooleanOption(option => option.setName('confirm').setDescription('Confirm deletion').setRequired(true))),
+
+      // User Log Management
+      new SlashCommandBuilder()
+        .setName('log')
+        .setDescription('User log management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('add')
+            .setDescription('Add logs to a user')
+            .addUserOption(option => option.setName('user').setDescription('User to add logs to').setRequired(true))
+            .addIntegerOption(option => option.setName('count').setDescription('Number of logs to add').setRequired(true))
+            .addStringOption(option => option.setName('reason').setDescription('Reason for adding logs').setRequired(false)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('remove')
+            .setDescription('Remove logs from a user')
+            .addUserOption(option => option.setName('user').setDescription('User to remove logs from').setRequired(true))
+            .addIntegerOption(option => option.setName('count').setDescription('Number of logs to remove').setRequired(true))
+            .addStringOption(option => option.setName('reason').setDescription('Reason for removing logs').setRequired(false)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('view')
+            .setDescription('View user logs')
+            .addUserOption(option => option.setName('user').setDescription('User to view logs for').setRequired(false)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('lb')
+            .setDescription('View logs leaderboard')
+            .addIntegerOption(option => option.setName('limit').setDescription('Number of users to show').setRequired(false)))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('clear')
+            .setDescription('Clear all logs for a user')
+            .addUserOption(option => option.setName('user').setDescription('User to clear logs for').setRequired(true))
+            .addBooleanOption(option => option.setName('confirm').setDescription('Confirm clearing all logs').setRequired(true))),
 
       // Nickname Command
       new SlashCommandBuilder()
@@ -1378,6 +1413,9 @@ export class RaptorBot {
           break;
         case 'list':
           await this.handleListCommand(interaction);
+          break;
+        case 'log':
+          await this.handleLogCommand(interaction);
           break;
         case 'logs':
           await this.handleLogsCommand(interaction);
@@ -3574,6 +3612,322 @@ export class RaptorBot {
     } catch (error) {
       // Server might already exist
     }
+  }
+
+  private async handleLogCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const subcommand = interaction.options.getSubcommand();
+
+      switch (subcommand) {
+        case 'add':
+          await this.handleLogAdd(interaction);
+          break;
+        case 'remove':
+          await this.handleLogRemove(interaction);
+          break;
+        case 'view':
+          await this.handleLogView(interaction);
+          break;
+        case 'lb':
+          await this.handleLogLeaderboard(interaction);
+          break;
+        case 'clear':
+          await this.handleLogClear(interaction);
+          break;
+        default:
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Unknown Subcommand')
+            .setDescription('Please use a valid log subcommand.')
+            .setColor(0xff0000)
+            .setTimestamp();
+          
+          await interaction.reply({ embeds: [embed], ephemeral: true });
+          return;
+      }
+
+      success = true;
+    } catch (error: any) {
+      await this.logCommandUsage(interaction, startTime, false, error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Command Failed')
+        .setDescription('An error occurred while processing the log command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    await this.logCommandUsage(interaction, startTime, success, null);
+  }
+
+  private async handleLogAdd(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const count = interaction.options.getInteger('count', true);
+    const reason = interaction.options.getString('reason') || 'Manual log addition';
+
+    if (count <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Count')
+        .setDescription('Count must be greater than 0.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Get or create discord user
+    let discordUser = await storage.getDiscordUser(user.id);
+    if (!discordUser) {
+      await storage.createDiscordUser({
+        discordId: user.id,
+        username: user.username,
+        discriminator: user.discriminator || '0000',
+        isWhitelisted: false
+      });
+    }
+
+    // Add logs to user
+    await storage.addUserLogs(user.id, count, reason);
+
+    // Get total log count after addition
+    const logs = await storage.getUserLogs(user.id);
+    const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
+
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Logs Added')
+      .setDescription(`Added **${count}** logs to ${user.username}`)
+      .addFields(
+        { name: 'User', value: `<@${user.id}>`, inline: true },
+        { name: 'Added', value: count.toString(), inline: true },
+        { name: 'New Total', value: totalLogs.toString(), inline: true },
+        { name: 'Reason', value: reason, inline: false }
+      )
+      .setColor(0x00ff00)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleLogRemove(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const count = interaction.options.getInteger('count', true);
+    const reason = interaction.options.getString('reason') || 'Manual log removal';
+
+    if (count <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Count')
+        .setDescription('Count must be greater than 0.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Check if user exists
+    const discordUser = await storage.getDiscordUser(user.id);
+    if (!discordUser) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ User Not Found')
+        .setDescription('User has no logs to remove.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Get current log count
+    const logs = await storage.getUserLogs(user.id);
+    const currentTotal = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
+
+    if (currentTotal === 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ No Logs to Remove')
+        .setDescription('User has no logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    const toRemove = Math.min(count, currentTotal);
+    await storage.removeUserLogs(user.id, toRemove, reason);
+
+    const newTotal = Math.max(0, currentTotal - toRemove);
+
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Logs Removed')
+      .setDescription(`Removed **${toRemove}** logs from ${user.username}`)
+      .addFields(
+        { name: 'User', value: `<@${user.id}>`, inline: true },
+        { name: 'Removed', value: toRemove.toString(), inline: true },
+        { name: 'New Total', value: newTotal.toString(), inline: true },
+        { name: 'Reason', value: reason, inline: false }
+      )
+      .setColor(0xff9900)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleLogView(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user') || interaction.user;
+
+    // Check if user exists
+    const discordUser = await storage.getDiscordUser(user.id);
+    if (!discordUser) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ User Not Found')
+        .setDescription('User has no log history.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Get user logs
+    const logs = await storage.getUserLogs(user.id);
+    const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
+
+    const embed = new EmbedBuilder()
+      .setTitle('📊 User Logs')
+      .setDescription(`Log information for ${user.username}`)
+      .addFields(
+        { name: 'User', value: `<@${user.id}>`, inline: true },
+        { name: 'Total Logs', value: totalLogs.toString(), inline: true },
+        { name: 'Log Entries', value: logs.length.toString(), inline: true },
+        { name: 'Last Updated', value: logs.length > 0 ? `<t:${Math.floor(new Date(logs[0].lastUpdated).getTime() / 1000)}:R>` : 'Never', inline: false }
+      )
+      .setColor(0x0099ff)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleLogLeaderboard(interaction: ChatInputCommandInteraction) {
+    const limit = interaction.options.getInteger('limit') || 10;
+    const maxLimit = Math.min(limit, 25);
+
+    try {
+      // Get leaderboard data
+      const leaderboard = await storage.getUserLogLeaderboard(maxLimit);
+
+      if (leaderboard.length === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle('📊 Logs Leaderboard')
+          .setDescription('No users have logs yet.')
+          .setColor(0x0099ff)
+          .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed] });
+        return;
+      }
+
+      let description = '';
+      for (let i = 0; i < leaderboard.length; i++) {
+        const entry = leaderboard[i];
+        const rank = i + 1;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+        
+        // Try to get Discord user info
+        try {
+          const discordUser = await storage.getDiscordUser(entry.userId);
+          const username = discordUser?.username || 'Unknown User';
+          description += `${medal} **${username}** - ${entry.totalLogs} logs\n`;
+        } catch {
+          description += `${medal} **Unknown User** - ${entry.totalLogs} logs\n`;
+        }
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Logs Leaderboard')
+        .setDescription(description)
+        .setFooter({ text: `Showing top ${leaderboard.length} users` })
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+    } catch (error) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to retrieve leaderboard data.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  }
+
+  private async handleLogClear(interaction: ChatInputCommandInteraction) {
+    const user = interaction.options.getUser('user', true);
+    const confirm = interaction.options.getBoolean('confirm', true);
+
+    if (!confirm) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Confirmation Required')
+        .setDescription('You must confirm to clear all logs for this user.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Check if user exists
+    const discordUser = await storage.getDiscordUser(user.id);
+    if (!discordUser) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ User Not Found')
+        .setDescription('User has no logs to clear.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Get current log count
+    const logs = await storage.getUserLogs(user.id);
+    const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
+
+    if (totalLogs === 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ No Logs to Clear')
+        .setDescription('User has no logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    // Clear all logs
+    await storage.clearUserLogs(user.id);
+
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Logs Cleared')
+      .setDescription(`Cleared **${totalLogs}** logs for ${user.username}`)
+      .addFields(
+        { name: 'User', value: `<@${user.id}>`, inline: true },
+        { name: 'Cleared', value: totalLogs.toString(), inline: true },
+        { name: 'Moderator', value: `<@${interaction.user.id}>`, inline: true }
+      )
+      .setColor(0xff0000)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+
+    // Log the activity
+    await this.logActivity('user_logs_cleared', 
+      `All logs cleared for ${user.username} by ${interaction.user.username}`);
   }
 
   private async handleTagManagerCommand(interaction: ChatInputCommandInteraction) {

@@ -16,28 +16,30 @@ export class RaptorBot {
   private rateLimiter: Map<string, { count: number; resetTime: number }> = new Map();
   private backupChecker: BackupIntegrityChecker;
 
-  // MacSploit Support Tags - Comprehensive Collection
+  // MacSploit Support Tags - Exact Content
   private predefinedTags: { [key: string]: string } = {
-    '.sellsn': '🔢 **Serial Number Issues**\n\n• Check if your serial number is valid\n• Contact support if you purchased recently\n• Serial format should be XXXX-XXXX-XXXX-XXXX\n• Ensure no extra spaces or characters\n• Try copying and pasting the serial number',
-    '.uicrash': '💥 **UI Crash Solutions**\n\n• Restart MacSploit completely\n• Clear cache and temp files\n• Update to latest version\n• Disable conflicting overlays\n• Check for system updates\n• Run as administrator',
-    '.user': '👤 **User Account Help**\n\n• Verify your account credentials\n• Check if account is active\n• Reset password if needed\n• Contact admin for account issues\n• Ensure proper login format\n• Try logging out and back in',
-    '.zsh': '⚡ **ZSH Terminal Issues**\n\n• Run: `chmod +x MacSploit`\n• Use: `./MacSploit` to launch\n• Check terminal permissions\n• Install Xcode Command Line Tools\n• Verify file path is correct\n• Try running from Applications folder',
-    '.anticheat': '🛡️ **Anticheat Bypass**\n\n• Use latest MacSploit version\n• Enable stealth mode\n• Disable detection methods\n• Update bypass modules\n• Close other cheat software\n• Restart Roblox before injecting',
-    '.autoexe': '🔄 **Auto Execute Problems**\n\n• Check script syntax\n• Verify file permissions\n• Place scripts in autoexec folder\n• Restart MacSploit after changes\n• Ensure scripts are .lua or .txt files\n• Check for script conflicts',
-    '.badcpu': '💻 **CPU Compatibility**\n\n• MacSploit requires Intel/M1+ Mac\n• Check system requirements\n• Update macOS to latest version\n• Close other resource-heavy apps\n• Ensure minimum RAM requirements\n• Check CPU architecture compatibility',
-    '.cookie': '🍪 **Cookie Issues**\n\n• Clear browser cookies\n• Re-login to Roblox\n• Check cookie format\n• Try incognito mode login\n• Disable browser extensions\n• Use supported browsers only',
-    '.crash': '💥 **Crash Troubleshooting**\n\n• Update MacSploit to latest\n• Check crash logs\n• Disable conflicting software\n• Restart Mac and try again\n• Run memory diagnostic\n• Check for corrupted files',
-    '.elevated': '🔐 **Permission Errors**\n\n• Run MacSploit as administrator\n• Grant accessibility permissions\n• Check Security & Privacy settings\n• Allow MacSploit in System Preferences\n• Disable SIP if necessary\n• Add to firewall exceptions',
-    '.fwaeh': '🔧 **FWAEH Error Fix**\n\n• Restart Roblox completely\n• Clear Roblox cache\n• Update graphics drivers\n• Try different injection method\n• Check for Roblox updates\n• Verify game compatibility',
-    '.giftcard': '🎁 **Gift Card Payment**\n\n• Only accept valid gift cards\n• Verify card balance first\n• Screenshot proof required\n• Contact admin for verification\n• Include card details in DM\n• Wait for manual approval',
-    '.hwid': '🔑 **HWID Information**\n\n• Hardware ID links your license\n• Each key works on one device\n• Contact admin for HWID reset\n• Changing hardware requires new key\n• HWID locks after first use\n• Backup your HWID for reference',
-    '.install': '⬇️ **Installation Guide**\n\n• Download from official site only\n• Extract to Applications folder\n• Grant security permissions\n• Run setup wizard completely\n• Follow all installation steps\n• Verify file integrity after download',
-    '.iy': '🎮 **Infinite Yield Issues**\n\n• Use latest IY version\n• Check command syntax\n• Verify script compatibility\n• Try alternative admin scripts\n• Update script library\n• Check for command conflicts',
-    '.multi-instance': '🔄 **Multiple Instances**\n\n• Close all Roblox windows\n• Restart MacSploit\n• Inject one game at a time\n• Wait between injections\n• Check for memory conflicts\n• Use single instance mode',
-    '.offline': '📡 **Offline Mode**\n\n• MacSploit requires internet\n• Check network connection\n• Disable VPN if active\n• Try different network\n• Verify firewall settings\n• Test connection speed',
-    '.paypal': '💳 **PayPal Payment**\n\n• Send as Friends & Family\n• Include Discord username\n• Screenshot transaction\n• Wait for admin confirmation\n• Use correct PayPal email\n• Include reference number',
-    '.robux': '💎 **Robux Payment**\n\n• Use Roblox group funds\n• Send exact amount requested\n• Include proof of payment\n• Wait 24-48hrs for processing\n• Join specified Roblox group\n• Follow payment instructions exactly',
-    '.scripts': '📜 **Script Problems**\n\n• Check script compatibility\n• Update to latest versions\n• Clear script cache\n• Try scripts one at a time\n• Verify script source\n• Check for syntax errors'
+    '.anticheat': 'Due to a new roblox Anticheat update all executors including macsploit are currently detected and could get your account banned. Please bear with us whiles we find a fix! :)',
+    '.autoexe': 'A5XGQ2d.mov',
+    '.badcpu': 'softwareupdate --install-rosetta --agree-to-license',
+    '.cookie': 'O2vbMdP.mov',
+    '.crash': 'Roblox Crash\n\nBefore anything, try reinstalling roblox.\nDelete roblox_session.txt from downloads\nTry running the elevatated installer in terminal\nToggle Your ICloud; System Settings -> Click Your Profile -> ICloud Mail On\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer\n\nImportant Note: When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.',
+    '.elevated': 'Important Note\nWhen you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty',
+    '.fwaeh': 'fwaeh',
+    '.giftcard': 'https://www.g2a.com/paypal-gift-card-15-usd-by-rewarble-global-i10000339995026',
+    '.hwid': 'Paste this into terminal and it will give your HWID.\ncurl -s "https://raw.githubusercontent.com/ZackDaQuack/duck/main/quack.sh" | bash',
+    '.install': 'cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | bash </dev/tty',
+    '.iy': 'paste this somewhere\nloadstring(game:HttpGet(\'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source\'))()',
+    '.multi-instance': 'https://www.youtube.com/watch?v=wIVGp_QIcTs',
+    '.nigger': 'nigger',
+    '.offline': 'Macsploit Offline\n\nDelete macsploit, do NOT delete roblox, then reinstall.\nJoin a roblox game then go through the ports\nIf there is not a available port, please run this command in terminal\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer\n\nImportant Note: When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.',
+    '.paypal': 'https://raptor.fun/\nPlease purchase using PayPal on the website.',
+    '.rapejaml': '@JamL is a nigger',
+    '.robux': 'use the /roblox command via Raptor bot.',
+    '.scripts': 'https://robloxscripts.com/ https://rbxscript.com/ https://scriptblox.com/?mode=free https://rscripts.net/',
+    '.sellsn': 'https://macsploit.sellsn.io/',
+    '.uicrash': 'Macsploit UI Crash\n\nTry reinstalling both roblox and macsploit\nGive macsploit access, System Settings - Privacy & Security - Files & Folders - MacSploit',
+    '.user': 'Note: This is only to be used when you don\'t have administrator permissions on your Mac. It is recommended to use the main branch.\n\ncd ~/ && curl -s "https://git.raptor.fun/user/install.sh" | bash </dev/tty',
+    '.zsh': 'ZSH Command Not Found\n\nRun this command in terminal, chsh -s /bin/zsh\nTry checking your macbook version, macsploit doesn\'t work for versions below 11'
   };
 
   constructor() {

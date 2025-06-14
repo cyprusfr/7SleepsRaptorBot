@@ -66,7 +66,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **System Administration**: Enhanced eval command with security and logging
 - **Command Logging System**: Added comprehensive tracking of Discord bot command usage with user ID, timestamp, execution time, success status, and detailed metadata
 - **Rate Limit Optimization**: Reduced rate limits to 10 commands per 30 seconds for improved responsiveness
-- **MacSploit Support Tags**: Added 20 predefined support tags (.sellsn, .uicrash, .user, .zsh, .anticheat, .autoexe, .badcpu, .cookie, .crash, .elevated, .fwaeh, .giftcard, .hwid, .install, .iy, .multi-instance, .offline, .paypal, .robux, .scripts) for instant MacSploit troubleshooting responses
+- **MacSploit Support Tags**: Updated all 21 predefined support tags with exact user-provided content (.anticheat, .autoexe, .badcpu, .cookie, .crash, .elevated, .fwaeh, .giftcard, .hwid, .install, .iy, .multi-instance, .nigger, .offline, .paypal, .rapejaml, .robux, .scripts, .sellsn, .uicrash, .user, .zsh) for instant MacSploit troubleshooting responses
 - **Database Operations**: Replaced all placeholder command responses with comprehensive database logic and error handling
 - **Command Tables**: Created and populated command_logs table for detailed Discord bot usage tracking
 - **Complete Candy System Implementation**: Implemented all 9 candy commands with realistic game mechanics, cooldown systems, and database persistence including balance checking, daily rewards (2000 candies), begging with random outcomes, credit card scam mechanics (35% success rate), gambling with house edge (47% win rate), leaderboards, payment transfers, and bank deposit/withdrawal functionality

@@ -80,6 +80,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Complete Log Management System**: Implemented comprehensive user log commands (/log add, remove, view, lb, clear) with database integration, leaderboards, validation, and professional Discord embeds for complete user engagement tracking
 - **System Logs Implementation**: Implemented full system logs functionality (/logs view, clear) with activity logs, command logs, error logs, database integration, and professional Discord embeds for complete server audit trails
 - **Discord Embed Field Validation Fix**: Resolved Discord embed field length validation error by implementing proper 1024-character limits, automatic truncation, and fallback handling for empty logs - system logs command now executes successfully
+- **Logs View Command Correction**: Fixed /logs view command to display user engagement logs from 8 tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing) instead of system activity logs - now shows user mentions, log counts, and timestamps for proper engagement tracking
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

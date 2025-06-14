@@ -85,6 +85,7 @@ export interface IStorage {
   addUserLogs(userId: string, count: number, reason: string): Promise<void>;
   removeUserLogs(userId: string, count: number, reason: string): Promise<void>;
   getUserLogs(userId: string): Promise<any[]>;
+  getAllUserLogs(limit: number): Promise<any[]>;
   getUserLogLeaderboard(limit: number): Promise<any[]>;
   clearUserLogs(userId: string): Promise<void>;
 
@@ -599,6 +600,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUserLogs(userId: string): Promise<any[]> {
     return db.select().from(userLogs).where(eq(userLogs.userId, userId));
+  }
+
+  async getAllUserLogs(limit: number): Promise<any[]> {
+    const logs = await db
+      .select({
+        userId: userLogs.userId,
+        logCount: userLogs.logCount,
+        lastUpdated: userLogs.lastUpdated
+      })
+      .from(userLogs)
+      .orderBy(desc(userLogs.lastUpdated))
+      .limit(limit);
+    return logs;
   }
 
   async getActivityLogs(limit: number): Promise<any[]> {

@@ -3458,33 +3458,10 @@ export class RaptorBot {
       let title = '';
       let description = '';
 
-      switch (type) {
-        case 'activity':
-          logs = await storage.getActivityLogs(maxLimit);
-          title = '📊 Activity Logs';
-          description = 'Recent system activity and operations';
-          break;
-        case 'commands':
-          logs = await storage.getCommandLogs(maxLimit);
-          title = '⚡ Command Logs';
-          description = 'Recent Discord command usage';
-          break;
-        case 'errors':
-          logs = await storage.getErrorLogs(maxLimit);
-          title = '🚨 Error Logs';
-          description = 'Recent system errors and failures';
-          break;
-        case 'all':
-        default:
-          const activityLogs = await storage.getActivityLogs(Math.floor(maxLimit / 2));
-          const commandLogs = await storage.getCommandLogs(Math.floor(maxLimit / 2));
-          logs = [...activityLogs, ...commandLogs].sort((a, b) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          ).slice(0, maxLimit);
-          title = '📋 System Logs';
-          description = 'Recent system activity and commands';
-          break;
-      }
+      // Get user engagement logs from the 8 tracked channels
+      logs = await storage.getAllUserLogs(maxLimit);
+      title = '📊 User Engagement Logs';
+      description = 'Recent user activity in tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing)';
 
       if (logs.length === 0) {
         const embed = new EmbedBuilder()
@@ -3498,29 +3475,17 @@ export class RaptorBot {
       }
 
       let logText = '';
-      for (const log of logs.slice(0, 10)) { // Limit to 10 entries to prevent overflow
-        const timestamp = new Date(log.timestamp);
+      for (const log of logs.slice(0, 15)) { // Show more user engagement entries
+        const timestamp = new Date(log.lastUpdated);
         const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
         
-        if (log.commandName) {
-          // Command log
-          const status = log.success ? '✅' : '❌';
-          const duration = log.executionTime ? ` (${log.executionTime}ms)` : '';
-          const entry = `${status} \`/${log.commandName}\` by ${log.userId}${duration} - ${timeStr}\n`;
-          
-          // Check if adding this entry would exceed the limit
-          if ((logText + entry).length > 900) break;
-          logText += entry;
-        } else {
-          // Activity log
-          const typeIcon = log.type === 'error' ? '🚨' : '📊';
-          const description = log.description.length > 40 ? log.description.substring(0, 40) + '...' : log.description;
-          const entry = `${typeIcon} ${log.type}: ${description} - ${timeStr}\n`;
-          
-          // Check if adding this entry would exceed the limit
-          if ((logText + entry).length > 900) break;
-          logText += entry;
-        }
+        // User engagement log entry
+        const logIcon = '📈';
+        const entry = `${logIcon} <@${log.userId}> - ${log.logCount} logs - ${timeStr}\n`;
+        
+        // Check if adding this entry would exceed the limit
+        if ((logText + entry).length > 900) break;
+        logText += entry;
       }
 
       // Ensure logText fits Discord's 1024 character limit for embed fields

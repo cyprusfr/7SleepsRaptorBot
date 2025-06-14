@@ -395,7 +395,8 @@ export class DatabaseStorage implements IStorage {
   async logActivity(type: string, description: string): Promise<void> {
     await db.insert(activityLogs).values({
       type,
-      description
+      description: description || `Activity: ${type}`,
+      metadata: {}
     });
   }
 

@@ -47,6 +47,7 @@ export class RaptorBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
       ],
     });
@@ -164,8 +165,15 @@ export class RaptorBot {
 
       // Handle predefined support tags
       const messageContent = message.content.trim().toLowerCase();
+      console.log('Message received:', messageContent);
+      
       if (this.predefinedTags[messageContent]) {
-        await this.handlePredefinedTag(message, messageContent);
+        console.log('Found predefined tag:', messageContent);
+        try {
+          await this.handlePredefinedTag(message, messageContent);
+        } catch (error) {
+          console.error('Error handling predefined tag:', error);
+        }
         return;
       }
 
@@ -3377,16 +3385,40 @@ export class RaptorBot {
   }
 
   private async handlePredefinedTag(message: any, tag: string) {
+    console.log('handlePredefinedTag called with tag:', tag);
     const response = this.predefinedTags[tag];
+    console.log('Response found:', response ? 'YES' : 'NO');
     
-    const embed = new EmbedBuilder()
-      .setTitle('🔧 MacSploit Support')
-      .setDescription(response)
-      .setColor(0x0099ff)
-      .setFooter({ text: 'MacSploit Support System' })
-      .setTimestamp();
+    if (!response) {
+      console.log('No response found for tag:', tag);
+      return;
+    }
+    
+    try {
+      const embed = new EmbedBuilder()
+        .setTitle('🔧 MacSploit Support')
+        .setDescription(response)
+        .setColor(0x0099ff)
+        .setFooter({ text: 'MacSploit Support System' })
+        .setTimestamp();
 
-    await message.reply({ embeds: [embed] });
+      console.log('Attempting to send reply...');
+      await message.reply({ embeds: [embed] });
+      console.log('Reply sent successfully');
+      
+      // Log tag usage
+      await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
+      
+    } catch (error) {
+      console.error('Error sending predefined tag response:', error);
+      // Try sending a simple message as fallback
+      try {
+        await message.channel.send(`**${tag}**\n\n${response}`);
+        console.log('Fallback message sent');
+      } catch (fallbackError) {
+        console.error('Fallback message also failed:', fallbackError);
+      }
+    }
   }
 
   private async handleVerificationMessage(message: any) {

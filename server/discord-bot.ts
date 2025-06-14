@@ -15,8 +15,6 @@ export class RaptorBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.DirectMessages,
       ],
     });
 

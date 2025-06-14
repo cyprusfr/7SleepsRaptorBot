@@ -235,7 +235,8 @@ export class RaptorBot {
   }
 
   private async updateServerStats() {
-    for (const guild of this.client.guilds.cache.values()) {
+    const guilds = Array.from(this.client.guilds.cache.values());
+    for (const guild of guilds) {
       try {
         await storage.updateDiscordServer(parseInt(guild.id), {
           memberCount: guild.memberCount,
@@ -1341,10 +1342,8 @@ export class RaptorBot {
       await storage.createVerificationSession({
         sessionId,
         discordUserId: targetUser.id,
-        botResponseCode: verificationCode,
-        expiresAt,
-        isCompleted: false,
-        createdBy: interaction.user.id
+        dashboardCode: verificationCode,
+        expiresAt
       });
 
       await this.logActivity('verification_started', `Verification session started for ${targetUser.username} by ${interaction.user.username}`);
@@ -1427,8 +1426,8 @@ export class RaptorBot {
         return;
       }
 
-      const statusColor = session.isCompleted ? 0x00ff00 : session.expiresAt < new Date() ? 0xff0000 : 0xff9900;
-      const statusText = session.isCompleted ? '✅ Completed' : session.expiresAt < new Date() ? '❌ Expired' : '⏳ Pending';
+      const statusColor = session.completedAt ? 0x00ff00 : session.expiresAt < new Date() ? 0xff0000 : 0xff9900;
+      const statusText = session.completedAt ? '✅ Completed' : session.expiresAt < new Date() ? '❌ Expired' : '⏳ Pending';
 
       const embed = new EmbedBuilder()
         .setTitle('🔐 Verification Status')
@@ -1481,7 +1480,7 @@ export class RaptorBot {
       // Reset verification by updating expiry to past
       await storage.updateVerificationSession(session.sessionId, {
         expiresAt: new Date(Date.now() - 1000),
-        isCompleted: false
+        completedAt: null
       });
 
       await this.logActivity('verification_reset', `Verification reset for ${targetUser.username} by ${interaction.user.username}`);
@@ -3095,7 +3094,8 @@ export class RaptorBot {
   }
 
   private async syncServerData() {
-    for (const guild of this.client.guilds.cache.values()) {
+    const guilds = Array.from(this.client.guilds.cache.values());
+    for (const guild of guilds) {
       await this.addServer(guild);
     }
   }

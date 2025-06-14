@@ -1,7 +1,7 @@
-import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, ActivityType, AttachmentBuilder, ChannelType } from 'discord.js';
+import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, ActivityType, AttachmentBuilder } from 'discord.js';
 import { storage } from './storage';
 import { db } from './db';
-import { discordUsers, licenseKeys, activityLogs, candyBalances, commandLogs, verificationSessions, type DiscordUser } from '@shared/schema';
+import { discordUsers, licenseKeys, activityLogs, candyBalances, commandLogs, type DiscordUser } from '@shared/schema';
 import { eq, sql, desc, asc, and, or } from 'drizzle-orm';
 import { BackupIntegrityChecker } from './backup-integrity';
 import crypto from 'crypto';
@@ -168,7 +168,7 @@ export class RaptorBot {
       }
 
       // Handle verification codes in DMs
-      if (message.channel.type === ChannelType.DM) {
+      if (message.channel.type === 1) {
         await this.handleVerificationMessage(message);
       }
     });
@@ -258,12 +258,7 @@ export class RaptorBot {
 
   private async registerCommands() {
     const commands = [
-      // Test command
-      new SlashCommandBuilder()
-        .setName('test')
-        .setDescription('Test command for debugging'),
-
-      // Add command (exactly from screenshots)
+      // Add Key Command
       new SlashCommandBuilder()
         .setName('add')
         .setDescription('Add a license key to the database')
@@ -303,7 +298,7 @@ export class RaptorBot {
         .setDescription('Display user avatar')
         .addUserOption(option => option.setName('user').setDescription('User to get avatar of').setRequired(false)),
 
-      // Backup Command - Comprehensive with all operations
+      // Backup Command
       new SlashCommandBuilder()
         .setName('backup')
         .setDescription('Database backup operations')
@@ -325,35 +320,7 @@ export class RaptorBot {
           subcommand
             .setName('integrity')
             .setDescription('Check backup integrity')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to check').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('schedule')
-            .setDescription('Schedule automatic backups')
-            .addStringOption(option => 
-              option.setName('frequency')
-                .setDescription('Backup frequency')
-                .setRequired(true)
-                .addChoices(
-                  { name: 'hourly', value: 'hourly' },
-                  { name: 'daily', value: 'daily' },
-                  { name: 'weekly', value: 'weekly' },
-                  { name: 'disabled', value: 'disabled' }
-                )))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('export')
-            .setDescription('Export backup data')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to export').setRequired(true))
-            .addStringOption(option => 
-              option.setName('format')
-                .setDescription('Export format')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'sql', value: 'sql' },
-                  { name: 'json', value: 'json' },
-                  { name: 'csv', value: 'csv' }
-                ))),
+            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to check').setRequired(false))),
 
       // Bug Report Command
       new SlashCommandBuilder()
@@ -361,17 +328,7 @@ export class RaptorBot {
         .setDescription('Report a bug')
         .addStringOption(option => option.setName('title').setDescription('Bug title').setRequired(true))
         .addStringOption(option => option.setName('description').setDescription('Bug description').setRequired(true))
-        .addStringOption(option => option.setName('steps').setDescription('Steps to reproduce').setRequired(false))
-        .addStringOption(option => 
-          option.setName('severity')
-            .setDescription('Bug severity')
-            .setRequired(false)
-            .addChoices(
-              { name: 'low', value: 'low' },
-              { name: 'medium', value: 'medium' },
-              { name: 'high', value: 'high' },
-              { name: 'critical', value: 'critical' }
-            )),
+        .addStringOption(option => option.setName('steps').setDescription('Steps to reproduce').setRequired(false)),
 
       // Bypass Command
       new SlashCommandBuilder()
@@ -380,7 +337,7 @@ export class RaptorBot {
         .addStringOption(option => option.setName('url').setDescription('URL to bypass').setRequired(true))
         .addUserOption(option => option.setName('user').setDescription('User requesting bypass').setRequired(false)),
 
-      // Candy System Commands - Complete implementation
+      // Candy System Commands
       new SlashCommandBuilder()
         .setName('candy')
         .setDescription('Candy system commands')
@@ -519,7 +476,7 @@ export class RaptorBot {
         .setDescription('Evaluate JavaScript code')
         .addStringOption(option => option.setName('code').setDescription('Code to evaluate').setRequired(true)),
 
-      // Generate Key Commands - All payment methods
+      // Generate Key Commands
       new SlashCommandBuilder()
         .setName('generatekey')
         .setDescription('Generate license keys for various payment methods')
@@ -901,7 +858,7 @@ export class RaptorBot {
         .setDescription('Get detailed information about a user')
         .addUserOption(option => option.setName('user').setDescription('User to get info about').setRequired(false)),
 
-      // Verify Command - Complete implementation
+      // Verify Command
       new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Verification system commands')
@@ -914,20 +871,7 @@ export class RaptorBot {
           subcommand
             .setName('check')
             .setDescription('Check verification status')
-            .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('reset')
-            .setDescription('Reset verification for a user')
-            .addUserOption(option => option.setName('user').setDescription('User to reset').setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List pending verifications'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('expire')
-            .setDescription('Expire old verification codes')),
+            .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(false))),
 
       // View Commands
       new SlashCommandBuilder()
@@ -1021,7 +965,7 @@ export class RaptorBot {
         return;
       }
 
-      // Permission checks for protected commands
+      // Permission checks
       if (!await this.hasPermission(interaction)) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Insufficient Permissions')
@@ -1033,11 +977,8 @@ export class RaptorBot {
         return;
       }
 
-      // Command routing with comprehensive implementations
+      // Command routing
       switch (interaction.commandName) {
-        case 'test':
-          await this.handleTestCommand(interaction);
-          break;
         case 'add':
           await this.handleAddCommand(interaction);
           break;
@@ -1258,605 +1199,1129 @@ export class RaptorBot {
     return true;
   }
 
-  // TEST COMMAND - Simple test implementation
-  private async handleTestCommand(interaction: ChatInputCommandInteraction) {
-    const embed = new EmbedBuilder()
-      .setTitle('✅ Test Command')
-      .setDescription('This is a test command for debugging purposes.')
-      .addFields(
-        { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
-        { name: 'Guild', value: interaction.guild?.name || 'DM', inline: true },
-        { name: 'Channel', value: `<#${interaction.channelId}>`, inline: true },
-        { name: 'Timestamp', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
-      )
-      .setColor(0x00ff00)
-      .setTimestamp();
-
-    await interaction.reply({ embeds: [embed] });
-  }
-
-  // VERIFY COMMAND - Complete implementation matching your screenshots
-  private async handleVerifyCommand(interaction: ChatInputCommandInteraction) {
-    const subcommand = interaction.options.getSubcommand();
-
-    switch (subcommand) {
-      case 'start':
-        await this.handleVerifyStart(interaction);
-        break;
-      case 'check':
-        await this.handleVerifyCheck(interaction);
-        break;
-      case 'reset':
-        await this.handleVerifyReset(interaction);
-        break;
-      case 'list':
-        await this.handleVerifyList(interaction);
-        break;
-      case 'expire':
-        await this.handleVerifyExpire(interaction);
-        break;
-    }
-  }
-
-  private async handleVerifyStart(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-
-    try {
-      // Check if user already has pending verification
-      const existingSession = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (existingSession && existingSession.expiresAt > new Date()) {
-        const embed = new EmbedBuilder()
-          .setTitle('⚠️ Verification Already Active')
-          .setDescription(`${targetUser.username} already has an active verification session.`)
-          .addFields(
-            { name: 'Session ID', value: existingSession.sessionId, inline: true },
-            { name: 'Code', value: existingSession.botResponseCode || 'Pending', inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(existingSession.expiresAt.getTime() / 1000)}:R>`, inline: true }
-          )
-          .setColor(0xff9900)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      // Generate verification code
-      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const sessionId = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-      // Create verification session
-      await storage.createVerificationSession({
-        sessionId,
-        discordUserId: targetUser.id,
-        botResponseCode: verificationCode,
-        expiresAt,
-        isCompleted: false,
-        createdBy: interaction.user.id
-      });
-
-      await this.logActivity('verification_started', `Verification session started for ${targetUser.username} by ${interaction.user.username}`);
-
-      // Send DM to user with verification code
-      try {
-        const dmEmbed = new EmbedBuilder()
-          .setTitle('🔐 Discord Verification Required')
-          .setDescription('Please enter this verification code in the channel where you started verification:')
-          .addFields(
-            { name: 'Verification Code', value: `\`${verificationCode}\``, inline: false },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Instructions', value: 'Simply type this code in the Discord channel to complete verification.', inline: false }
-          )
-          .setColor(0x0099ff)
-          .setFooter({ text: 'MacSploit Verification System' })
-          .setTimestamp();
-
-        await targetUser.send({ embeds: [dmEmbed] });
-
-        const embed = new EmbedBuilder()
-          .setTitle('✅ Verification Session Created')
-          .setDescription(`Verification session created for ${targetUser.username}`)
-          .addFields(
-            { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-            { name: 'Session ID', value: sessionId, inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Next Steps', value: `A verification code has been sent to ${targetUser.username}'s DMs. They should enter the code in this channel to complete verification.`, inline: false }
-          )
-          .setColor(0x00ff00)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-
-      } catch (dmError) {
-        const embed = new EmbedBuilder()
-          .setTitle('⚠️ Verification Session Created (DM Failed)')
-          .setDescription(`Verification session created for ${targetUser.username}, but couldn't send DM.`)
-          .addFields(
-            { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-            { name: 'Verification Code', value: `\`${verificationCode}\``, inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Instructions', value: `Please share this code with ${targetUser.username} and have them enter it in this channel.`, inline: false }
-          )
-          .setColor(0xff9900)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-      }
-
-    } catch (error) {
-      console.error('Error starting verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Verification Error')
-        .setDescription('Failed to start verification session.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyCheck(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-
-    try {
-      const session = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (!session) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ No Verification Session')
-          .setDescription(`${targetUser.username} has no verification session on record.`)
-          .setColor(0xff0000)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      const statusColor = session.isCompleted ? 0x00ff00 : session.expiresAt < new Date() ? 0xff0000 : 0xff9900;
-      const statusText = session.isCompleted ? '✅ Completed' : session.expiresAt < new Date() ? '❌ Expired' : '⏳ Pending';
-
-      const embed = new EmbedBuilder()
-        .setTitle('🔐 Verification Status')
-        .setDescription(`Verification status for ${targetUser.username}`)
-        .addFields(
-          { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-          { name: 'Status', value: statusText, inline: true },
-          { name: 'Session ID', value: session.sessionId, inline: true },
-          { name: 'Created', value: `<t:${Math.floor(session.createdAt.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Expires', value: `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Completed', value: session.completedAt ? `<t:${Math.floor(session.completedAt.getTime() / 1000)}:R>` : 'Not completed', inline: true }
-        )
-        .setColor(statusColor)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error checking verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to check verification status.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyReset(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user', true);
-
-    try {
-      const session = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (!session) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ No Verification Session')
-          .setDescription(`${targetUser.username} has no verification session to reset.`)
-          .setColor(0xff0000)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      // Reset verification by updating expiry to past
-      await storage.updateVerificationSession(session.sessionId, {
-        expiresAt: new Date(Date.now() - 1000),
-        isCompleted: false
-      });
-
-      await this.logActivity('verification_reset', `Verification reset for ${targetUser.username} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Verification Reset')
-        .setDescription(`Verification session reset for ${targetUser.username}`)
-        .addFields(
-          { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-          { name: 'Reset By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Previous Session', value: session.sessionId, inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error resetting verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to reset verification.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyList(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      // Get all pending verifications (you'd need to implement this in storage)
-      // For now, showing a placeholder implementation
-      
-      const embed = new EmbedBuilder()
-        .setTitle('🔐 Pending Verifications')
-        .setDescription('List of pending verification sessions')
-        .addFields(
-          { name: 'Total Sessions', value: '0', inline: true },
-          { name: 'Active Sessions', value: '0', inline: true },
-          { name: 'Expired Sessions', value: '0', inline: true }
-        )
-        .setColor(0x0099ff)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error listing verifications:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to list verifications.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyExpire(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      // Expire old verification codes (placeholder implementation)
-      const expiredCount = 0; // You'd implement the actual logic here
-
-      await this.logActivity('verification_cleanup', `Expired ${expiredCount} old verification codes by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Verification Cleanup')
-        .setDescription(`Expired ${expiredCount} old verification codes.`)
-        .addFields(
-          { name: 'Expired Sessions', value: expiredCount.toString(), inline: true },
-          { name: 'Cleaned By', value: `<@${interaction.user.id}>`, inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error expiring verifications:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to expire old verifications.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  // BACKUP COMMAND - Complete implementation
-  private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
-    const subcommand = interaction.options.getSubcommand();
-
-    switch (subcommand) {
-      case 'create':
-        await this.handleBackupCreate(interaction);
-        break;
-      case 'restore':
-        await this.handleBackupRestore(interaction);
-        break;
-      case 'list':
-        await this.handleBackupList(interaction);
-        break;
-      case 'integrity':
-        await this.handleBackupIntegrity(interaction);
-        break;
-      case 'schedule':
-        await this.handleBackupSchedule(interaction);
-        break;
-      case 'export':
-        await this.handleBackupExport(interaction);
-        break;
-    }
-  }
-
-  private async handleBackupCreate(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const backupName = interaction.options.getString('name') || `backup_${Date.now()}`;
-
-    try {
-      const backupId = crypto.randomUUID();
-      const timestamp = new Date();
-
-      // Create backup (placeholder - you'd implement actual backup logic)
-      await this.logActivity('backup_created', `Database backup created: ${backupName} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Backup Created Successfully')
-        .setDescription(`Database backup has been created successfully.`)
-        .addFields(
-          { name: 'Backup Name', value: backupName, inline: true },
-          { name: 'Backup ID', value: backupId, inline: true },
-          { name: 'Created By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Timestamp', value: `<t:${Math.floor(timestamp.getTime() / 1000)}:F>`, inline: false },
-          { name: 'Size', value: 'Calculating...', inline: true },
-          { name: 'Status', value: '✅ Completed', inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error creating backup:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Backup Failed')
-        .setDescription('Failed to create database backup.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleBackupRestore(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const backupId = interaction.options.getString('backup_id', true);
-
-    try {
-      // Restore backup (placeholder implementation)
-      await this.logActivity('backup_restored', `Database restored from backup ${backupId} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Backup Restored Successfully')
-        .setDescription(`Database has been restored from backup.`)
-        .addFields(
-          { name: 'Backup ID', value: backupId, inline: true },
-          { name: 'Restored By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: '✅ Completed', inline: true },
-          { name: '⚠️ Important', value: 'All data has been restored to the backup state. Recent changes may have been lost.', inline: false }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error restoring backup:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Restore Failed')
-        .setDescription('Failed to restore from backup.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleBackupList(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    try {
-      // Get backup list (placeholder implementation)
-      const backups = []; // You'd get actual backups from storage
-
-      if (backups.length === 0) {
-        const embed = new EmbedBuilder()
-          .setTitle('📁 Available Backups')
-          .setDescription('No backups found.')
-          .setColor(0xff9900)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('📁 Available Backups')
-        .setDescription(`Found ${backups.length} backup(s)`)
-        .setColor(0x0099ff)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error listing backups:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to list backups.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleBackupIntegrity(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const backupId = interaction.options.getString('backup_id');
-
-    try {
-      // Check backup integrity
-      const result = await this.backupChecker.performFullCheck();
-
-      const embed = new EmbedBuilder()
-        .setTitle('🔍 Backup Integrity Check')
-        .setDescription(`Integrity check ${result ? 'completed' : 'failed'}`)
-        .addFields(
-          { name: 'Checked By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: result ? '✅ Passed' : '❌ Failed', inline: true },
-          { name: 'Files Checked', value: '0', inline: true }
-        )
-        .setColor(result ? 0x00ff00 : 0xff0000)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error checking backup integrity:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Integrity Check Failed')
-        .setDescription('Failed to check backup integrity.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleBackupSchedule(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const frequency = interaction.options.getString('frequency', true);
-
-    try {
-      await storage.setBotSetting('backup_frequency', frequency);
-      await this.logActivity('backup_scheduled', `Backup frequency set to ${frequency} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('⏰ Backup Schedule Updated')
-        .setDescription(`Automatic backup frequency has been updated.`)
-        .addFields(
-          { name: 'Frequency', value: frequency, inline: true },
-          { name: 'Updated By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: frequency === 'disabled' ? '⏸️ Disabled' : '✅ Enabled', inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error scheduling backup:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Schedule Failed')
-        .setDescription('Failed to update backup schedule.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleBackupExport(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const backupId = interaction.options.getString('backup_id', true);
-    const format = interaction.options.getString('format') || 'sql';
-
-    try {
-      // Export backup (placeholder implementation)
-      await this.logActivity('backup_exported', `Backup ${backupId} exported as ${format} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('📤 Backup Export Started')
-        .setDescription(`Backup export has been initiated.`)
-        .addFields(
-          { name: 'Backup ID', value: backupId, inline: true },
-          { name: 'Format', value: format.toUpperCase(), inline: true },
-          { name: 'Exported By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: '⏳ Processing', inline: false }
-        )
-        .setColor(0x0099ff)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error exporting backup:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Export Failed')
-        .setDescription('Failed to export backup.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  // Placeholder implementations for other commands - these will be fully implemented
+  // Command Implementations
   private async handleAddCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-    
-    // Implementation based on your screenshots would go here
-    const embed = new EmbedBuilder()
-      .setTitle('🔨 Add Command')
-      .setDescription(`Subcommand: ${subcommand}`)
-      .setColor(0x0099ff)
-      .setTimestamp();
-    
-    await interaction.reply({ embeds: [embed] });
+
+    switch (subcommand) {
+      case 'key':
+        await this.handleAddKey(interaction);
+        break;
+      case 'logs':
+        await this.handleAddLogs(interaction);
+        break;
+      case 'whitelist':
+        await this.handleAddWhitelist(interaction);
+        break;
+    }
+  }
+
+  private async handleAddKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const keyValue = interaction.options.getString('key', true);
+    const user = interaction.options.getUser('user');
+    const hwid = interaction.options.getString('hwid');
+    const note = interaction.options.getString('note');
+
+    try {
+      // Check if key already exists
+      const existingKey = await storage.getDiscordKeyByKeyId(keyValue);
+      if (existingKey) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Key Already Exists')
+          .setDescription('This license key already exists in the database.')
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Create new key
+      const newKey = await storage.createDiscordKey({
+        keyId: keyValue,
+        userId: user?.id,
+        username: user?.username,
+        hwid: hwid,
+        status: 'active',
+        createdBy: interaction.user.id,
+        notes: note,
+      });
+
+      await this.logActivity('key_created', `Key ${keyValue} created by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Key Added Successfully')
+        .setDescription(`License key \`${keyValue}\` has been added to the database.`)
+        .addFields(
+          { name: 'Key ID', value: keyValue, inline: true },
+          { name: 'User', value: user ? `<@${user.id}>` : 'Not assigned', inline: true },
+          { name: 'HWID', value: hwid || 'Not set', inline: true },
+          { name: 'Status', value: 'Active', inline: true },
+          { name: 'Created By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Notes', value: note || 'None', inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error adding key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Adding Key')
+        .setDescription('An error occurred while adding the license key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleAddLogs(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getUser('user', true);
+    const amount = interaction.options.getInteger('amount', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+
+    try {
+      await storage.addUserLogs(user.id, amount, reason);
+      await this.logActivity('logs_added', `${amount} logs added to ${user.username} by ${interaction.user.username}: ${reason}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Logs Added')
+        .setDescription(`Successfully added ${amount} logs to <@${user.id}>`)
+        .addFields(
+          { name: 'User', value: `<@${user.id}>`, inline: true },
+          { name: 'Amount', value: amount.toString(), inline: true },
+          { name: 'Reason', value: reason, inline: false },
+          { name: 'Added By', value: `<@${interaction.user.id}>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error adding logs:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Adding Logs')
+        .setDescription('An error occurred while adding logs.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleAddWhitelist(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getUser('user', true);
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+
+    try {
+      await storage.addToWhitelist(user.id);
+      await this.logActivity('whitelist_added', `${user.username} added to whitelist by ${interaction.user.username}: ${reason}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ User Whitelisted')
+        .setDescription(`<@${user.id}> has been added to the whitelist.`)
+        .addFields(
+          { name: 'User', value: `<@${user.id}>`, inline: true },
+          { name: 'Reason', value: reason, inline: false },
+          { name: 'Added By', value: `<@${interaction.user.id}>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error adding to whitelist:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Adding to Whitelist')
+        .setDescription('An error occurred while adding user to whitelist.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
   }
 
   private async handleCandyCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-    
-    // Implementation based on your screenshots would go here
-    const embed = new EmbedBuilder()
-      .setTitle('🍭 Candy System')
-      .setDescription(`Subcommand: ${subcommand}`)
-      .setColor(0xff69b4)
-      .setTimestamp();
-    
-    await interaction.reply({ embeds: [embed] });
+
+    switch (subcommand) {
+      case 'balance':
+        await this.handleCandyBalance(interaction);
+        break;
+      case 'daily':
+        await this.handleCandyDaily(interaction);
+        break;
+      case 'beg':
+        await this.handleCandyBeg(interaction);
+        break;
+      case 'credit-card-scam':
+        await this.handleCandyScam(interaction);
+        break;
+      case 'gamble':
+        await this.handleCandyGamble(interaction);
+        break;
+      case 'pay':
+        await this.handleCandyPay(interaction);
+        break;
+      case 'deposit':
+        await this.handleCandyDeposit(interaction);
+        break;
+      case 'withdraw':
+        await this.handleCandyWithdraw(interaction);
+        break;
+      case 'leaderboard':
+        await this.handleCandyLeaderboard(interaction);
+        break;
+    }
   }
 
+  private async handleCandyBalance(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getUser('user') || interaction.user;
+
+    try {
+      const balance = await storage.getCandyBalance(user.id);
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`🍭 ${user.username}'s Candy Balance`)
+        .addFields(
+          { name: '💰 Wallet', value: balance.wallet.toLocaleString(), inline: true },
+          { name: '🏦 Bank', value: balance.bank.toLocaleString(), inline: true },
+          { name: '💎 Total', value: balance.total.toLocaleString(), inline: true }
+        )
+        .setColor(0xff69b4)
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error getting candy balance:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to get candy balance.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyDaily(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const canClaim = await storage.checkDailyCandy(interaction.user.id);
+      
+      if (!canClaim) {
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Daily Already Claimed')
+          .setDescription('You have already claimed your daily candy today. Come back tomorrow!')
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const amount = await storage.claimDailyCandy(interaction.user.id);
+      await this.logActivity('daily_claimed', `${interaction.user.username} claimed daily candy: ${amount}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎉 Daily Candy Claimed!')
+        .setDescription(`You received **${amount.toLocaleString()}** candies!`)
+        .setColor(0x00ff00)
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error claiming daily candy:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to claim daily candy.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyBeg(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const lastBeg = await storage.getLastBeg(interaction.user.id);
+      const cooldownMs = parseInt(this.getSetting('beg_cooldown', '300000')); // 5 minutes default
+      
+      if (lastBeg && Date.now() - lastBeg.getTime() < cooldownMs) {
+        const remainingMs = cooldownMs - (Date.now() - lastBeg.getTime());
+        const remainingMinutes = Math.ceil(remainingMs / 60000);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Cooldown Active')
+          .setDescription(`You can beg again in ${remainingMinutes} minutes.`)
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Random chance mechanics
+      const chance = Math.random();
+      let amount = 0;
+      let message = '';
+
+      if (chance < 0.1) { // 10% chance for good amount
+        amount = Math.floor(Math.random() * 500) + 100;
+        message = 'Someone felt generous!';
+      } else if (chance < 0.5) { // 40% chance for small amount
+        amount = Math.floor(Math.random() * 50) + 10;
+        message = 'You got some spare change.';
+      } else { // 50% chance for nothing
+        message = 'Nobody gave you anything. Better luck next time!';
+      }
+
+      if (amount > 0) {
+        await storage.addCandyBalance(interaction.user.id, amount);
+      }
+      
+      await storage.updateLastBeg(interaction.user.id);
+      await this.logActivity('candy_beg', `${interaction.user.username} begged and got ${amount} candies`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🥺 Begging Results')
+        .setDescription(message)
+        .setColor(amount > 0 ? 0x00ff00 : 0xff9900)
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setTimestamp();
+
+      if (amount > 0) {
+        embed.addFields({ name: '💰 Amount Received', value: amount.toLocaleString(), inline: true });
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing beg command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process beg command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyScam(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const target = interaction.options.getUser('target', true);
+    
+    if (target.id === interaction.user.id) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Target')
+        .setDescription('You cannot scam yourself!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const lastScam = await storage.getLastScam(interaction.user.id);
+      const cooldownMs = parseInt(this.getSetting('scam_cooldown', '600000')); // 10 minutes default
+      
+      if (lastScam && Date.now() - lastScam.getTime() < cooldownMs) {
+        const remainingMs = cooldownMs - (Date.now() - lastScam.getTime());
+        const remainingMinutes = Math.ceil(remainingMs / 60000);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Cooldown Active')
+          .setDescription(`You can attempt another scam in ${remainingMinutes} minutes.`)
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Get target balance
+      const targetBalance = await storage.getCandyBalance(target.id);
+      if (targetBalance.wallet === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle('💸 No Money to Steal')
+          .setDescription(`<@${target.id}> has no candies in their wallet to steal!`)
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Scam mechanics with realistic chances
+      const chance = Math.random();
+      let success = false;
+      let amount = 0;
+      let message = '';
+
+      if (chance < 0.15) { // 15% success chance
+        success = true;
+        amount = Math.min(Math.floor(targetBalance.wallet * 0.1), 1000); // Max 10% of wallet or 1000
+        message = `🎯 **Scam Successful!** You stole **${amount.toLocaleString()}** candies from <@${target.id}>!`;
+        
+        await storage.subtractCandy(target.id, amount);
+        await storage.addCandyBalance(interaction.user.id, amount);
+      } else if (chance < 0.35) { // 20% chance of getting caught and fined
+        amount = Math.min(Math.floor(Math.random() * 500) + 100, targetBalance.wallet);
+        message = `🚨 **Scam Failed!** You got caught and had to pay <@${target.id}> **${amount.toLocaleString()}** candies as compensation!`;
+        
+        const userBalance = await storage.getCandyBalance(interaction.user.id);
+        const actualFine = Math.min(amount, userBalance.wallet);
+        
+        if (actualFine > 0) {
+          await storage.subtractCandy(interaction.user.id, actualFine);
+          await storage.addCandyBalance(target.id, actualFine);
+        }
+      } else { // 65% chance of just failing
+        message = `❌ **Scam Failed!** <@${target.id}> saw through your scheme and blocked you!`;
+      }
+
+      await storage.updateLastScam(interaction.user.id);
+      await this.logActivity('candy_scam', `${interaction.user.username} attempted to scam ${target.username}: ${success ? 'Success' : 'Failed'}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('💳 Credit Card Scam Results')
+        .setDescription(message)
+        .setColor(success ? 0x00ff00 : 0xff0000)
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing scam command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process scam command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+    const maxGamble = parseInt(this.getSetting('max_gamble_amount', '10000'));
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must gamble a positive amount!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    if (amount > maxGamble) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Amount Too High')
+        .setDescription(`Maximum gamble amount is ${maxGamble.toLocaleString()} candies.`)
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance.wallet < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${balance.wallet.toLocaleString()} candies in your wallet.`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Gambling mechanics - house edge
+      const chance = Math.random();
+      let won = false;
+      let payout = 0;
+      let message = '';
+
+      if (chance < 0.45) { // 45% chance to win
+        won = true;
+        payout = Math.floor(amount * (1.5 + Math.random())); // 1.5x to 2.5x multiplier
+        message = `🎉 **You Won!** You gambled ${amount.toLocaleString()} candies and won ${payout.toLocaleString()} candies!`;
+        
+        await storage.addCandyBalance(interaction.user.id, payout - amount); // Net gain
+      } else { // 55% chance to lose
+        message = `💸 **You Lost!** You gambled ${amount.toLocaleString()} candies and lost it all!`;
+        await storage.subtractCandy(interaction.user.id, amount);
+      }
+
+      await this.logActivity('candy_gamble', `${interaction.user.username} gambled ${amount} candies: ${won ? 'Won' : 'Lost'}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎰 Gambling Results')
+        .setDescription(message)
+        .setColor(won ? 0x00ff00 : 0xff0000)
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing gamble command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process gamble command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyPay(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const recipient = interaction.options.getUser('user', true);
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (recipient.id === interaction.user.id) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Recipient')
+        .setDescription('You cannot pay yourself!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must pay a positive amount!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance.wallet < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${balance.wallet.toLocaleString()} candies in your wallet.`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      await storage.transferCandy(interaction.user.id, recipient.id, amount);
+      await this.logActivity('candy_transfer', `${interaction.user.username} paid ${amount} candies to ${recipient.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('💸 Payment Successful')
+        .setDescription(`You paid **${amount.toLocaleString()}** candies to <@${recipient.id}>!`)
+        .addFields(
+          { name: 'From', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'To', value: `<@${recipient.id}>`, inline: true },
+          { name: 'Amount', value: amount.toLocaleString(), inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process payment.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must deposit a positive amount!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance.wallet < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${balance.wallet.toLocaleString()} candies in your wallet.`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      await storage.depositCandy(interaction.user.id, amount);
+      await this.logActivity('candy_deposit', `${interaction.user.username} deposited ${amount} candies`);
+
+      const newBalance = await storage.getCandyBalance(interaction.user.id);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏦 Deposit Successful')
+        .setDescription(`You deposited **${amount.toLocaleString()}** candies into your bank!`)
+        .addFields(
+          { name: '💰 Wallet', value: newBalance.wallet.toLocaleString(), inline: true },
+          { name: '🏦 Bank', value: newBalance.bank.toLocaleString(), inline: true },
+          { name: '💎 Total', value: newBalance.total.toLocaleString(), inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing deposit:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process deposit.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyWithdraw(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must withdraw a positive amount!')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const balance = await storage.getCandyBalance(interaction.user.id);
+      
+      if (balance.bank < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${balance.bank.toLocaleString()} candies in your bank.`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      await storage.withdrawCandy(interaction.user.id, amount);
+      await this.logActivity('candy_withdraw', `${interaction.user.username} withdrew ${amount} candies`);
+
+      const newBalance = await storage.getCandyBalance(interaction.user.id);
+
+      const embed = new EmbedBuilder()
+        .setTitle('💰 Withdrawal Successful')
+        .setDescription(`You withdrew **${amount.toLocaleString()}** candies from your bank!`)
+        .addFields(
+          { name: '💰 Wallet', value: newBalance.wallet.toLocaleString(), inline: true },
+          { name: '🏦 Bank', value: newBalance.bank.toLocaleString(), inline: true },
+          { name: '💎 Total', value: newBalance.total.toLocaleString(), inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process withdrawal.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleCandyLeaderboard(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const leaderboard = await storage.getCandyLeaderboard(10);
+      
+      if (leaderboard.length === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle('🏆 Candy Leaderboard')
+          .setDescription('No users found with candy balances.')
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      let description = '';
+      for (let i = 0; i < leaderboard.length; i++) {
+        const entry = leaderboard[i];
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        description += `${medal} <@${entry.userId}> - **${entry.balance.toLocaleString()}** candies\n`;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏆 Candy Leaderboard')
+        .setDescription(description)
+        .setColor(0xffd700)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error getting leaderboard:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to get candy leaderboard.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // Generate Key Commands
   private async handleGenerateKeyCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-    
-    // Implementation based on your screenshots would go here
-    const embed = new EmbedBuilder()
-      .setTitle('🔑 Generate Key')
-      .setDescription(`Payment method: ${subcommand}`)
-      .setColor(0x00ff00)
-      .setTimestamp();
-    
-    await interaction.reply({ embeds: [embed] });
+
+    switch (subcommand) {
+      case 'bitcoin':
+        await this.handleGenerateBitcoinKey(interaction);
+        break;
+      case 'cashapp':
+        await this.handleGenerateCashAppKey(interaction);
+        break;
+      case 'ethereum':
+        await this.handleGenerateEthereumKey(interaction);
+        break;
+      case 'paypal':
+        await this.handleGeneratePayPalKey(interaction);
+        break;
+      case 'robux':
+        await this.handleGenerateRobuxKey(interaction);
+        break;
+      case 'venmo':
+        await this.handleGenerateVenmoKey(interaction);
+        break;
+      case 'custom':
+        await this.handleGenerateCustomKey(interaction);
+        break;
+    }
+  }
+
+  private async handleGenerateBitcoinKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const txid = interaction.options.getString('txid', true);
+    const amount = interaction.options.getString('amount') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `Bitcoin Payment - TXID: ${txid}, Amount: ${amount}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `Bitcoin key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Bitcoin Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for Bitcoin payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '₿ Transaction ID', value: txid, inline: true },
+          { name: '💰 Amount', value: amount, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0xf7931a)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating Bitcoin key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate Bitcoin payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGenerateCashAppKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const identifier = interaction.options.getString('identifier', true);
+    const amount = interaction.options.getString('amount') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `CashApp Payment - ID: ${identifier}, Amount: ${amount}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `CashApp key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 CashApp Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for CashApp payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '💳 Payment ID', value: identifier, inline: true },
+          { name: '💰 Amount', value: amount, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x00d632)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating CashApp key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate CashApp payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGenerateEthereumKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const txid = interaction.options.getString('txid', true);
+    const amount = interaction.options.getString('amount') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `Ethereum Payment - TXID: ${txid}, Amount: ${amount}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `Ethereum key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Ethereum Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for Ethereum payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '⟠ Transaction ID', value: txid, inline: true },
+          { name: '💰 Amount', value: amount, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x627eea)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating Ethereum key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate Ethereum payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGeneratePayPalKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const email = interaction.options.getString('email', true);
+    const amount = interaction.options.getString('amount') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `PayPal Payment - Email: ${email}, Amount: ${amount}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `PayPal key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 PayPal Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for PayPal payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '📧 PayPal Email', value: email, inline: true },
+          { name: '💰 Amount', value: amount, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x0070ba)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating PayPal key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate PayPal payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGenerateRobuxKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const amount = interaction.options.getString('amount', true);
+    const group = interaction.options.getString('group') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `Robux Payment - Amount: ${amount}, Group: ${group}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `Robux key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Robux Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for Robux payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '💎 Robux Amount', value: amount, inline: true },
+          { name: '👥 Group', value: group, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x00a2ff)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating Robux key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate Robux payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGenerateVenmoKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const username = interaction.options.getString('username', true);
+    const amount = interaction.options.getString('amount') || 'Not specified';
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `Venmo Payment - Username: ${username}, Amount: ${amount}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `Venmo key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Venmo Key Generated')
+        .setDescription(`A new MacSploit license key has been generated for Venmo payment.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '📱 Venmo Username', value: username, inline: true },
+          { name: '💰 Amount', value: amount, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x3d95ce)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating Venmo key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate Venmo payment key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  private async handleGenerateCustomKey(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const user = interaction.options.getString('user', true);
+    const note = interaction.options.getString('note', true);
+
+    try {
+      const keyValue = this.generateRandomKey();
+      
+      const newKey = await storage.createLicenseKey({
+        keyValue: keyValue,
+        userId: user,
+        createdBy: interaction.user.id,
+        notes: `Custom Key - ${note}`,
+        isActive: true
+      });
+
+      await this.logActivity('key_generated', `Custom key ${keyValue} generated for ${user} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Custom Key Generated')
+        .setDescription(`A new MacSploit license key has been generated.`)
+        .addFields(
+          { name: '🔑 License Key', value: `\`${keyValue}\``, inline: false },
+          { name: '👤 User', value: user, inline: true },
+          { name: '📝 Note', value: note, inline: true },
+          { name: '👨‍💼 Generated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '⏰ Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x9932cc)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error generating custom key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error Generating Key')
+        .setDescription('Failed to generate custom key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
   }
 
   // Ping Command
@@ -1924,6 +2389,143 @@ export class RaptorBot {
     }
   }
 
+  // Bypass Command
+  private async handleBypassCommand(interaction: ChatInputCommandInteraction) {
+    const url = interaction.options.getString('url', true);
+    const user = interaction.options.getUser('user');
+
+    const embed = new EmbedBuilder()
+      .setTitle('🔗 Bypass Request')
+      .setDescription('Bypass functionality is currently unavailable. This is a placeholder command.')
+      .addFields(
+        { name: 'URL', value: url, inline: true },
+        { name: 'Requested by', value: user ? `<@${user.id}>` : `<@${interaction.user.id}>`, inline: true }
+      )
+      .setColor(0xff9900)
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  // Key Info Command
+  private async handleKeyInfoCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const keyValue = interaction.options.getString('key', true);
+
+    try {
+      const key = await storage.getDiscordKeyByKeyId(keyValue);
+      
+      if (!key) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Key Not Found')
+          .setDescription('The specified license key was not found in the database.')
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 License Key Information')
+        .addFields(
+          { name: 'Key ID', value: key.keyId, inline: true },
+          { name: 'Status', value: key.status || 'Unknown', inline: true },
+          { name: 'User', value: key.userId ? `<@${key.userId}>` : 'Not assigned', inline: true },
+          { name: 'Username', value: key.username || 'N/A', inline: true },
+          { name: 'HWID', value: key.hwid || 'Not set', inline: true },
+          { name: 'Created', value: key.createdAt ? `<t:${Math.floor(key.createdAt.getTime() / 1000)}:R>` : 'Unknown', inline: true },
+          { name: 'Created By', value: key.createdBy ? `<@${key.createdBy}>` : 'Unknown', inline: true },
+          { name: 'Notes', value: key.notes || 'None', inline: false }
+        )
+        .setColor(key.status === 'active' ? 0x00ff00 : 0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error getting key info:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to retrieve key information.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // Help command implementation and other missing commands would continue here...
+  private async handleHelpCommand(interaction: ChatInputCommandInteraction) {
+    const command = interaction.options.getString('command');
+
+    if (command) {
+      // Specific command help
+      const helpText = this.getCommandHelp(command);
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`📚 Help: /${command}`)
+        .setDescription(helpText)
+        .setColor(0x0099ff)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+    } else {
+      // General help
+      const embed = new EmbedBuilder()
+        .setTitle('📚 MacSploit Bot Help')
+        .setDescription('Here are all available commands organized by category:')
+        .addFields(
+          { 
+            name: '🔑 Key Management', 
+            value: '`/add key` - Add a new license key\n`/keyinfo` - Get key information\n`/transfer` - Transfer key ownership\n`/generatekey` - Generate payment keys', 
+            inline: false 
+          },
+          { 
+            name: '🍭 Candy System', 
+            value: '`/candy balance` - Check balance\n`/candy daily` - Claim daily reward\n`/candy gamble` - Gamble candies\n`/candy pay` - Pay another user', 
+            inline: false 
+          },
+          { 
+            name: '👥 User Management', 
+            value: '`/userinfo` - Get user information\n`/whitelist` - Manage whitelist\n`/add logs` - Add user logs\n`/view logs` - View user logs', 
+            inline: false 
+          },
+          { 
+            name: '🛠️ Administration', 
+            value: '`/settings` - Bot settings\n`/backup` - Database backups\n`/stats` - System statistics\n`/eval` - Execute code', 
+            inline: false 
+          },
+          { 
+            name: '🔧 Utilities', 
+            value: '`/ping` - Check bot status\n`/help` - This help message\n`/poke` - Poke someone\n`/avatar` - Show user avatar', 
+            inline: false 
+          }
+        )
+        .setFooter({ text: 'Use /help <command> for detailed information about a specific command' })
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+    }
+  }
+
+  private getCommandHelp(command: string): string {
+    const helpTexts: { [key: string]: string } = {
+      'add': 'Add various items to the system:\n• `/add key` - Add a new license key\n• `/add logs` - Add logs to a user\n• `/add whitelist` - Add user to whitelist',
+      'candy': 'Candy system commands for the economy:\n• `/candy balance` - Check your or another user\'s balance\n• `/candy daily` - Claim your daily 2000 candies\n• `/candy beg` - Beg for candies (5min cooldown)\n• `/candy gamble` - Gamble your candies\n• `/candy pay` - Send candies to another user',
+      'generatekey': 'Generate license keys for various payment methods:\n• Bitcoin, Ethereum, PayPal, CashApp, Venmo, Robux\n• Each requires payment verification details\n• Keys are automatically added to the database',
+      'keyinfo': 'Get detailed information about a license key:\n• Usage: `/keyinfo key:<license_key>`\n• Shows status, owner, HWID, creation date, and notes',
+      'ping': 'Check bot status and latency:\n• Shows bot response time\n• Discord API latency\n• Database connectivity\n• System uptime',
+      'stats': 'Display comprehensive system statistics:\n• Total keys and active keys\n• User counts and server connections\n• Recent activity and performance metrics',
+      'whitelist': 'Manage the user whitelist:\n• `/whitelist add` - Add user to whitelist\n• `/whitelist remove` - Remove user from whitelist\n• `/whitelist list` - Show all whitelisted users\n• `/whitelist check` - Check if user is whitelisted'
+    };
+
+    return helpTexts[command] || 'No help available for this command.';
+  }
+
   // Utility methods
   private generateRandomKey(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -1970,165 +2572,150 @@ export class RaptorBot {
     }
   }
 
-  // Placeholder stub implementations for remaining commands
+  // Stub implementations for remaining commands
   private async handleAnnounceCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Announce command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Announce command not yet implemented', ephemeral: true });
   }
 
   private async handleAvatarCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Avatar command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Avatar command not yet implemented', ephemeral: true });
+  }
+
+  private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
+    // Implementation would go here
+    await interaction.reply({ content: 'Backup command not yet implemented', ephemeral: true });
   }
 
   private async handleBugReportCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Bug report command not yet fully implemented', ephemeral: true });
-  }
-
-  private async handleBypassCommand(interaction: ChatInputCommandInteraction) {
-    const embed = new EmbedBuilder()
-      .setTitle('🔗 Bypass Request')
-      .setDescription('Bypass functionality is currently unavailable. This is a placeholder command.')
-      .setColor(0xff9900)
-      .setTimestamp();
-
-    await interaction.reply({ embeds: [embed] });
+    // Implementation would go here
+    await interaction.reply({ content: 'Bug report command not yet implemented', ephemeral: true });
   }
 
   private async handleCheckCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Check command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Check command not yet implemented', ephemeral: true });
   }
 
   private async handleDbCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Database command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Database command not yet implemented', ephemeral: true });
   }
 
   private async handleDeleteCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Delete command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Delete command not yet implemented', ephemeral: true });
   }
 
   private async handleDmCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'DM command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'DM command not yet implemented', ephemeral: true });
   }
 
   private async handleEvalCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Eval command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Eval command not yet implemented', ephemeral: true });
   }
 
   private async handleGetCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Get command not yet fully implemented', ephemeral: true });
-  }
-
-  private async handleHelpCommand(interaction: ChatInputCommandInteraction) {
-    const embed = new EmbedBuilder()
-      .setTitle('📚 MacSploit Bot Help')
-      .setDescription('Here are all available commands organized by category:')
-      .addFields(
-        { 
-          name: '🔑 Key Management', 
-          value: '`/add key` - Add a new license key\n`/keyinfo` - Get key information\n`/transfer` - Transfer key ownership\n`/generatekey` - Generate payment keys', 
-          inline: false 
-        },
-        { 
-          name: '🍭 Candy System', 
-          value: '`/candy balance` - Check balance\n`/candy daily` - Claim daily reward\n`/candy gamble` - Gamble candies\n`/candy pay` - Pay another user', 
-          inline: false 
-        },
-        { 
-          name: '👥 User Management', 
-          value: '`/userinfo` - Get user information\n`/whitelist` - Manage whitelist\n`/add logs` - Add user logs\n`/view logs` - View user logs', 
-          inline: false 
-        },
-        { 
-          name: '🛠️ Administration', 
-          value: '`/settings` - Bot settings\n`/backup` - Database backups\n`/stats` - System statistics\n`/eval` - Execute code', 
-          inline: false 
-        },
-        { 
-          name: '🔧 Utilities', 
-          value: '`/ping` - Check bot status\n`/help` - This help message\n`/poke` - Poke someone\n`/avatar` - Show user avatar', 
-          inline: false 
-        }
-      )
-      .setFooter({ text: 'Use /help <command> for detailed information about a specific command' })
-      .setColor(0x0099ff)
-      .setTimestamp();
-
-    await interaction.reply({ embeds: [embed] });
+    // Implementation would go here
+    await interaction.reply({ content: 'Get command not yet implemented', ephemeral: true });
   }
 
   private async handleHwidCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'HWID command not yet fully implemented', ephemeral: true });
-  }
-
-  private async handleKeyInfoCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'KeyInfo command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'HWID command not yet implemented', ephemeral: true });
   }
 
   private async handleKeyCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Key command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Key command not yet implemented', ephemeral: true });
   }
 
   private async handleListCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'List command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'List command not yet implemented', ephemeral: true });
   }
 
   private async handleLogsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Logs command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Logs command not yet implemented', ephemeral: true });
   }
 
   private async handleNicknameCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Nickname command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Nickname command not yet implemented', ephemeral: true });
   }
 
   private async handlePurgeCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Purge command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Purge command not yet implemented', ephemeral: true });
   }
 
   private async handleRemoveCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Remove command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Remove command not yet implemented', ephemeral: true });
   }
 
   private async handleResetCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Reset command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Reset command not yet implemented', ephemeral: true });
   }
 
   private async handleSayCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Say command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Say command not yet implemented', ephemeral: true });
   }
 
   private async handleSearchCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Search command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Search command not yet implemented', ephemeral: true });
   }
 
   private async handleSettingsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Settings command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Settings command not yet implemented', ephemeral: true });
   }
 
   private async handleStatsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Stats command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Stats command not yet implemented', ephemeral: true });
   }
 
   private async handleSuggestionCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Suggestion command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Suggestion command not yet implemented', ephemeral: true });
   }
 
   private async handleTimeoutCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Timeout command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Timeout command not yet implemented', ephemeral: true });
   }
 
   private async handleTransferCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Transfer command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Transfer command not yet implemented', ephemeral: true });
   }
 
   private async handleUserInfoCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'UserInfo command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Userinfo command not yet implemented', ephemeral: true });
+  }
+
+  private async handleVerifyCommand(interaction: ChatInputCommandInteraction) {
+    // Implementation would go here
+    await interaction.reply({ content: 'Verify command not yet implemented', ephemeral: true });
   }
 
   private async handleViewCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'View command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'View command not yet implemented', ephemeral: true });
   }
 
   private async handleWhitelistCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Whitelist command not yet fully implemented', ephemeral: true });
+    // Implementation would go here
+    await interaction.reply({ content: 'Whitelist command not yet implemented', ephemeral: true });
   }
 
   private async handlePredefinedTag(message: any, tag: string) {

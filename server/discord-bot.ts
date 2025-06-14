@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { storage } from './storage';
+import { storage } from './storage-simple';
 import crypto from 'crypto';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;

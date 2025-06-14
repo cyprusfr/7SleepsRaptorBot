@@ -296,6 +296,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Discord Server operations
+  async addServer(server: { serverId: string; serverName: string; memberCount?: number; isActive?: boolean }): Promise<DiscordServer> {
+    const insertServer: InsertDiscordServer = {
+      serverId: server.serverId,
+      serverName: server.serverName,
+      memberCount: server.memberCount || 0,
+      isActive: server.isActive !== false
+    };
+    return this.upsertDiscordServer(insertServer);
+  }
+
   async upsertDiscordServer(insertServer: InsertDiscordServer): Promise<DiscordServer> {
     const [server] = await db
       .insert(discordServers)

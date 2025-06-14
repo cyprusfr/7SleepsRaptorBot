@@ -41,11 +41,6 @@ app.use((req, res, next) => {
     console.log('🔄 Starting server setup...');
     const server = await registerRoutes(app);
     console.log('✅ Routes registered successfully');
-    
-    // Start Discord bot
-    const { discordBot } = await import("./discord-bot");
-    await discordBot.start();
-    console.log('✅ Discord bot started');
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -86,6 +81,18 @@ app.use((req, res, next) => {
     server.listen(port, host, () => {
       console.log(`✅ Server listening on ${host}:${port}`);
       log(`serving on port ${port}`);
+      
+      // Start Discord bot after server is listening
+      (async () => {
+        try {
+          const { discordBot } = await import("./discord-bot");
+          await discordBot.start();
+          console.log('✅ Discord bot started successfully');
+        } catch (error) {
+          console.error('❌ Discord bot startup failed:', error);
+          // Continue without Discord bot - web app still functional
+        }
+      })();
     });
   } catch (error) {
     console.error('❌ Server startup failed:', error);

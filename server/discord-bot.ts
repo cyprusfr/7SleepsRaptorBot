@@ -1208,29 +1208,7 @@ export class RaptorBot {
             .setRequired(false)
         ),
 
-      // Individual Support Tag Commands
-      new SlashCommandBuilder().setName('anticheat').setDescription('Anti-cheat detection fix'),
-      new SlashCommandBuilder().setName('autoexe').setDescription('Auto-execute script setup'),
-      new SlashCommandBuilder().setName('badcpu').setDescription('CPU compatibility issues'),
-      new SlashCommandBuilder().setName('cookie').setDescription('Cookie logging information'),
-      new SlashCommandBuilder().setName('crash').setDescription('Roblox crash troubleshooting'),
-      new SlashCommandBuilder().setName('elevated').setDescription('Elevated permissions setup'),
-      new SlashCommandBuilder().setName('fwaeh').setDescription('FWAEH error resolution'),
-      new SlashCommandBuilder().setName('giftcard').setDescription('Gift card payment method'),
-      new SlashCommandBuilder().setName('hwid').setDescription('Hardware ID troubleshooting'),
-      new SlashCommandBuilder().setName('install').setDescription('MacSploit installation guide'),
-      new SlashCommandBuilder().setName('iy').setDescription('IY script hub information'),
-      new SlashCommandBuilder().setName('multi-instance').setDescription('Multiple instance support'),
-      new SlashCommandBuilder().setName('nigger').setDescription('Racial slur information'),
-      new SlashCommandBuilder().setName('offline').setDescription('Offline mode functionality'),
-      new SlashCommandBuilder().setName('paypal').setDescription('PayPal payment'),
-      new SlashCommandBuilder().setName('rapejaml').setDescription('JamL reference'),
-      new SlashCommandBuilder().setName('robux').setDescription('Robux command'),
-      new SlashCommandBuilder().setName('scripts').setDescription('Script resources'),
-      new SlashCommandBuilder().setName('sellsn').setDescription('SellSN store'),
-      new SlashCommandBuilder().setName('uicrash').setDescription('UI crash fix'),
-      new SlashCommandBuilder().setName('user').setDescription('User branch install'),
-      new SlashCommandBuilder().setName('zsh').setDescription('ZSH command fix'),
+
 
 
     ];
@@ -1440,30 +1418,6 @@ export class RaptorBot {
           break;
         case 'tag-manager':
           await this.handleTagManagerCommand(interaction);
-          break;
-        case 'anticheat':
-        case 'autoexe':
-        case 'badcpu':
-        case 'cookie':
-        case 'crash':
-        case 'elevated':
-        case 'fwaeh':
-        case 'giftcard':
-        case 'hwid':
-        case 'install':
-        case 'iy':
-        case 'multi-instance':
-        case 'nigger':
-        case 'offline':
-        case 'paypal':
-        case 'rapejaml':
-        case 'robux':
-        case 'scripts':
-        case 'sellsn':
-        case 'uicrash':
-        case 'user':
-        case 'zsh':
-          await this.handleSupportTagCommand(interaction);
           break;
         default:
           const embed = new EmbedBuilder()
@@ -3502,15 +3456,9 @@ export class RaptorBot {
     // Clean up plain text (remove extra spaces and newlines)
     plainText = plainText.replace(/\n\s*\n/g, '\n').trim();
 
-    // For .scripts tag, check if it's Lua or bash
+    // For .scripts tag, just return plain text without code blocks
     if (tag === '.scripts') {
-      if (content.includes('loadstring') || content.includes('game:') || content.includes('local ')) {
-        return `\`\`\`lua\n${content}\n\`\`\``;
-      } else if (bashCommands.length > 0) {
-        return `\`\`\`bash\n${content}\n\`\`\``;
-      } else {
-        return `\`\`\`lua\n${content}\n\`\`\``;
-      }
+      return content;
     }
 
     // For other tags, show plain text + bash commands in separate blocks
@@ -3699,41 +3647,7 @@ export class RaptorBot {
     }
   }
 
-  private async handleSupportTagCommand(interaction: ChatInputCommandInteraction) {
-    const startTime = Date.now();
-    let success = false;
 
-    try {
-      const commandName = interaction.commandName;
-      const tagKey = `.${commandName}`;
-      const tagContent = this.predefinedTags[tagKey];
-
-      if (!tagContent) {
-        await interaction.reply({ 
-          content: `❌ Support tag \`${tagKey}\` not found.`,
-          ephemeral: true 
-        });
-        return;
-      }
-
-      // Format the tag response with proper bash script separation
-      let formattedContent = this.formatTagResponse(tagContent, tagKey);
-      await interaction.reply(formattedContent);
-      success = true;
-
-      // Log the support tag usage
-      await this.logActivity('support_tag_used', `User ${interaction.user.username} used support tag ${tagKey}`);
-      await this.logCommandUsage(interaction, startTime, success, null);
-    } catch (error) {
-      console.error('Error in support tag command:', error);
-      await this.logCommandUsage(interaction, startTime, false, error);
-      
-      await interaction.reply({ 
-        content: '❌ An error occurred while retrieving the support information.',
-        ephemeral: true 
-      });
-    }
-  }
 
   public async start(): Promise<void> {
     if (!DISCORD_TOKEN) {

@@ -74,6 +74,8 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **MessageContent Intent Resolution**: User enabled MessageContent intent in Discord Developer Portal enabling message-based support tags (.hwid format)
 - **Support Tag Format Updates**: Removed Discord embeds per user request, implemented plain text responses and intelligent script detection
 - **Smart Script Detection**: Implemented automatic language detection for .scripts tag - bash scripts (sudo, curl commands) use bash code blocks, Lua scripts (game:, loadstring) use lua code blocks with proper syntax highlighting
+- **Support Tag Slash Commands Removal**: Removed all individual slash commands (/hwid, /crash, etc.) per user request, keeping only message-based support tags (.hwid format)
+- **Scripts Tag Plain Text**: Updated .scripts tag to return plain text without code blocks as requested
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

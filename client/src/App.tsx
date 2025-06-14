@@ -45,6 +45,29 @@ function Router() {
     );
   }
 
+  // If authentication failed, show landing page with login option
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Raptor Bot Dashboard</h1>
+          <p className="text-gray-600 mb-8">MacSploit license management and Discord bot control panel</p>
+          <div className="space-y-4">
+            <a 
+              href="/api/auth/google"
+              className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Sign in with Google
+            </a>
+            <p className="text-sm text-gray-500">
+              Access requires Google authentication and a valid dashboard key from Discord
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // If not authenticated with Google, or not completed auth flow
   if (!isAuthenticated || (!authFlowComplete && !dashboardKeyAuthenticated)) {
     return (

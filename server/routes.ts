@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage-simple";
+import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { raptorBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
@@ -240,6 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to check phrase status" });
     }
   });
+
+
 
 
 

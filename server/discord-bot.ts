@@ -47,6 +47,7 @@ export class RaptorBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
       ],
     });
@@ -162,8 +163,15 @@ export class RaptorBot {
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
 
-      // Without MessageContent intent, we can't read message content
-      // But we can still handle verification codes in DMs
+      // Handle predefined support tags
+      const messageContent = message.content.trim().toLowerCase();
+      
+      if (this.predefinedTags[messageContent]) {
+        await this.handlePredefinedTag(message, messageContent);
+        return;
+      }
+
+      // Handle verification codes in DMs
       if (message.channel.type === ChannelType.DM) {
         await this.handleVerificationMessage(message);
       }

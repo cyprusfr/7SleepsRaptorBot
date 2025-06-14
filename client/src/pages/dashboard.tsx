@@ -331,18 +331,6 @@ function DashboardContent() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column - Key Management */}
             <div className="space-y-6">
-              {/* Discord Keys Management */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Key className="w-5 h-5" />
-                    Discord Keys
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <KeyTable keys={keys} />
-                </CardContent>
-              </Card>
 
               {/* Quick Key Actions */}
               <Card>

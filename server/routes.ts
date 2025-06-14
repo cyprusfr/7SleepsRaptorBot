@@ -1113,7 +1113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Discord keys
+  // Discord bot keys (actual bot keys, not dashboard auth keys)
   app.get("/api/keys", async (req, res) => {
     try {
       const status = req.query.status as string;
@@ -1262,28 +1262,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard keys
-  app.get("/api/keys", async (req, res) => {
+  // Bot settings endpoints
+  app.get("/api/bot/settings", async (req, res) => {
     try {
-      const keys = await storage.getAllDashboardKeys();
+      const settings = await storage.getAllBotSettings();
+      const settingsObj = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {} as Record<string, string>);
       
-      // Format keys for dashboard display
-      const formattedKeys = keys.map(key => ({
-        id: key.id,
-        keyId: key.keyId,
-        discordUsername: key.discordUsername,
-        discordUserId: key.discordUserId,
-        status: key.status,
-        generatedAt: key.generatedAt?.toISOString(),
-        lastAccessAt: key.lastAccessAt?.toISOString(),
-        isLinked: !!key.userId,
-        linkedEmail: key.linkedEmail,
-      }));
-      
-      res.json(formattedKeys);
+      res.json({
+        prefix: settingsObj.prefix || '/',
+        rateLimitEnabled: settingsObj.rateLimitEnabled === 'true',
+        maxCommandsPerMinute: parseInt(settingsObj.maxCommandsPerMinute || '10'),
+        autoDeleteTime: parseInt(settingsObj.autoDeleteTime || '5'),
+        logChannelId: settingsObj.logChannelId || '',
+        moderationEnabled: settingsObj.moderationEnabled === 'true',
+        candySystemEnabled: settingsObj.candySystemEnabled === 'true',
+        welcomeMessage: settingsObj.welcomeMessage || 'Welcome to the server!',
+        maintenanceMode: settingsObj.maintenanceMode === 'true',
+      });
     } catch (error) {
-      console.error("Error fetching keys:", error);
-      res.status(500).json({ error: "Failed to fetch keys" });
+      console.error("Error fetching bot settings:", error);
+      res.status(500).json({ error: "Failed to fetch bot settings" });
+    }
+  });
+
+  app.post("/api/bot/settings", async (req, res) => {
+    try {
+      const settings = req.body;
+      
+      // Update each setting in the database
+      for (const [key, value] of Object.entries(settings)) {
+        await storage.setBotSetting(key, String(value));
+      }
+      
+      // Apply settings to the Discord bot
+      await raptorBot.updateSettings(settings);
+      
+      await storage.logActivity({
+        type: "bot_settings_update",
+        description: `Bot settings updated: ${Object.keys(settings).join(', ')}`,
+        metadata: settings
+      });
+      
+      res.json({ success: true, message: "Bot settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating bot settings:", error);
+      res.status(500).json({ error: "Failed to update bot settings" });
     }
   });
 

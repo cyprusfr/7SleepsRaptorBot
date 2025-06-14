@@ -5979,6 +5979,37 @@ Please purchase using PayPal on the website.`,
       }
     }
   }
+
+  public isOnline(): boolean {
+    return this.isReady && this.client.readyTimestamp !== null;
+  }
+
+  public async updateSettings(settings: any): Promise<void> {
+    try {
+      // Update internal settings cache
+      Object.entries(settings).forEach(([key, value]) => {
+        this.settings.set(key, String(value));
+      });
+
+      // Apply specific setting changes immediately
+      if (settings.maintenanceMode !== undefined) {
+        console.log(`🔧 Maintenance mode ${settings.maintenanceMode ? 'enabled' : 'disabled'}`);
+      }
+
+      if (settings.rateLimitEnabled !== undefined) {
+        console.log(`⚡ Rate limiting ${settings.rateLimitEnabled ? 'enabled' : 'disabled'}`);
+      }
+
+      if (settings.candySystemEnabled !== undefined) {
+        console.log(`🍬 Candy system ${settings.candySystemEnabled ? 'enabled' : 'disabled'}`);
+      }
+
+      console.log('✅ Bot settings updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating bot settings:', error);
+      throw error;
+    }
+  }
 }
 
 export const raptorBot = new RaptorBot();

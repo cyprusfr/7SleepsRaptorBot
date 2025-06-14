@@ -91,10 +91,16 @@ function requireAdmin(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Apply general API rate limiting to all routes
-  app.use('/api/', rateLimits.api.middleware.bind(rateLimits.api));
-  // Setup Google OAuth authentication
-  setupAuth(app);
+  try {
+    // Apply general API rate limiting to all routes
+    app.use('/api/', rateLimits.api.middleware.bind(rateLimits.api));
+    // Setup Google OAuth authentication
+    setupAuth(app);
+    console.log('✅ Authentication setup completed');
+  } catch (error) {
+    console.error('❌ Error setting up authentication:', error);
+    throw error;
+  }
 
   // Health check endpoint for deployment infrastructure
   app.get('/api/health', (req, res) => {

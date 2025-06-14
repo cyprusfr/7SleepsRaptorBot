@@ -47,7 +47,6 @@ export class RaptorBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
       ],
     });
@@ -163,21 +162,7 @@ export class RaptorBot {
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
 
-      // Handle predefined support tags
-      const messageContent = message.content.trim().toLowerCase();
-      console.log('Message received:', messageContent);
-      
-      if (this.predefinedTags[messageContent]) {
-        console.log('Found predefined tag:', messageContent);
-        try {
-          await this.handlePredefinedTag(message, messageContent);
-        } catch (error) {
-          console.error('Error handling predefined tag:', error);
-        }
-        return;
-      }
-
-      // Handle verification codes in DMs
+      // Handle verification codes in DMs only
       if (message.channel.type === ChannelType.DM) {
         await this.handleVerificationMessage(message);
       }
@@ -1188,6 +1173,39 @@ export class RaptorBot {
             .setName('check')
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
+
+      // Support Tag Command
+      new SlashCommandBuilder()
+        .setName('tag')
+        .setDescription('MacSploit support tags')
+        .addStringOption(option =>
+          option.setName('name')
+            .setDescription('Support tag name')
+            .setRequired(true)
+            .addChoices(
+              { name: 'anticheat - Anticheat detection info', value: 'anticheat' },
+              { name: 'autoexe - Auto execute problems', value: 'autoexe' },
+              { name: 'badcpu - CPU compatibility', value: 'badcpu' },
+              { name: 'cookie - Cookie issues', value: 'cookie' },
+              { name: 'crash - Roblox crash fix', value: 'crash' },
+              { name: 'elevated - Permission errors', value: 'elevated' },
+              { name: 'fwaeh - FWAEH error', value: 'fwaeh' },
+              { name: 'giftcard - Gift card payment', value: 'giftcard' },
+              { name: 'hwid - Get HWID command', value: 'hwid' },
+              { name: 'install - Installation guide', value: 'install' },
+              { name: 'iy - Infinite Yield script', value: 'iy' },
+              { name: 'multi-instance - Multiple instances', value: 'multi-instance' },
+              { name: 'nigger - Test tag', value: 'nigger' },
+              { name: 'offline - MacSploit offline fix', value: 'offline' },
+              { name: 'paypal - PayPal payment', value: 'paypal' },
+              { name: 'rapejaml - JamL reference', value: 'rapejaml' },
+              { name: 'robux - Robux command', value: 'robux' },
+              { name: 'scripts - Script resources', value: 'scripts' },
+              { name: 'sellsn - SellSN store', value: 'sellsn' },
+              { name: 'uicrash - UI crash fix', value: 'uicrash' },
+              { name: 'user - User branch install', value: 'user' },
+              { name: 'zsh - ZSH command fix', value: 'zsh' }
+            )),
     ];
 
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
@@ -1392,6 +1410,9 @@ export class RaptorBot {
           break;
         case 'whitelist':
           await this.handleWhitelistCommand(interaction);
+          break;
+        case 'tag':
+          await this.handleTagCommand(interaction);
           break;
         default:
           const embed = new EmbedBuilder()
@@ -3384,42 +3405,41 @@ export class RaptorBot {
     await interaction.reply({ content: 'Whitelist command not yet fully implemented', ephemeral: true });
   }
 
-  private async handlePredefinedTag(message: any, tag: string) {
-    console.log('handlePredefinedTag called with tag:', tag);
-    const response = this.predefinedTags[tag];
-    console.log('Response found:', response ? 'YES' : 'NO');
+  private async handleTagCommand(interaction: ChatInputCommandInteraction) {
+    const tagName = interaction.options.getString('name', true);
+    const response = this.predefinedTags[`.${tagName}`];
     
     if (!response) {
-      console.log('No response found for tag:', tag);
+      await interaction.reply({ 
+        content: '❌ Support tag not found.', 
+        ephemeral: true 
+      });
       return;
     }
-    
+
     try {
       const embed = new EmbedBuilder()
         .setTitle('🔧 MacSploit Support')
-        .setDescription(response)
+        .setDescription(`**${tagName.toUpperCase()}**\n\n${response}`)
         .setColor(0x0099ff)
         .setFooter({ text: 'MacSploit Support System' })
         .setTimestamp();
 
-      console.log('Attempting to send reply...');
-      await message.reply({ embeds: [embed] });
-      console.log('Reply sent successfully');
+      await interaction.reply({ embeds: [embed] });
       
       // Log tag usage
-      await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
+      await this.logActivity('support_tag_used', `Support tag used: .${tagName} by ${interaction.user.username}`);
       
     } catch (error) {
-      console.error('Error sending predefined tag response:', error);
-      // Try sending a simple message as fallback
-      try {
-        await message.channel.send(`**${tag}**\n\n${response}`);
-        console.log('Fallback message sent');
-      } catch (fallbackError) {
-        console.error('Fallback message also failed:', fallbackError);
-      }
+      console.error('Error handling tag command:', error);
+      await interaction.reply({ 
+        content: '❌ Failed to process support tag.', 
+        ephemeral: true 
+      });
     }
   }
+
+
 
   private async handleVerificationMessage(message: any) {
     const code = message.content.trim().toUpperCase();

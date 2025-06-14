@@ -1890,24 +1890,19 @@ export class RaptorBot {
     const targetUser = interaction.options.getUser('user') || interaction.user;
 
     try {
-      // Get or create user balance
-      let user = await storage.getDiscordUserByDiscordId(targetUser.id);
+      // Get candy balance from the candy_balances table
+      const candyBalance = await storage.getCandyBalance(targetUser.id);
       
-      if (!user) {
-        user = await storage.upsertDiscordUser({
-          username: targetUser.username,
-          discordId: targetUser.id
-        });
-      }
-
-      const totalBalance = user.candyBalance + user.candyBank;
+      const walletBalance = candyBalance?.balance || 0;
+      const bankBalance = candyBalance?.bankBalance || 0;
+      const totalBalance = walletBalance + bankBalance;
 
       const embed = new EmbedBuilder()
         .setTitle('🍭 Candy Balance')
         .setDescription(`Balance information for ${targetUser.username}`)
         .addFields(
-          { name: '💰 Wallet', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
-          { name: '🏦 Bank', value: `${user.candyBank.toLocaleString()} candies`, inline: true },
+          { name: '💰 Wallet', value: `${walletBalance.toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank', value: `${bankBalance.toLocaleString()} candies`, inline: true },
           { name: '📊 Total', value: `${totalBalance.toLocaleString()} candies`, inline: true }
         )
         .setThumbnail(targetUser.displayAvatarURL())
@@ -2085,12 +2080,16 @@ export class RaptorBot {
         await this.logActivity('candy_beg', `${interaction.user.username} begged and received ${finalAmount} candies`);
       }
 
+      // Get updated balance from candy_balances table
+      const candyBalance = await storage.getCandyBalance(userId);
+      const currentBalance = candyBalance?.balance || 0;
+
       const embed = new EmbedBuilder()
         .setTitle('🙏 Begging Results')
         .setDescription(randomOutcome.message)
         .addFields(
           { name: '💰 Earned', value: `${finalAmount.toLocaleString()} candies`, inline: true },
-          { name: '🍭 New Balance', value: `${(user.candyBalance + finalAmount).toLocaleString()} candies`, inline: true },
+          { name: '🍭 New Balance', value: `${currentBalance.toLocaleString()} candies`, inline: true },
           { name: '⏰ Next Beg', value: `<t:${Math.floor((now.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
         )
         .setColor(finalAmount > 0 ? 0x00ff00 : 0xff9900)

@@ -823,6 +823,9 @@ export class DatabaseStorage implements IStorage {
         bankBalance: 0,
         totalEarned: amount > 0 ? amount : 0,
         totalSpent: amount < 0 ? Math.abs(amount) : 0,
+        lastDaily: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
     } else {
       const current = existing[0];
@@ -849,6 +852,9 @@ export class DatabaseStorage implements IStorage {
         userId,
         balance: 0,
         bankBalance: Math.max(0, amount),
+        totalEarned: amount > 0 ? amount : 0,
+        totalSpent: amount < 0 ? Math.abs(amount) : 0,
+        lastDaily: null
       });
     } else {
       const current = existing[0];

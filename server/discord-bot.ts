@@ -247,163 +247,29 @@ export class RaptorBot {
 
   private async registerCommands() {
     const commands = [
-      new SlashCommandBuilder()
-        .setName('verify')
-        .setDescription('Verify your dashboard access with a verification code')
-        .addStringOption(option =>
-          option.setName('code')
-            .setDescription('The verification code from the dashboard')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('whitelist')
-        .setDescription('Generate and whitelist a new key')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to assign the key to')
-            .setRequired(false)
-        )
-        .addStringOption(option =>
-          option.setName('hwid')
-            .setDescription('Hardware ID to bind the key to')
-            .setRequired(false)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('dewhitelist')
-        .setDescription('Dewhitelist and revoke a key')
-        .addStringOption(option =>
-          option.setName('key')
-            .setDescription('Key ID to revoke')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('userinfo')
-        .setDescription('Get user information')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to get information about')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('hwidinfo')
-        .setDescription('Get HWID information')
-        .addStringOption(option =>
-          option.setName('hwid')
-            .setDescription('Hardware ID to get information about')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('link')
-        .setDescription('Link a key to a user')
-        .addStringOption(option =>
-          option.setName('key')
-            .setDescription('Key ID to link')
-            .setRequired(true)
-        )
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to link the key to')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('backup')
-        .setDescription('Backup server data and members')
-        .addStringOption(option =>
-          option.setName('type')
-            .setDescription('Type of backup to create')
-            .setRequired(false)
-            .addChoices(
-              { name: 'Full Backup', value: 'full' },
-              { name: 'Members Only', value: 'members' },
-              { name: 'Channels Only', value: 'channels' },
-              { name: 'Roles Only', value: 'roles' },
-              { name: 'Messages Only', value: 'messages' }
-            )
-        ),
-
-      new SlashCommandBuilder()
-        .setName('restore')
-        .setDescription('Restore server data from backup')
-        .addStringOption(option =>
-          option.setName('backup_id')
-            .setDescription('ID of the backup to restore')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option.setName('type')
-            .setDescription('What to restore from backup')
-            .setRequired(false)
-            .addChoices(
-              { name: 'Everything', value: 'full' },
-              { name: 'Channels Only', value: 'channels' },
-              { name: 'Roles Only', value: 'roles' }
-            )
-        ),
-
-      new SlashCommandBuilder()
-        .setName('backups')
-        .setDescription('List available backups')
-        .addStringOption(option =>
-          option.setName('action')
-            .setDescription('Action to perform')
-            .setRequired(false)
-            .addChoices(
-              { name: 'List Backups', value: 'list' },
-              { name: 'Delete Backup', value: 'delete' }
-            )
-        )
-        .addStringOption(option =>
-          option.setName('backup_id')
-            .setDescription('Backup ID for delete action')
-            .setRequired(false)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('help')
-        .setDescription('Show available commands and usage'),
-
-      new SlashCommandBuilder()
-        .setName('whitelist-user')
-        .setDescription('Add a user ID to the bot whitelist')
-        .addStringOption(option =>
-          option.setName('user_id')
-            .setDescription('Discord user ID to whitelist')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option.setName('username')
-            .setDescription('Username for the user ID')
-            .setRequired(false)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('unwhitelist-user')
-        .setDescription('Remove a user ID from the bot whitelist')
-        .addStringOption(option =>
-          option.setName('user_id')
-            .setDescription('Discord user ID to remove from whitelist')
-            .setRequired(true)
-        ),
-
-      // License Key Management Commands
+      // License Key Management
       new SlashCommandBuilder()
         .setName('add')
         .setDescription('Add a new license key to the database')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to assign the key to')
+            .setRequired(true)
+        )
         .addStringOption(option =>
           option.setName('key')
             .setDescription('License key to add')
             .setRequired(true)
         )
         .addStringOption(option =>
-          option.setName('user')
-            .setDescription('User to assign the key to')
-            .setRequired(false)
+          option.setName('generatedby')
+            .setDescription('Who generated this key')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option.setName('reason')
+            .setDescription('Reason for generating this key')
+            .setRequired(true)
         ),
 
       new SlashCommandBuilder()
@@ -411,46 +277,96 @@ export class RaptorBot {
         .setDescription('Fetch a user\'s avatar from the server')
         .addUserOption(option =>
           option.setName('user')
-            .setDescription('User to get avatar for')
-            .setRequired(true)
+            .setDescription('User to get avatar from')
+            .setRequired(false)
+        )
+        .addUserOption(option =>
+          option.setName('user2')
+            .setDescription('Second user (optional)')
+            .setRequired(false)
         ),
 
       new SlashCommandBuilder()
         .setName('bug-report')
-        .setDescription('Report a bug to the developers')
-        .addStringOption(option =>
-          option.setName('description')
-            .setDescription('Description of the bug')
-            .setRequired(true)
-        ),
+        .setDescription('Report a bug to the developers'),
 
       new SlashCommandBuilder()
         .setName('bypass')
         .setDescription('Bypass given link')
         .addStringOption(option =>
-          option.setName('link')
-            .setDescription('Link to bypass')
+          option.setName('url')
+            .setDescription('URL to bypass')
             .setRequired(true)
         ),
 
+      // Candy System Commands
       new SlashCommandBuilder()
-        .setName('db-management')
-        .setDescription('Manage Database Tables and Entries')
-        .addStringOption(option =>
-          option.setName('action')
-            .setDescription('Action to perform')
-            .setRequired(true)
-            .addChoices(
-              { name: 'View Tables', value: 'view' },
-              { name: 'Clear Table', value: 'clear' },
-              { name: 'Backup Database', value: 'backup' },
-              { name: 'Restore Database', value: 'restore' }
+        .setName('candy')
+        .setDescription('Candy system commands')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('balance')
+            .setDescription('Check your balance')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to check balance for')
+                .setRequired(false)
             )
         )
-        .addStringOption(option =>
-          option.setName('table')
-            .setDescription('Table name (if applicable)')
-            .setRequired(false)
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('beg')
+            .setDescription('Beg for some candy')
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('credit-card-scam')
+            .setDescription('Attempt a credit card scam on another user')
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('daily')
+            .setDescription('Claim your daily reward of 2000 candies')
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('deposit')
+            .setDescription('Deposit candy into your bank')
+            .addIntegerOption(option =>
+              option.setName('amount')
+                .setDescription('Amount to deposit')
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('gamble')
+            .setDescription('99.99% of gamblers quit before they hit big')
+            .addIntegerOption(option =>
+              option.setName('amount')
+                .setDescription('Amount to gamble')
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('leaderboard')
+            .setDescription('Display the top 10 users with the highest amt of candies')
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('pay')
+            .setDescription('Give candies to another user')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to pay')
+                .setRequired(true)
+            )
+            .addIntegerOption(option =>
+              option.setName('amount')
+                .setDescription('Amount to pay')
+                .setRequired(true)
+            )
         ),
 
       new SlashCommandBuilder()
@@ -464,108 +380,246 @@ export class RaptorBot {
 
       // Key Generation Commands
       new SlashCommandBuilder()
-        .setName('generatekey-bitcoin')
-        .setDescription('Generate a key for a bitcoin payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Bitcoin amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-cashapp')
-        .setDescription('Generate a key for a cashapp payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('CashApp amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-custom')
-        .setDescription('Generate a key for a custom payment method')
-        .addStringOption(option =>
-          option.setName('method')
-            .setDescription('Payment method')
-            .setRequired(true)
+        .setName('generatekey')
+        .setDescription('Generate keys for various payment methods')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('bitcoin')
+            .setDescription('Generate a key for a bitcoin payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('txid')
+                .setDescription('Transaction ID')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
         )
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Payment amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-ethereum')
-        .setDescription('Generate a key for an eth payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Ethereum amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-g2a')
-        .setDescription('Generate a key for a g2a gift code')
-        .addStringOption(option =>
-          option.setName('code')
-            .setDescription('G2A gift code')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-litecoin')
-        .setDescription('Generate a key for a litecoin payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Litecoin amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-paypal')
-        .setDescription('Generate a key for a paypal payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('PayPal amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-robux')
-        .setDescription('Generate a key for a robux payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Robux amount')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('generatekey-venmo')
-        .setDescription('Generate a key for a venmo payment')
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Venmo amount')
-            .setRequired(true)
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('cashapp')
+            .setDescription('Generate a key for a cashapp payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('identifier')
+                .setDescription('Payment identifier')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('custom')
+            .setDescription('Generate a key for a custom payment method')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Payment note')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('ethereum')
+            .setDescription('Generate a key for an eth payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('txid')
+                .setDescription('Transaction ID')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('g2a')
+            .setDescription('Generate a key for a g2a gift code')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('litecoin')
+            .setDescription('Generate a key for a litecoin payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('txid')
+                .setDescription('Transaction ID')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('paypal')
+            .setDescription('Generate a key for a paypal payment')
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('robux')
+            .setDescription('Generate a key for a robux payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('roblox_user_id')
+                .setDescription('Roblox user ID')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('venmo')
+            .setDescription('Generate a key for a venmo payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('txid')
+                .setDescription('Transaction ID')
+                .setRequired(true)
+            )
+            .addStringOption(option =>
+              option.setName('type')
+                .setDescription('Key type')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'note', value: 'note' },
+                  { name: 'booster', value: 'booster' },
+                  { name: 'early-access', value: 'early-access' },
+                  { name: 'monthly', value: 'monthly' }
+                )
+            )
         ),
 
       // HWID Commands
       new SlashCommandBuilder()
-        .setName('hwidinfo-hwid')
-        .setDescription('Get HWID information by HWID')
-        .addStringOption(option =>
-          option.setName('hwid')
-            .setDescription('Hardware ID to lookup')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('hwidinfo-user')
-        .setDescription('Get HWID information by user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to get HWID info for')
-            .setRequired(true)
+        .setName('hwidinfo')
+        .setDescription('Get HWID information')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('hwid')
+            .setDescription('Get HWID information by HWID')
+            .addStringOption(option =>
+              option.setName('hwid')
+                .setDescription('Hardware ID to lookup')
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('user')
+            .setDescription('Get HWID information by user')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to lookup HWID for')
+                .setRequired(true)
+            )
         ),
 
       new SlashCommandBuilder()
@@ -573,119 +627,602 @@ export class RaptorBot {
         .setDescription('Get information about a license key')
         .addStringOption(option =>
           option.setName('key')
-            .setDescription('License key to get info for')
+            .setDescription('License key to lookup')
             .setRequired(true)
         ),
 
-      // Server Management Commands
+      // Lockdown Commands
       new SlashCommandBuilder()
-        .setName('lockdown-end')
-        .setDescription('End server lockdown'),
-
-      new SlashCommandBuilder()
-        .setName('lockdown-initiate')
-        .setDescription('Initiate server lockdown'),
-
-      // Logging Commands
-      new SlashCommandBuilder()
-        .setName('log-add')
-        .setDescription('Add logs for a user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to add logs for')
-            .setRequired(true)
+        .setName('lockdown')
+        .setDescription('Server lockdown commands')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('end')
+            .setDescription('End server lockdown')
         )
-        .addStringOption(option =>
-          option.setName('log')
-            .setDescription('Log entry to add')
-            .setRequired(true)
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('initiate')
+            .setDescription('Initiate server lockdown')
         ),
 
+      // Log Commands
       new SlashCommandBuilder()
-        .setName('log-lb')
-        .setDescription('View the logs leaderboard'),
-
-      new SlashCommandBuilder()
-        .setName('log-remove')
-        .setDescription('Remove logs from a user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to remove logs from')
-            .setRequired(true)
+        .setName('log')
+        .setDescription('User log management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('add')
+            .setDescription('Add logs for a user')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to add logs for')
+                .setRequired(true)
+            )
+            .addIntegerOption(option =>
+              option.setName('count')
+                .setDescription('Number of logs to add')
+                .setRequired(true)
+            )
         )
-        .addStringOption(option =>
-          option.setName('log_id')
-            .setDescription('Log ID to remove')
-            .setRequired(true)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('log-view')
-        .setDescription('View logs for a user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to view logs for')
-            .setRequired(true)
-        ),
-
-      // Candy System Commands
-      new SlashCommandBuilder()
-        .setName('balance')
-        .setDescription('Check your candy balance')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to check balance for (optional)')
-            .setRequired(false)
-        ),
-
-      new SlashCommandBuilder()
-        .setName('daily')
-        .setDescription('Claim your daily candy reward'),
-
-      new SlashCommandBuilder()
-        .setName('candy-transfer')
-        .setDescription('Transfer candy to another user')
-        .addUserOption(option =>
-          option.setName('user')
-            .setDescription('User to transfer candy to')
-            .setRequired(true)
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('lb')
+            .setDescription('View the logs leaderboard')
         )
-        .addIntegerOption(option =>
-          option.setName('amount')
-            .setDescription('Amount of candy to transfer')
-            .setRequired(true)
-            .setMinValue(1)
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('remove')
+            .setDescription('Remove logs from a user')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to remove logs from')
+                .setRequired(true)
+            )
+            .addIntegerOption(option =>
+              option.setName('count')
+                .setDescription('Number of logs to remove')
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('view')
+            .setDescription('View logs for a user')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to view logs for')
+                .setRequired(false)
+            )
         ),
-
-      new SlashCommandBuilder()
-        .setName('candy-leaderboard')
-        .setDescription('View the candy leaderboard'),
-
-      // Utility Commands
-      new SlashCommandBuilder()
-        .setName('ping')
-        .setDescription('Pong! View the speed of the bot\'s response'),
 
       new SlashCommandBuilder()
         .setName('poke')
         .setDescription('Poke the bot'),
 
       new SlashCommandBuilder()
-        .setName('roblox')
-        .setDescription('Automates a roblox payment')
+        .setName('suggestion')
+        .setDescription('Suggestion system')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('setup')
+            .setDescription('Setup the suggestion channels')
+            .addChannelOption(option =>
+              option.setName('suggestion-channel')
+                .setDescription('Channel for suggestions')
+                .setRequired(true)
+            )
+            .addChannelOption(option =>
+              option.setName('results-channel')
+                .setDescription('Channel for results')
+                .setRequired(true)
+            )
+        ),
+
+      // Whitelist Commands
+      new SlashCommandBuilder()
+        .setName('whitelist')
+        .setDescription('Whitelist management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('add')
+            .setDescription('Add a user to whitelist')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to add to whitelist')
+                .setRequired(true)
+            )
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('list')
+            .setDescription('List all whitelisted users')
+        )
+        .addSubcommandGroup(group =>
+          group
+            .setName('admin')
+            .setDescription('Whitelist admin management')
+            .addSubcommand(subcommand =>
+              subcommand
+                .setName('add')
+                .setDescription('Add a whitelist admin')
+                .addUserOption(option =>
+                  option.setName('user')
+                    .setDescription('User to make whitelist admin')
+                    .setRequired(true)
+                )
+            )
+            .addSubcommand(subcommand =>
+              subcommand
+                .setName('list')
+                .setDescription('List all whitelist admins')
+            )
+            .addSubcommand(subcommand =>
+              subcommand
+                .setName('remove')
+                .setDescription('Remove a whitelist admin')
+                .addUserOption(option =>
+                  option.setName('user')
+                    .setDescription('User to remove from whitelist admins')
+                    .setRequired(true)
+                )
+            )
+        ),
+
+      // Test Command
+      new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Test all bot commands and functionality'),
+
+      // Transfer Command  
+      new SlashCommandBuilder()
+        .setName('transfer')
+        .setDescription('Transfer a key to another user')
         .addStringOption(option =>
-          option.setName('username')
-            .setDescription('Roblox username')
+          option.setName('key')
+            .setDescription('Key to transfer')
             .setRequired(true)
         )
-        .addStringOption(option =>
-          option.setName('amount')
-            .setDescription('Robux amount')
+        .addUserOption(option =>
+          option.setName('user')
+            .setDescription('User to transfer to')
             .setRequired(true)
         ),
 
+      // Legacy verify command for compatibility
       new SlashCommandBuilder()
-        .setName('role-color')
+        .setName('verify')
+        .setDescription('Verify your dashboard access with a verification code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('The verification code from the dashboard')
+            .setRequired(true)
+        )
+    ];
+
+    try {
+      const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
+      console.log('Started refreshing application (/) commands.');
+
+      await rest.put(
+        Routes.applicationCommands(CLIENT_ID!),
+        { body: commands },
+      );
+
+      console.log('Successfully reloaded application (/) commands.');
+    } catch (error) {
+      console.error('Error registering commands:', error);
+    }
+  }
+
+  private async handleCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    
+    try {
+      // Check permissions for all commands except verify
+      if (interaction.commandName !== 'verify' && !this.hasRequiredPermissions(interaction)) {
+        await interaction.reply({ content: 'You don\'t have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      // Rate limiting check
+      if (await this.isRateLimited(interaction.user.id)) {
+        await interaction.reply({ content: 'You are being rate limited. Please wait before using another command.', ephemeral: true });
+        return;
+      }
+
+      // Store user data
+      await this.storeUserData(interaction.user, interaction.member, interaction.guild);
+
+      // Handle commands based on exact names from screenshots
+      switch (interaction.commandName) {
+        case 'add':
+          await this.handleAdd(interaction);
+          break;
+        case 'avatar':
+          await this.handleAvatar(interaction);
+          break;
+        case 'bug-report':
+          await this.handleBugReport(interaction);
+          break;
+        case 'bypass':
+          await this.handleBypass(interaction);
+          break;
+        case 'candy':
+          await this.handleCandyCommands(interaction);
+          break;
+        case 'eval':
+          await this.handleEval(interaction);
+          break;
+        case 'generatekey':
+          await this.handleGenerateKeyCommands(interaction);
+          break;
+        case 'hwidinfo':
+          await this.handleHwidInfoCommands(interaction);
+          break;
+        case 'keyinfo':
+          await this.handleKeyInfo(interaction);
+          break;
+        case 'lockdown':
+          await this.handleLockdownCommands(interaction);
+          break;
+        case 'log':
+          await this.handleLogCommands(interaction);
+          break;
+        case 'poke':
+          await this.handlePoke(interaction);
+          break;
+        case 'suggestion':
+          await this.handleSuggestionCommands(interaction);
+          break;
+        case 'test':
+          await this.handleTest(interaction);
+          break;
+        case 'transfer':
+          await this.handleTransfer(interaction);
+          break;
+        case 'verify':
+          await this.handleVerify(interaction);
+          break;
+        case 'whitelist':
+          await this.handleWhitelistCommands(interaction);
+          break;
+        default:
+          await interaction.reply({ content: 'Unknown command.', ephemeral: true });
+          break;
+      }
+
+      // Log successful command execution
+      await this.logCommandUsage(interaction, startTime, true);
+
+    } catch (error) {
+      console.error(`Error handling command ${interaction.commandName}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Log failed command execution
+      await this.logCommandUsage(interaction, startTime, false, errorMessage);
+
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'An error occurred while processing your command.', ephemeral: true });
+      }
+    }
+  }
+
+  // Command Handler Methods
+  private async handleCandyCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'balance':
+        await this.handleBalance(interaction);
+        break;
+      case 'beg':
+        await this.handleCandyBeg(interaction);
+        break;
+      case 'credit-card-scam':
+        await this.handleCreditCardScam(interaction);
+        break;
+      case 'daily':
+        await this.handleDaily(interaction);
+        break;
+      case 'deposit':
+        await this.handleCandyDeposit(interaction);
+        break;
+      case 'gamble':
+        await this.handleCandyGamble(interaction);
+        break;
+      case 'leaderboard':
+        await this.handleCandyLeaderboard(interaction);
+        break;
+      case 'pay':
+        await this.handleCandyPay(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown candy subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleGenerateKeyCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'bitcoin':
+        await this.handleGenerateKeyBitcoin(interaction);
+        break;
+      case 'cashapp':
+        await this.handleGenerateKeyCashapp(interaction);
+        break;
+      case 'custom':
+        await this.handleGenerateKeyCustom(interaction);
+        break;
+      case 'ethereum':
+        await this.handleGenerateKeyEthereum(interaction);
+        break;
+      case 'g2a':
+        await this.handleGenerateKeyG2a(interaction);
+        break;
+      case 'litecoin':
+        await this.handleGenerateKeyLitecoin(interaction);
+        break;
+      case 'paypal':
+        await this.handleGenerateKeyPaypal(interaction);
+        break;
+      case 'robux':
+        await this.handleGenerateKeyRobux(interaction);
+        break;
+      case 'venmo':
+        await this.handleGenerateKeyVenmo(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown generatekey subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleHwidInfoCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'hwid':
+        await this.handleHwidInfoHwid(interaction);
+        break;
+      case 'user':
+        await this.handleHwidInfoUser(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown hwidinfo subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleLockdownCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'end':
+        await this.handleLockdownEnd(interaction);
+        break;
+      case 'initiate':
+        await this.handleLockdownInitiate(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown lockdown subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleLogCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'add':
+        await this.handleLogAdd(interaction);
+        break;
+      case 'lb':
+        await this.handleLogLb(interaction);
+        break;
+      case 'remove':
+        await this.handleLogRemove(interaction);
+        break;
+      case 'view':
+        await this.handleLogView(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown log subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleSuggestionCommands(interaction: ChatInputCommandInteraction) {
+    const subcommand = interaction.options.getSubcommand();
+    
+    switch (subcommand) {
+      case 'setup':
+        await this.handleSuggestionSetup(interaction);
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown suggestion subcommand.', ephemeral: true });
+    }
+  }
+
+  private async handleWhitelistCommands(interaction: ChatInputCommandInteraction) {
+    const subcommandGroup = interaction.options.getSubcommandGroup();
+    const subcommand = interaction.options.getSubcommand();
+    
+    if (subcommandGroup === 'admin') {
+      switch (subcommand) {
+        case 'add':
+          await this.handleWhitelistAdminAdd(interaction);
+          break;
+        case 'list':
+          await this.handleWhitelistAdminList(interaction);
+          break;
+        case 'remove':
+          await this.handleWhitelistAdminRemove(interaction);
+          break;
+        default:
+          await interaction.reply({ content: 'Unknown whitelist admin subcommand.', ephemeral: true });
+      }
+    } else {
+      switch (subcommand) {
+        case 'add':
+          await this.handleWhitelistAdd(interaction);
+          break;
+        case 'list':
+          await this.handleWhitelistList(interaction);
+          break;
+        default:
+          await interaction.reply({ content: 'Unknown whitelist subcommand.', ephemeral: true });
+      }
+    }
+  }
+
+  // Individual Command Implementations
+  private async handleCandyBeg(interaction: ChatInputCommandInteraction) {
+    try {
+      const userId = interaction.user.id;
+      
+      // Random chance logic for begging
+      const chance = Math.random();
+      let amount = 0;
+      let message = '';
+      
+      if (chance < 0.1) { // 10% chance for big reward
+        amount = Math.floor(Math.random() * 500) + 100; // 100-600 candies
+        message = `🍭 Lucky you! You found **${amount}** candies!`;
+      } else if (chance < 0.6) { // 50% chance for small reward
+        amount = Math.floor(Math.random() * 50) + 1; // 1-50 candies
+        message = `🍬 You begged and received **${amount}** candies.`;
+      } else { // 40% chance for nothing
+        message = `😔 Your begging was unsuccessful. Try again later!`;
+      }
+      
+      if (amount > 0) {
+        await storage.updateCandyBalance(userId, amount);
+      }
+      
+      await interaction.reply({ content: message });
+      
+    } catch (error) {
+      console.error('Error in candy beg command:', error);
+      await interaction.reply({ content: 'Error processing beg command.', ephemeral: true });
+    }
+  }
+
+  private async handleCreditCardScam(interaction: ChatInputCommandInteraction) {
+    try {
+      const userId = interaction.user.id;
+      
+      // Random chance logic for credit card scam
+      const chance = Math.random();
+      let amount = 0;
+      let message = '';
+      
+      if (chance < 0.3) { // 30% chance for success
+        amount = Math.floor(Math.random() * 1000) + 200; // 200-1200 candies
+        message = `💳 Your credit card scam was successful! You gained **${amount}** candies!`;
+        await storage.updateCandyBalance(userId, amount);
+      } else { // 70% chance for failure
+        message = `🚨 Your credit card scam failed! Better luck next time.`;
+      }
+      
+      await interaction.reply({ content: message });
+      
+    } catch (error) {
+      console.error('Error in credit card scam command:', error);
+      await interaction.reply({ content: 'Error processing credit card scam command.', ephemeral: true });
+    }
+  }
+
+  private async handleBypass(interaction: ChatInputCommandInteraction) {
+    const url = interaction.options.getString('url', true);
+    
+    await interaction.reply({ 
+      content: `🔗 Bypass functionality for URL: ${url}\n\n*This feature is currently under development.*`,
+      ephemeral: true 
+    });
+  }
+
+  private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getInteger('amount', true);
+    const userId = interaction.user.id;
+    
+    try {
+      const userBalance = await storage.getCandyBalance(userId);
+      
+      if (userBalance.wallet < amount) {
+        await interaction.reply({ content: `❌ You don't have enough candies in your wallet. You have **${userBalance.wallet}** candies.`, ephemeral: true });
+        return;
+      }
+      
+      await storage.depositCandy(userId, amount);
+      const newBalance = await storage.getCandyBalance(userId);
+      
+      await interaction.reply({ 
+        content: `🏦 Successfully deposited **${amount}** candies to your bank!\n\n**New Balance:**\n💰 Wallet: ${newBalance.wallet}\n🏦 Bank: ${newBalance.bank}` 
+      });
+      
+    } catch (error) {
+      console.error('Error in candy deposit command:', error);
+      await interaction.reply({ content: 'Error processing deposit command.', ephemeral: true });
+    }
+  }
+
+  private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
+    const amount = interaction.options.getInteger('amount', true);
+    const userId = interaction.user.id;
+    
+    try {
+      const userBalance = await storage.getCandyBalance(userId);
+      
+      if (userBalance.wallet < amount) {
+        await interaction.reply({ content: `❌ You don't have enough candies to gamble. You have **${userBalance.wallet}** candies.`, ephemeral: true });
+        return;
+      }
+      
+      // 45% chance to win, 55% chance to lose
+      const won = Math.random() < 0.45;
+      
+      if (won) {
+        const winAmount = Math.floor(amount * 1.5); // 1.5x multiplier
+        await storage.updateCandyBalance(userId, winAmount - amount); // Net gain
+        await interaction.reply({ content: `🎰 **You won!** You gained **${winAmount - amount}** candies! (Total return: ${winAmount})` });
+      } else {
+        await storage.updateCandyBalance(userId, -amount);
+        await interaction.reply({ content: `🎰 **You lost!** You lost **${amount}** candies. Better luck next time!` });
+      }
+      
+    } catch (error) {
+      console.error('Error in candy gamble command:', error);
+      await interaction.reply({ content: 'Error processing gamble command.', ephemeral: true });
+    }
+  }
+
+  private async handleCandyPay(interaction: ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getUser('user', true);
+    const amount = interaction.options.getInteger('amount', true);
+    const userId = interaction.user.id;
+    
+    if (targetUser.id === userId) {
+      await interaction.reply({ content: '❌ You cannot pay yourself!', ephemeral: true });
+      return;
+    }
+    
+    try {
+      const userBalance = await storage.getCandyBalance(userId);
+      
+      if (userBalance.wallet < amount) {
+        await interaction.reply({ content: `❌ You don't have enough candies. You have **${userBalance.wallet}** candies.`, ephemeral: true });
+        return;
+      }
+      
+      await storage.transferCandy(userId, targetUser.id, amount);
+      
+      await interaction.reply({ 
+        content: `💸 Successfully transferred **${amount}** candies to ${targetUser.toString()}!` 
+      });
+      
+    } catch (error) {
+      console.error('Error in candy pay command:', error);
+      await interaction.reply({ content: 'Error processing payment.', ephemeral: true });
+    }
+  }
         .setDescription('Find the perfect color to match a role icon tststs')
         .addRoleOption(option =>
           option.setName('role')

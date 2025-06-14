@@ -161,11 +161,28 @@ export class RaptorBot {
     });
 
     this.client.on('messageCreate', async (message) => {
+      // Log every message to debug MessageContent intent issue
+      console.log('MESSAGE EVENT:', {
+        author: message.author?.username || 'unknown',
+        content: message.content || 'empty',
+        isBot: message.author?.bot,
+        hasContent: !!message.content,
+        contentLength: message.content?.length || 0
+      });
+      
       if (message.author.bot) return;
+
+      // If we can't read content, try checking for empty content which indicates MessageContent intent issue
+      if (!message.content || message.content.length === 0) {
+        console.log('WARNING: Message content is empty - MessageContent intent may not be enabled');
+        return;
+      }
 
       // Handle predefined support tags
       const messageContent = message.content.trim().toLowerCase();
+      
       if (this.predefinedTags[messageContent]) {
+        console.log('Found tag:', messageContent);
         await this.handlePredefinedTag(message, messageContent);
         return;
       }
@@ -1182,6 +1199,30 @@ export class RaptorBot {
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
 
+      // Individual Support Tag Commands
+      new SlashCommandBuilder().setName('anticheat').setDescription('Anticheat detection info'),
+      new SlashCommandBuilder().setName('autoexe').setDescription('Auto execute problems'),
+      new SlashCommandBuilder().setName('badcpu').setDescription('CPU compatibility'),
+      new SlashCommandBuilder().setName('cookie').setDescription('Cookie issues'),
+      new SlashCommandBuilder().setName('crash').setDescription('Roblox crash fix'),
+      new SlashCommandBuilder().setName('elevated').setDescription('Permission errors'),
+      new SlashCommandBuilder().setName('fwaeh').setDescription('FWAEH error'),
+      new SlashCommandBuilder().setName('giftcard').setDescription('Gift card payment'),
+      new SlashCommandBuilder().setName('hwid').setDescription('Get HWID command'),
+      new SlashCommandBuilder().setName('install').setDescription('Installation guide'),
+      new SlashCommandBuilder().setName('iy').setDescription('Infinite Yield script'),
+      new SlashCommandBuilder().setName('multi-instance').setDescription('Multiple instances'),
+      new SlashCommandBuilder().setName('nigger').setDescription('Test tag'),
+      new SlashCommandBuilder().setName('offline').setDescription('MacSploit offline fix'),
+      new SlashCommandBuilder().setName('paypal').setDescription('PayPal payment'),
+      new SlashCommandBuilder().setName('rapejaml').setDescription('JamL reference'),
+      new SlashCommandBuilder().setName('robux').setDescription('Robux command'),
+      new SlashCommandBuilder().setName('scripts').setDescription('Script resources'),
+      new SlashCommandBuilder().setName('sellsn').setDescription('SellSN store'),
+      new SlashCommandBuilder().setName('uicrash').setDescription('UI crash fix'),
+      new SlashCommandBuilder().setName('user').setDescription('User branch install'),
+      new SlashCommandBuilder().setName('zsh').setDescription('ZSH command fix'),
+
 
     ];
 
@@ -1387,6 +1428,30 @@ export class RaptorBot {
           break;
         case 'whitelist':
           await this.handleWhitelistCommand(interaction);
+          break;
+        case 'anticheat':
+        case 'autoexe':
+        case 'badcpu':
+        case 'cookie':
+        case 'crash':
+        case 'elevated':
+        case 'fwaeh':
+        case 'giftcard':
+        case 'hwid':
+        case 'install':
+        case 'iy':
+        case 'multi-instance':
+        case 'nigger':
+        case 'offline':
+        case 'paypal':
+        case 'rapejaml':
+        case 'robux':
+        case 'scripts':
+        case 'sellsn':
+        case 'uicrash':
+        case 'user':
+        case 'zsh':
+          await this.handleSupportTagCommand(interaction);
           break;
         default:
           const embed = new EmbedBuilder()
@@ -3377,6 +3442,40 @@ export class RaptorBot {
 
   private async handleWhitelistCommand(interaction: ChatInputCommandInteraction) {
     await interaction.reply({ content: 'Whitelist command not yet fully implemented', ephemeral: true });
+  }
+
+  private async handleSupportTagCommand(interaction: ChatInputCommandInteraction) {
+    const tagName = interaction.commandName;
+    const response = this.predefinedTags[`.${tagName}`];
+    
+    if (!response) {
+      await interaction.reply({ 
+        content: 'Support tag not found.', 
+        ephemeral: true 
+      });
+      return;
+    }
+
+    try {
+      const embed = new EmbedBuilder()
+        .setTitle('🔧 MacSploit Support')
+        .setDescription(response)
+        .setColor(0x0099ff)
+        .setFooter({ text: 'MacSploit Support System' })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+      
+      // Log tag usage
+      await this.logActivity('support_tag_used', `Support tag used: .${tagName} by ${interaction.user.username}`);
+      
+    } catch (error) {
+      console.error('Error handling support tag command:', error);
+      await interaction.reply({ 
+        content: 'Failed to process support tag.', 
+        ephemeral: true 
+      });
+    }
   }
 
 

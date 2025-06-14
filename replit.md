@@ -51,7 +51,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Complete Candy Banking System Fix**: Fixed deposit/withdraw commands to use correct candy_balances table with proper balance validation and real-time updates
 - **Generate Key Commands Replacement**: Replaced complex payment key commands with simplified interface matching user screenshots - removed required parameters for clean autocomplete display while maintaining full database integration and professional Discord embeds
 - **Optional Type Parameter Implementation**: Added booster/early-access/monthly choices to all generate key commands with enhanced key ID generation, database integration, and Discord embed display matching exact user specifications
-- **Support Tag System Restoration**: Restored original message-based support tag system - users can now type .hwid, .crash, .install, etc. directly in chat to get instant MacSploit support responses with exact user-provided content
+- **Support Tag System Implementation**: Implemented MacSploit support tags as individual slash commands due to Discord MessageContent intent restrictions - users can now type /hwid, /crash, /install, etc. to get instant MacSploit support responses with exact user-provided content
 - **Complete Discord Bot Command Implementation**: Added full database functionality to all 60+ commands
 - **Payment Key Generation**: Implemented real database storage for Bitcoin, Ethereum, PayPal, CashApp, Venmo, Robux keys
 - **HWID Management**: Added comprehensive hardware ID tracking and key association

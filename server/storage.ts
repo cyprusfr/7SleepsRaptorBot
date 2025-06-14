@@ -392,12 +392,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(discordServers.serverId, serverId));
   }
 
-  async logActivity(type: string, description: string): Promise<void> {
-    await db.insert(activityLogs).values({
-      type,
-      description: description || `Activity: ${type}`,
-      metadata: {}
-    });
+  async logActivity(typeOrData: any, description?: string): Promise<void> {
+    try {
+      // Handle both old format (type, description) and new format (object)
+      if (typeof typeOrData === 'string') {
+        // Old format - separate type and description parameters
+        await db.insert(activityLogs).values({
+          type: typeOrData,
+          description: description || `Activity: ${typeOrData}`
+        });
+      } else {
+        // New format - object with type, description, etc.
+        await db.insert(activityLogs).values({
+          type: typeOrData.type,
+          description: typeOrData.description || `Activity: ${typeOrData.type}`
+        });
+      }
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
   }
 
   async logCommand(log: any): Promise<void> {

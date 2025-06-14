@@ -384,6 +384,68 @@ export class DatabaseStorage implements IStorage {
       .where(eq(discordUsers.discordId, discordId));
   }
 
+  async createDiscordUser(user: InsertDiscordUser): Promise<DiscordUser> {
+    const [discordUser] = await db
+      .insert(discordUsers)
+      .values(user)
+      .returning();
+    return discordUser;
+  }
+
+  async updateDiscordUser(discordId: string, updates: Partial<DiscordUser>): Promise<void> {
+    await db
+      .update(discordUsers)
+      .set(updates)
+      .where(eq(discordUsers.discordId, discordId));
+  }
+
+  async logCandyTransaction(transaction: any): Promise<void> {
+    await db
+      .insert(candyTransactions)
+      .values({
+        type: transaction.type,
+        amount: transaction.amount,
+        fromUserId: transaction.fromUserId || null,
+        toUserId: transaction.toUserId,
+        description: transaction.description || null,
+        metadata: transaction.metadata || {},
+      });
+  }
+
+  async getVerificationByCode(code: string): Promise<VerificationSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(verificationSessions)
+      .where(eq(verificationSessions.botResponseCode, code));
+    return session || undefined;
+  }
+
+  async completeVerification(code: string, discordUserId: string): Promise<void> {
+    await db
+      .update(verificationSessions)
+      .set({
+        isCompleted: true,
+        completedAt: new Date(),
+      })
+      .where(eq(verificationSessions.botResponseCode, code));
+  }
+
+  async createDiscordServer(server: InsertDiscordServer): Promise<DiscordServer> {
+    const [discordServer] = await db
+      .insert(discordServers)
+      .values(server)
+      .onConflictDoUpdate({
+        target: discordServers.serverId,
+        set: {
+          serverName: server.serverName,
+          memberCount: server.memberCount,
+          isActive: server.isActive,
+        },
+      })
+      .returning();
+    return discordServer;
+  }
+
   async upsertDiscordServer(insertServer: InsertDiscordServer): Promise<DiscordServer> {
     const [server] = await db
       .insert(discordServers)

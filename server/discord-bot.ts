@@ -1835,15 +1835,936 @@ export class RaptorBot {
 
   private async handleCandyCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-    
-    // Implementation based on your screenshots would go here
-    const embed = new EmbedBuilder()
-      .setTitle('🍭 Candy System')
-      .setDescription(`Subcommand: ${subcommand}`)
-      .setColor(0xff69b4)
-      .setTimestamp();
-    
-    await interaction.reply({ embeds: [embed] });
+
+    switch (subcommand) {
+      case 'balance':
+        await this.handleCandyBalance(interaction);
+        break;
+      case 'daily':
+        await this.handleCandyDaily(interaction);
+        break;
+      case 'beg':
+        await this.handleCandyBeg(interaction);
+        break;
+      case 'credit-card-scam':
+        await this.handleCandyCreditCardScam(interaction);
+        break;
+      case 'gamble':
+        await this.handleCandyGamble(interaction);
+        break;
+      case 'leaderboard':
+        await this.handleCandyLeaderboard(interaction);
+        break;
+      case 'pay':
+        await this.handleCandyPay(interaction);
+        break;
+      case 'deposit':
+        await this.handleCandyDeposit(interaction);
+        break;
+      case 'withdraw':
+        await this.handleCandyWithdraw(interaction);
+        break;
+      default:
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Unknown Subcommand')
+          .setDescription('This candy subcommand is not recognized.')
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  }
+
+  // CANDY BALANCE - Check user's candy balance
+  private async handleCandyBalance(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+
+    try {
+      // Get or create user balance
+      let user = await storage.getDiscordUserByDiscordId(targetUser.id);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: targetUser.username,
+          discordId: targetUser.id
+        });
+      }
+
+      const totalBalance = user.candyBalance + user.candyBank;
+
+      const embed = new EmbedBuilder()
+        .setTitle('🍭 Candy Balance')
+        .setDescription(`Balance information for ${targetUser.username}`)
+        .addFields(
+          { name: '💰 Wallet', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank', value: `${user.candyBank.toLocaleString()} candies`, inline: true },
+          { name: '📊 Total', value: `${totalBalance.toLocaleString()} candies`, inline: true }
+        )
+        .setThumbnail(targetUser.displayAvatarURL())
+        .setColor(0xff69b4)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error checking candy balance:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to check candy balance.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY DAILY - Claim daily reward
+  private async handleCandyDaily(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      // Check cooldown (24 hours)
+      const now = new Date();
+      const lastDaily = user.lastDaily;
+      const cooldownTime = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (lastDaily && (now.getTime() - lastDaily.getTime()) < cooldownTime) {
+        const timeLeft = cooldownTime - (now.getTime() - lastDaily.getTime());
+        const hoursLeft = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutesLeft = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Daily Cooldown')
+          .setDescription('You have already claimed your daily reward!')
+          .addFields(
+            { name: 'Time Remaining', value: `${hoursLeft}h ${minutesLeft}m`, inline: true },
+            { name: 'Next Claim', value: `<t:${Math.floor((lastDaily.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
+          )
+          .setColor(0xff9900)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Give daily reward
+      const dailyAmount = parseInt(this.getSetting('daily_candy_amount', '2000'));
+      const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
+      const finalAmount = Math.floor(dailyAmount * multiplier);
+
+      await storage.updateDiscordUser(userId, {
+        candyBalance: user.candyBalance + finalAmount,
+        lastDaily: now
+      });
+
+      await this.logActivity('candy_daily', `${interaction.user.username} claimed daily reward: ${finalAmount} candies`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎁 Daily Reward Claimed!')
+        .setDescription(`You received your daily candy reward!`)
+        .addFields(
+          { name: '💰 Reward', value: `${finalAmount.toLocaleString()} candies`, inline: true },
+          { name: '🍭 New Balance', value: `${(user.candyBalance + finalAmount).toLocaleString()} candies`, inline: true },
+          { name: '⏰ Next Claim', value: `<t:${Math.floor((now.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error claiming daily reward:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to claim daily reward.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY BEG - Beg for candies with cooldown
+  private async handleCandyBeg(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      // Check cooldown (5 minutes)
+      const now = new Date();
+      const lastBeg = user.lastBeg;
+      const cooldownTime = parseInt(this.getSetting('beg_cooldown', '300000')); // 5 minutes
+
+      if (lastBeg && (now.getTime() - lastBeg.getTime()) < cooldownTime) {
+        const timeLeft = cooldownTime - (now.getTime() - lastBeg.getTime());
+        const minutesLeft = Math.floor(timeLeft / (60 * 1000));
+        const secondsLeft = Math.floor((timeLeft % (60 * 1000)) / 1000);
+
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Beg Cooldown')
+          .setDescription('You are begging too fast! Slow down.')
+          .addFields(
+            { name: 'Time Remaining', value: `${minutesLeft}m ${secondsLeft}s`, inline: true },
+            { name: 'Next Beg', value: `<t:${Math.floor((lastBeg.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
+          )
+          .setColor(0xff9900)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Random beg amounts and messages
+      const begOutcomes = [
+        { amount: 50, message: "A kind stranger gave you some candies!" },
+        { amount: 75, message: "You found some candies on the ground!" },
+        { amount: 100, message: "Someone felt sorry for you and donated candies!" },
+        { amount: 25, message: "You got a few candies from begging." },
+        { amount: 150, message: "A generous person shared their candies with you!" },
+        { amount: 10, message: "You barely managed to get a few candies." },
+        { amount: 200, message: "Wow! Someone gave you a lot of candies!" },
+        { amount: 0, message: "Nobody wanted to give you candies today... Better luck next time!" }
+      ];
+
+      // 20% chance of getting nothing, 80% chance of getting candies
+      const randomOutcome = Math.random() < 0.2 ? begOutcomes[7] : begOutcomes[Math.floor(Math.random() * 7)];
+      
+      const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
+      const finalAmount = Math.floor(randomOutcome.amount * multiplier);
+
+      await storage.updateDiscordUser(userId, {
+        candyBalance: user.candyBalance + finalAmount,
+        lastBeg: now
+      });
+
+      if (finalAmount > 0) {
+        await this.logActivity('candy_beg', `${interaction.user.username} begged and received ${finalAmount} candies`);
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🙏 Begging Results')
+        .setDescription(randomOutcome.message)
+        .addFields(
+          { name: '💰 Earned', value: `${finalAmount.toLocaleString()} candies`, inline: true },
+          { name: '🍭 New Balance', value: `${(user.candyBalance + finalAmount).toLocaleString()} candies`, inline: true },
+          { name: '⏰ Next Beg', value: `<t:${Math.floor((now.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
+        )
+        .setColor(finalAmount > 0 ? 0x00ff00 : 0xff9900)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error begging for candies:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to beg for candies.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY CREDIT CARD SCAM - Scam another user
+  private async handleCandyCreditCardScam(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const target = interaction.options.getUser('target', true);
+
+    if (target.id === interaction.user.id) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Target')
+        .setDescription('You cannot scam yourself!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    if (target.bot) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Target')
+        .setDescription('You cannot scam bots!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      // Check cooldown (10 minutes)
+      const now = new Date();
+      const lastScam = user.lastScam;
+      const cooldownTime = parseInt(this.getSetting('scam_cooldown', '600000')); // 10 minutes
+
+      if (lastScam && (now.getTime() - lastScam.getTime()) < cooldownTime) {
+        const timeLeft = cooldownTime - (now.getTime() - lastScam.getTime());
+        const minutesLeft = Math.floor(timeLeft / (60 * 1000));
+        const secondsLeft = Math.floor((timeLeft % (60 * 1000)) / 1000);
+
+        const embed = new EmbedBuilder()
+          .setTitle('⏰ Scam Cooldown')
+          .setDescription('You need to wait before attempting another scam!')
+          .addFields(
+            { name: 'Time Remaining', value: `${minutesLeft}m ${secondsLeft}s`, inline: true },
+            { name: 'Next Scam', value: `<t:${Math.floor((lastScam.getTime() + cooldownTime) / 1000)}:R>`, inline: true }
+          )
+          .setColor(0xff9900)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Get target user
+      let targetUser = await storage.getDiscordUserByDiscordId(target.id);
+      
+      if (!targetUser) {
+        targetUser = await storage.upsertDiscordUser({
+          username: target.username,
+          discordId: target.id,
+          candyBalance: 1000, // Give new users some starting balance
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      // 35% success rate for scam
+      const success = Math.random() < 0.35;
+      
+      await storage.updateDiscordUser(userId, {
+        lastScam: now
+      });
+
+      if (success && targetUser.candyBalance > 0) {
+        // Scam successful - steal 10-30% of target's wallet
+        const stealPercentage = 0.1 + Math.random() * 0.2; // 10-30%
+        const stolenAmount = Math.floor(targetUser.candyBalance * stealPercentage);
+        const finalAmount = Math.min(stolenAmount, targetUser.candyBalance);
+
+        await storage.updateDiscordUser(userId, {
+          candyBalance: user.candyBalance + finalAmount
+        });
+
+        await storage.updateDiscordUser(target.id, {
+          candyBalance: targetUser.candyBalance - finalAmount
+        });
+
+        await this.logActivity('candy_scam_success', `${interaction.user.username} successfully scammed ${finalAmount} candies from ${target.username}`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('💳 Credit Card Scam Successful!')
+          .setDescription(`You successfully scammed <@${target.id}>!`)
+          .addFields(
+            { name: '💰 Stolen', value: `${finalAmount.toLocaleString()} candies`, inline: true },
+            { name: '🍭 Your Balance', value: `${(user.candyBalance + finalAmount).toLocaleString()} candies`, inline: true },
+            { name: '😈 Success Rate', value: '35%', inline: true }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+
+      } else {
+        // Scam failed
+        const penalties = [
+          { amount: 100, message: "Your scam failed and you lost some candies in the process!" },
+          { amount: 50, message: "The target caught on to your scam and reported you!" },
+          { amount: 75, message: "Your fake credit card was detected!" },
+          { amount: 150, message: "The authorities caught you and fined you!" },
+          { amount: 25, message: "Your scam attempt backfired!" }
+        ];
+
+        const penalty = penalties[Math.floor(Math.random() * penalties.length)];
+        const lostAmount = Math.min(penalty.amount, user.candyBalance);
+
+        await storage.updateDiscordUser(userId, {
+          candyBalance: Math.max(0, user.candyBalance - lostAmount)
+        });
+
+        await this.logActivity('candy_scam_failed', `${interaction.user.username} failed to scam ${target.username} and lost ${lostAmount} candies`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('💳 Credit Card Scam Failed!')
+          .setDescription(penalty.message)
+          .addFields(
+            { name: '💸 Lost', value: `${lostAmount.toLocaleString()} candies`, inline: true },
+            { name: '🍭 Your Balance', value: `${Math.max(0, user.candyBalance - lostAmount).toLocaleString()} candies`, inline: true },
+            { name: '😅 Failure Rate', value: '65%', inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      }
+
+    } catch (error) {
+      console.error('Error performing credit card scam:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to perform credit card scam.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY GAMBLE - Gamble candies with house edge
+  private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must gamble a positive amount of candies!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    const maxGamble = parseInt(this.getSetting('max_gamble_amount', '10000'));
+    if (amount > maxGamble) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Amount Too High')
+        .setDescription(`You can only gamble up to ${maxGamble.toLocaleString()} candies at once!`)
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      if (user.candyBalance < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${user.candyBalance.toLocaleString()} candies in your wallet!`)
+          .addFields(
+            { name: '💰 Your Balance', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+            { name: '🎰 Tried to Gamble', value: `${amount.toLocaleString()} candies`, inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Gambling logic with house edge (47% win rate)
+      const winChance = 0.47;
+      const won = Math.random() < winChance;
+
+      if (won) {
+        // Win: 1.5x to 2x multiplier
+        const multiplier = 1.5 + Math.random() * 0.5; // 1.5x to 2x
+        const winnings = Math.floor(amount * multiplier);
+        const profit = winnings - amount;
+
+        await storage.updateDiscordUser(userId, {
+          candyBalance: user.candyBalance + profit
+        });
+
+        await this.logActivity('candy_gamble_win', `${interaction.user.username} won ${profit} candies gambling ${amount} candies`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('🎰 You Won!')
+          .setDescription('99.99% of gamblers quit before they hit big!')
+          .addFields(
+            { name: '🎲 Bet', value: `${amount.toLocaleString()} candies`, inline: true },
+            { name: '💰 Won', value: `${winnings.toLocaleString()} candies`, inline: true },
+            { name: '📈 Profit', value: `+${profit.toLocaleString()} candies`, inline: true },
+            { name: '🍭 New Balance', value: `${(user.candyBalance + profit).toLocaleString()} candies`, inline: false },
+            { name: '🎯 Multiplier', value: `${multiplier.toFixed(2)}x`, inline: true }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+
+      } else {
+        // Lose: lose the entire bet
+        await storage.updateDiscordUser(userId, {
+          candyBalance: user.candyBalance - amount
+        });
+
+        await this.logActivity('candy_gamble_loss', `${interaction.user.username} lost ${amount} candies gambling`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('🎰 You Lost!')
+          .setDescription('The house always wins... but you can try again!')
+          .addFields(
+            { name: '🎲 Bet', value: `${amount.toLocaleString()} candies`, inline: true },
+            { name: '💸 Lost', value: `${amount.toLocaleString()} candies`, inline: true },
+            { name: '📉 Profit', value: `-${amount.toLocaleString()} candies`, inline: true },
+            { name: '🍭 New Balance', value: `${(user.candyBalance - amount).toLocaleString()} candies`, inline: false },
+            { name: '🎯 Win Rate', value: '47%', inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      }
+
+    } catch (error) {
+      console.error('Error gambling candies:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process gambling request.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY LEADERBOARD - Show top candy holders
+  private async handleCandyLeaderboard(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      const topUsers = await storage.getCandyLeaderboard(10);
+
+      if (topUsers.length === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle('🏆 Candy Leaderboard')
+          .setDescription('No users found with candy balances.')
+          .setColor(0xff9900)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const leaderboardText = topUsers.map((user, index) => {
+        const position = index + 1;
+        const emoji = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '📍';
+        const totalBalance = user.candyBalance + user.candyBank;
+        return `${emoji} **#${position}** <@${user.discordId}> - ${totalBalance.toLocaleString()} candies`;
+      }).join('\n');
+
+      // Get current user's position
+      const currentUser = await storage.getDiscordUserByDiscordId(interaction.user.id);
+      let userPosition = '';
+      
+      if (currentUser) {
+        const allUsers = await storage.getCandyLeaderboard(1000); // Get more users to find position
+        const userIndex = allUsers.findIndex(u => u.discordId === interaction.user.id);
+        if (userIndex !== -1) {
+          const userTotal = currentUser.candyBalance + currentUser.candyBank;
+          userPosition = `\n**Your Position:** #${userIndex + 1} with ${userTotal.toLocaleString()} candies`;
+        }
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏆 Candy Leaderboard')
+        .setDescription(`**Top 10 Richest Users**\n\n${leaderboardText}${userPosition}`)
+        .setFooter({ text: 'Rankings based on total candies (wallet + bank)' })
+        .setColor(0xffd700)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error showing candy leaderboard:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to load candy leaderboard.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY PAY - Pay candies to another user
+  private async handleCandyPay(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const target = interaction.options.getUser('user', true);
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (target.id === interaction.user.id) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Target')
+        .setDescription('You cannot pay yourself!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    if (target.bot) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Target')
+        .setDescription('You cannot pay bots!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must pay a positive amount of candies!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      if (user.candyBalance < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${user.candyBalance.toLocaleString()} candies in your wallet!`)
+          .addFields(
+            { name: '💰 Your Balance', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+            { name: '💸 Tried to Pay', value: `${amount.toLocaleString()} candies`, inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Get or create target user
+      let targetUser = await storage.getDiscordUserByDiscordId(target.id);
+      
+      if (!targetUser) {
+        targetUser = await storage.upsertDiscordUser({
+          username: target.username,
+          discordId: target.id,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      // Process payment
+      await storage.updateDiscordUser(userId, {
+        candyBalance: user.candyBalance - amount
+      });
+
+      await storage.updateDiscordUser(target.id, {
+        candyBalance: targetUser.candyBalance + amount
+      });
+
+      // Log the transaction
+      await storage.logCandyTransaction({
+        type: 'payment',
+        amount: amount,
+        fromUserId: userId,
+        toUserId: target.id,
+        description: `Payment from ${interaction.user.username} to ${target.username}`
+      });
+
+      await this.logActivity('candy_payment', `${interaction.user.username} paid ${amount} candies to ${target.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('💸 Payment Successful!')
+        .setDescription(`You successfully paid <@${target.id}>!`)
+        .addFields(
+          { name: '💰 Amount', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '🍭 Your New Balance', value: `${(user.candyBalance - amount).toLocaleString()} candies`, inline: true },
+          { name: '📤 Sent To', value: `<@${target.id}>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error processing candy payment:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process payment.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY DEPOSIT - Deposit candies to bank
+  private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must deposit a positive amount of candies!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      if (user.candyBalance < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${user.candyBalance.toLocaleString()} candies in your wallet!`)
+          .addFields(
+            { name: '💰 Wallet Balance', value: `${user.candyBalance.toLocaleString()} candies`, inline: true },
+            { name: '💸 Tried to Deposit', value: `${amount.toLocaleString()} candies`, inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Process deposit
+      await storage.updateDiscordUser(userId, {
+        candyBalance: user.candyBalance - amount,
+        candyBank: user.candyBank + amount
+      });
+
+      await this.logActivity('candy_deposit', `${interaction.user.username} deposited ${amount} candies to bank`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏦 Deposit Successful!')
+        .setDescription(`You deposited candies to your bank account!`)
+        .addFields(
+          { name: '💰 Deposited', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '👛 Wallet Balance', value: `${(user.candyBalance - amount).toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank Balance', value: `${(user.candyBank + amount).toLocaleString()} candies`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error depositing candies:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to deposit candies.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // CANDY WITHDRAW - Withdraw candies from bank
+  private async handleCandyWithdraw(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const amount = interaction.options.getInteger('amount', true);
+
+    if (amount <= 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Invalid Amount')
+        .setDescription('You must withdraw a positive amount of candies!')
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+
+    try {
+      const userId = interaction.user.id;
+      let user = await storage.getDiscordUserByDiscordId(userId);
+      
+      if (!user) {
+        user = await storage.upsertDiscordUser({
+          username: interaction.user.username,
+          discordId: userId,
+          candyBalance: 0,
+          candyBank: 0,
+          isWhitelisted: false,
+          logs: 0,
+          lastDaily: null,
+          lastBeg: null,
+          lastScam: null
+        });
+      }
+
+      if (user.candyBank < amount) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Insufficient Funds')
+          .setDescription(`You only have ${user.candyBank.toLocaleString()} candies in your bank!`)
+          .addFields(
+            { name: '🏦 Bank Balance', value: `${user.candyBank.toLocaleString()} candies`, inline: true },
+            { name: '💸 Tried to Withdraw', value: `${amount.toLocaleString()} candies`, inline: true }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Process withdrawal
+      await storage.updateDiscordUser(userId, {
+        candyBalance: user.candyBalance + amount,
+        candyBank: user.candyBank - amount
+      });
+
+      await this.logActivity('candy_withdraw', `${interaction.user.username} withdrew ${amount} candies from bank`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏦 Withdrawal Successful!')
+        .setDescription(`You withdrew candies from your bank account!`)
+        .addFields(
+          { name: '💰 Withdrawn', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '👛 Wallet Balance', value: `${(user.candyBalance + amount).toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank Balance', value: `${(user.candyBank - amount).toLocaleString()} candies`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error withdrawing candies:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to withdraw candies.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
   }
 
   private async handleGenerateKeyCommand(interaction: ChatInputCommandInteraction) {

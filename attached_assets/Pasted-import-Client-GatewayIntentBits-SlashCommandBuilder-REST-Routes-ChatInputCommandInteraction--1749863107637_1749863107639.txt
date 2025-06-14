@@ -33,7 +33,7 @@ export class RaptorBot {
       for (const setting of allSettings) {
         this.settings.set(setting.key, setting.value);
       }
-
+      
       // Set default settings if they don't exist
       const defaultSettings = [
         { key: 'required_role', value: 'Raptor Admin' },
@@ -66,10 +66,10 @@ export class RaptorBot {
     this.client.once('ready', async () => {
       console.log(`✅ Raptor bot is ready! Logged in as ${this.client.user?.tag}`);
       this.isReady = true;
-
+      
       // Sync server data
       await this.syncServerData();
-
+      
       // Set bot status
       this.client.user?.setActivity('Managing Keys | /help', { type: 0 });
     });
@@ -128,7 +128,7 @@ export class RaptorBot {
     try {
       // Find verification session with this dashboard code
       const session = await storage.getVerificationSessionByDiscordUserId(userId);
-
+      
       if (!session) {
         await message.reply('No active verification session found. Please start verification from the dashboard first.');
         return;
@@ -151,7 +151,7 @@ export class RaptorBot {
 
       // Generate bot response code
       const botResponseCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
+      
       // Update session with bot response
       await storage.updateVerificationSession(session.sessionId, {
         botResponseCode,
@@ -196,7 +196,7 @@ export class RaptorBot {
     try {
       // Find verification session with this dashboard code
       const session = await storage.getVerificationSessionByDiscordUserId(userId);
-
+      
       if (!session) {
         await interaction.reply({ content: 'No active verification session found. Please start verification from the dashboard first.', ephemeral: true });
         return;
@@ -221,7 +221,7 @@ export class RaptorBot {
 
       // Generate bot response code
       const botResponseCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
+      
       // Update session with bot response code
       await storage.updateVerificationSession(session.sessionId, {
         botResponseCode,
@@ -817,7 +817,7 @@ export class RaptorBot {
 
   private async handleCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
-
+    
     try {
       // Check permissions for all commands except verify
       if (interaction.commandName !== 'verify' && !this.hasRequiredPermissions(interaction)) {
@@ -898,7 +898,7 @@ export class RaptorBot {
     } catch (error) {
       console.error(`Error handling command ${interaction.commandName}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
+      
       // Log failed command execution
       await this.logCommandUsage(interaction, startTime, false, errorMessage);
 
@@ -911,7 +911,7 @@ export class RaptorBot {
   // Command Handler Methods
   private async handleCandyCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'balance':
         await this.handleBalance(interaction);
@@ -944,7 +944,7 @@ export class RaptorBot {
 
   private async handleGenerateKeyCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'bitcoin':
         await this.handleGenerateKeyBitcoin(interaction);
@@ -980,7 +980,7 @@ export class RaptorBot {
 
   private async handleHwidInfoCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'hwid':
         await this.handleHwidInfoHwid(interaction);
@@ -995,7 +995,7 @@ export class RaptorBot {
 
   private async handleLockdownCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'end':
         await this.handleLockdownEnd(interaction);
@@ -1010,7 +1010,7 @@ export class RaptorBot {
 
   private async handleLogCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'add':
         await this.handleLogAdd(interaction);
@@ -1031,7 +1031,7 @@ export class RaptorBot {
 
   private async handleSuggestionCommands(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
-
+    
     switch (subcommand) {
       case 'setup':
         await this.handleSuggestionSetup(interaction);
@@ -1044,7 +1044,7 @@ export class RaptorBot {
   private async handleWhitelistCommands(interaction: ChatInputCommandInteraction) {
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
-
+    
     if (subcommandGroup === 'admin') {
       switch (subcommand) {
         case 'add':
@@ -1077,12 +1077,12 @@ export class RaptorBot {
   private async handleCandyBeg(interaction: ChatInputCommandInteraction) {
     try {
       const userId = interaction.user.id;
-
+      
       // Random chance logic for begging
       const chance = Math.random();
       let amount = 0;
       let message = '';
-
+      
       if (chance < 0.1) { // 10% chance for big reward
         amount = Math.floor(Math.random() * 500) + 100; // 100-600 candies
         message = `🍭 Lucky you! You found **${amount}** candies!`;
@@ -1092,13 +1092,13 @@ export class RaptorBot {
       } else { // 40% chance for nothing
         message = `😔 Your begging was unsuccessful. Try again later!`;
       }
-
+      
       if (amount > 0) {
         await storage.updateCandyBalance(userId, amount);
       }
-
+      
       await interaction.reply({ content: message });
-
+      
     } catch (error) {
       console.error('Error in candy beg command:', error);
       await interaction.reply({ content: 'Error processing beg command.', ephemeral: true });
@@ -1108,12 +1108,12 @@ export class RaptorBot {
   private async handleCreditCardScam(interaction: ChatInputCommandInteraction) {
     try {
       const userId = interaction.user.id;
-
+      
       // Random chance logic for credit card scam
       const chance = Math.random();
       let amount = 0;
       let message = '';
-
+      
       if (chance < 0.3) { // 30% chance for success
         amount = Math.floor(Math.random() * 1000) + 200; // 200-1200 candies
         message = `💳 Your credit card scam was successful! You gained **${amount}** candies!`;
@@ -1121,9 +1121,9 @@ export class RaptorBot {
       } else { // 70% chance for failure
         message = `🚨 Your credit card scam failed! Better luck next time.`;
       }
-
+      
       await interaction.reply({ content: message });
-
+      
     } catch (error) {
       console.error('Error in credit card scam command:', error);
       await interaction.reply({ content: 'Error processing credit card scam command.', ephemeral: true });
@@ -1132,7 +1132,7 @@ export class RaptorBot {
 
   private async handleBypass(interaction: ChatInputCommandInteraction) {
     const url = interaction.options.getString('url', true);
-
+    
     await interaction.reply({ 
       content: `🔗 Bypass functionality for URL: ${url}\n\n*This feature is currently under development.*`,
       ephemeral: true 
@@ -1142,22 +1142,22 @@ export class RaptorBot {
   private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
     const amount = interaction.options.getInteger('amount', true);
     const userId = interaction.user.id;
-
+    
     try {
       const userBalance = await storage.getCandyBalance(userId);
-
+      
       if (userBalance.wallet < amount) {
         await interaction.reply({ content: `❌ You don't have enough candies in your wallet. You have **${userBalance.wallet}** candies.`, ephemeral: true });
         return;
       }
-
+      
       await storage.depositCandy(userId, amount);
       const newBalance = await storage.getCandyBalance(userId);
-
+      
       await interaction.reply({ 
         content: `🏦 Successfully deposited **${amount}** candies to your bank!\n\n**New Balance:**\n💰 Wallet: ${newBalance.wallet}\n🏦 Bank: ${newBalance.bank}` 
       });
-
+      
     } catch (error) {
       console.error('Error in candy deposit command:', error);
       await interaction.reply({ content: 'Error processing deposit command.', ephemeral: true });
@@ -1167,18 +1167,18 @@ export class RaptorBot {
   private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
     const amount = interaction.options.getInteger('amount', true);
     const userId = interaction.user.id;
-
+    
     try {
       const userBalance = await storage.getCandyBalance(userId);
-
+      
       if (userBalance.wallet < amount) {
         await interaction.reply({ content: `❌ You don't have enough candies to gamble. You have **${userBalance.wallet}** candies.`, ephemeral: true });
         return;
       }
-
+      
       // 45% chance to win, 55% chance to lose
       const won = Math.random() < 0.45;
-
+      
       if (won) {
         const winAmount = Math.floor(amount * 1.5); // 1.5x multiplier
         await storage.updateCandyBalance(userId, winAmount - amount); // Net gain
@@ -1187,7 +1187,7 @@ export class RaptorBot {
         await storage.updateCandyBalance(userId, -amount);
         await interaction.reply({ content: `🎰 **You lost!** You lost **${amount}** candies. Better luck next time!` });
       }
-
+      
     } catch (error) {
       console.error('Error in candy gamble command:', error);
       await interaction.reply({ content: 'Error processing gamble command.', ephemeral: true });
@@ -1198,26 +1198,26 @@ export class RaptorBot {
     const targetUser = interaction.options.getUser('user', true);
     const amount = interaction.options.getInteger('amount', true);
     const userId = interaction.user.id;
-
+    
     if (targetUser.id === userId) {
       await interaction.reply({ content: '❌ You cannot pay yourself!', ephemeral: true });
       return;
     }
-
+    
     try {
       const userBalance = await storage.getCandyBalance(userId);
-
+      
       if (userBalance.wallet < amount) {
         await interaction.reply({ content: `❌ You don't have enough candies. You have **${userBalance.wallet}** candies.`, ephemeral: true });
         return;
       }
-
+      
       await storage.transferCandy(userId, targetUser.id, amount);
-
+      
       await interaction.reply({ 
         content: `💸 Successfully transferred **${amount}** candies to ${targetUser.toString()}!` 
       });
-
+      
     } catch (error) {
       console.error('Error in candy pay command:', error);
       await interaction.reply({ content: 'Error processing payment.', ephemeral: true });
@@ -1726,9 +1726,9 @@ export class RaptorBot {
 
     } catch (error) {
       console.error(`❌ Error handling command ${commandName}:`, error);
-
+      
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-
+      
       if (!interaction.replied) {
         await interaction.reply({
           content: `❌ An error occurred: ${errorMessage}`,
@@ -1740,7 +1740,7 @@ export class RaptorBot {
 
   private hasRequiredPermissions(interaction: ChatInputCommandInteraction): boolean {
     const userId = interaction.user.id;
-
+    
     // Check if user is in authorized list (bypass role requirements)
     const authorizedUserId = this.getSetting('authorized_user_id', '1131426483404026019');
     if (userId === authorizedUserId) {
@@ -1772,7 +1772,7 @@ export class RaptorBot {
       const hasKeySystemRole = Array.isArray(memberRoles)
         ? memberRoles.some(role => role === keySystemRole)
         : memberRoles.cache?.some(role => role.name === keySystemRole);
-
+      
       return hasKeySystemRole || hasRequiredRole;
     }
 
@@ -1783,28 +1783,28 @@ export class RaptorBot {
 
   private async isRateLimited(userId: string): Promise<boolean> {
     if (this.getSetting('rate_limit_enabled') !== 'true') return false;
-
+    
     // Shorter rate limits: 10 commands per 30 seconds
     const now = Date.now();
     const userKey = `ratelimit:${userId}`;
-
+    
     const userLimits = this.rateLimitMap.get(userKey) || [];
     const recentCommands = userLimits.filter(timestamp => now - timestamp < 30000); // 30 seconds
-
+    
     if (recentCommands.length >= 10) {
       return true;
     }
-
+    
     recentCommands.push(now);
     this.rateLimitMap.set(userKey, recentCommands);
-
+    
     return false;
   }
 
   private async logCommandUsage(interaction: ChatInputCommandInteraction, startTime: number, success: boolean = true, errorMessage?: string): Promise<void> {
     try {
       const executionTime = Date.now() - startTime;
-
+      
       // Collect command arguments
       const args: any = {};
       interaction.options.data.forEach(option => {
@@ -1921,7 +1921,7 @@ export class RaptorBot {
 
   private async handleUserInfo(interaction: ChatInputCommandInteraction) {
     const targetUser = interaction.options.getUser('user', true);
-
+    
     const userData = await storage.getDiscordUserByDiscordId(targetUser.id);
     const userKeys = await storage.getDiscordKeysByUserId(targetUser.id);
 
@@ -1946,7 +1946,7 @@ export class RaptorBot {
 
   private async handleHwidInfo(interaction: ChatInputCommandInteraction) {
     const hwid = interaction.options.getString('hwid', true);
-
+    
     const keys = await storage.getDiscordKeysByHwid(hwid);
 
     if (keys.length === 0) {
@@ -2129,19 +2129,19 @@ export class RaptorBot {
             limit: 200, // Further reduced to avoid rate limits
             time: 20000 // 20 second timeout
           });
-
+          
           backupData.members = [];
           const memberArray = Array.from(members.values());
-
+          
           // Process members with rate limiting (10 per second)
           for (let i = 0; i < memberArray.length; i++) {
             const member = memberArray[i];
-
+            
             if (i > 0 && i % 10 === 0) {
               // Wait 1 second every 10 members to avoid rate limits
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
-
+            
             backupData.members.push({
               userId: member.user.id,
               username: member.user.username,
@@ -2238,16 +2238,16 @@ export class RaptorBot {
           );
 
           backupData.messages = [];
-
+          
           // Process channels with rate limiting
           for (let i = 0; i < Math.min(textChannels.length, 5); i++) {
             const channel = textChannels[i];
-
+            
             if (i > 0) {
               // Wait 2 seconds between channels to avoid rate limits
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
-
+            
             try {
               const messages = await (channel as any).messages.fetch({ limit: 30 });
               const channelMessages = Array.from(messages.values()).map((msg: any) => ({
@@ -2325,7 +2325,7 @@ export class RaptorBot {
                   url: sticker.url
                 }))
               }));
-
+              
               backupData.messages.push(...channelMessages);
             } catch (channelError) {
               console.warn(`Failed to backup messages from ${channel?.name}:`, channelError);
@@ -2762,7 +2762,7 @@ export class RaptorBot {
   private async handleSay(interaction: ChatInputCommandInteraction) {
     const message = interaction.options.getString('message', true);
     const targetChannel = interaction.options.getChannel('channel');
-
+    
     const channel = targetChannel ? await interaction.guild?.channels.fetch(targetChannel.id) : interaction.channel;
 
     if (!channel || !('send' in channel)) {
@@ -2878,7 +2878,7 @@ export class RaptorBot {
 
       const member = await interaction.guild.members.fetch(user.id);
       const oldNickname = member.nickname || member.user.username;
-
+      
       await member.setNickname(nickname);
 
       // Log the moderation action
@@ -2943,7 +2943,7 @@ export class RaptorBot {
     try {
       const messages = await interaction.channel.messages.fetch({ limit: amount });
       await interaction.channel.bulkDelete(messages);
-
+      
       await interaction.reply({
         content: `✅ Deleted ${messages.size} messages.`,
         flags: [4096],
@@ -2974,7 +2974,7 @@ export class RaptorBot {
 
       const member = await interaction.guild.members.fetch(user.id);
       const timeoutDuration = minutes * 60 * 1000;
-
+      
       await member.timeout(timeoutDuration, reason);
 
       // Log the moderation action
@@ -3281,7 +3281,7 @@ export class RaptorBot {
         const existingRoles = guild.roles.cache.filter((role: any) => 
           role.name !== '@everyone' && !role.managed && role.editable
         );
-
+        
         for (const role of existingRoles.values()) {
           try {
             await (role as any).delete('Clearing for backup restoration');
@@ -3327,7 +3327,7 @@ export class RaptorBot {
         const existingChannels = guild.channels.cache.filter((channel: any) => 
           channel.deletable && !channel.isVoice() && channel.type !== 4 // Don't delete categories for now
         );
-
+        
         for (const channel of existingChannels.values()) {
           try {
             await (channel as any).delete('Clearing for backup restoration');
@@ -3397,7 +3397,7 @@ export class RaptorBot {
       progressEmbed.fields[0].value = '▓▓▓▓▓▓▓▓▓▓ 100%';
       progressEmbed.fields[1].value = 'Restoration complete!';
       progressEmbed.color = 0x00FF00;
-
+      
       const resultsEmbed = {
         title: '✅ Restoration Complete',
         description: `Successfully restored server from backup`,
@@ -3429,7 +3429,7 @@ export class RaptorBot {
 
     } catch (error) {
       console.error('Error during restore process:', error);
-
+      
       const errorEmbed = {
         title: '❌ Restoration Failed',
         description: 'An error occurred during the restoration process.',
@@ -4082,7 +4082,7 @@ export class RaptorBot {
         const metadata = key.metadata as any;
         const status = key.status || 'unknown';
         const username = key.discordUsername || key.userId || 'Unlinked';
-
+        
         return {
           name: `Key #${index + 1} - ${key.keyId}`,
           value: `User: ${username}\nStatus: ${status}\nLinked: ${key.userId ? 'Yes' : 'No'}`,
@@ -4202,7 +4202,7 @@ export class RaptorBot {
 
       // Get key information from database
       const keyData = await storage.getDiscordKeyByKeyId(key);
-
+      
       if (!keyData) {
         await interaction.reply({
           content: `❌ License key \`${key}\` not found in the system.`,
@@ -4341,15 +4341,15 @@ export class RaptorBot {
 
       // Get all log activities and count by user
       const logActivities = await storage.getActivityLogsByType('user_log', 1000);
-
+      
       // Count logs per user
       const userLogCounts = new Map<string, { username: string; count: number }>();
-
+      
       for (const log of logActivities) {
         const metadata = log.metadata as any;
         const loggedUser = metadata?.loggedUser || 'Unknown';
         const existing = userLogCounts.get(log.targetId || 'unknown');
-
+        
         if (existing) {
           existing.count++;
         } else {
@@ -4490,7 +4490,7 @@ export class RaptorBot {
         const addedBy = metadata?.addedBy || 'Unknown';
         const logEntry = metadata?.logEntry || log.description;
         const date = new Date(log.timestamp).toLocaleDateString();
-
+        
         return {
           name: `Log #${log.id} - ${date}`,
           value: `${logEntry}\n*Added by: ${addedBy}*`,
@@ -5030,7 +5030,7 @@ Please purchase using PayPal on the website.`,
 
   private async handleTagManager(interaction: ChatInputCommandInteraction) {
     const tagName = interaction.options.getString('tag');
-
+    
     try {
       // If no tag specified, show all available tags
       if (!tagName) {
@@ -5092,7 +5092,7 @@ Please purchase using PayPal on the website.`,
 
       // Log tag usage
       await this.logCommandUsage(interaction, Date.now(), true);
-
+      
     } catch (error) {
       console.error('Error handling tag manager:', error);
       await interaction.reply({
@@ -5503,7 +5503,7 @@ Please purchase using PayPal on the website.`,
         })
         .filter(backup => backup !== null)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
+      
       return backups;
     } catch (error) {
       console.error('Error fetching backups:', error);
@@ -5543,14 +5543,14 @@ Please purchase using PayPal on the website.`,
     try {
       const backupKey = `backup_${backupId}`;
       const backupData = await storage.getBotSetting(backupKey);
-
+      
       if (!backupData) {
         throw new Error('Backup not found');
       }
 
       // Delete the backup
       await storage.setBotSetting(backupKey, '');
-
+      
       return { success: true, message: 'Backup deleted successfully' };
     } catch (error) {
       console.error('Backup delete error:', error);
@@ -5561,12 +5561,12 @@ Please purchase using PayPal on the website.`,
   public async syncServerData() {
     try {
       await this.loadSettings();
-
+      
       const guilds = Array.from(this.client.guilds.cache.values());
       for (const guild of guilds) {
         await this.addServer(guild);
       }
-
+      
       await storage.logActivity({
         type: 'server_sync',
         userId: 'system',
@@ -5690,7 +5690,7 @@ Please purchase using PayPal on the website.`,
 
       // Check if user can claim daily candy
       const canClaim = await storage.checkDailyCandy(interaction.user.id);
-
+      
       if (!canClaim) {
         const embed = {
           title: '🕐 Daily Candy Already Claimed',
@@ -5890,7 +5890,7 @@ Please purchase using PayPal on the website.`,
       const commandTests = [
         // Authentication & Verification
         { name: 'verify', args: { code: 'TEST123' }, description: 'Discord verification system test' },
-
+        
         // License Key Management
         { name: 'whitelist', args: { user: testUser, hwid: 'TEST-HWID-123' }, description: 'Generate and whitelist key' },
         { name: 'dewhitelist', args: { key: 'TEST-KEY-123' }, description: 'Dewhitelist and revoke key' },
@@ -5899,12 +5899,12 @@ Please purchase using PayPal on the website.`,
         { name: 'link', args: { key: 'TEST-KEY-123', user: testUser }, description: 'Link key to user' },
         { name: 'keyinfo', args: { key: 'TEST-KEY-123' }, description: 'Get key information' },
         { name: 'add', args: { key: 'TEST-KEY-456', user: testUser.id }, description: 'Add license key to database' },
-
+        
         // Backup & Restore System
         { name: 'backup', args: { type: 'full' }, description: 'Create server backup' },
         { name: 'restore', args: { backup_id: 'TEST-BACKUP-123', type: 'channels' }, description: 'Restore from backup' },
         { name: 'backups', args: { action: 'list' }, description: 'List available backups' },
-
+        
         // User Management
         { name: 'whitelist-user', args: { user_id: testUser.id, username: testUser.username }, description: 'Add user to whitelist' },
         { name: 'unwhitelist-user', args: { user_id: testUser.id }, description: 'Remove user from whitelist' },
@@ -5914,21 +5914,21 @@ Please purchase using PayPal on the website.`,
         { name: 'whitelist-admin-list', args: {}, description: 'List whitelist admins' },
         { name: 'whitelist-admin-remove', args: { user: testUser }, description: 'Remove whitelist admin' },
         { name: 'whitelist-remove', args: { user: testUser }, description: 'Remove user from whitelist' },
-
+        
         // Utility Commands
         { name: 'help', args: {}, description: 'Show help information' },
         { name: 'ping', args: {}, description: 'Check bot response time' },
         { name: 'poke', args: {}, description: 'Poke the bot' },
         { name: 'avatar', args: { user: testUser }, description: 'Get user avatar' },
-
+        
         // Bug Reporting & Development
         { name: 'bug-report', args: { description: 'Test bug report submission' }, description: 'Submit bug report' },
         { name: 'bypass', args: { link: 'https://example.com' }, description: 'Bypass link system' },
         { name: 'eval', args: { code: '1 + 1' }, description: 'Code evaluation (admin only)' },
-
+        
         // Database Management
         { name: 'db-management', args: { action: 'view', table: 'users' }, description: 'Database management tools' },
-
+        
         // Payment Key Generation
         { name: 'generatekey-bitcoin', args: { amount: '0.001' }, description: 'Generate Bitcoin payment key' },
         { name: 'generatekey-cashapp', args: { amount: '10.00' }, description: 'Generate CashApp payment key' },
@@ -5939,51 +5939,51 @@ Please purchase using PayPal on the website.`,
         { name: 'generatekey-paypal', args: { amount: '15.00' }, description: 'Generate PayPal payment key' },
         { name: 'generatekey-robux', args: { amount: '1000' }, description: 'Generate Robux payment key' },
         { name: 'generatekey-venmo', args: { amount: '12.50' }, description: 'Generate Venmo payment key' },
-
+        
         // HWID Management
         { name: 'hwidinfo-hwid', args: { hwid: 'TEST-HWID-456' }, description: 'Get HWID info by HWID' },
         { name: 'hwidinfo-user', args: { user: testUser }, description: 'Get HWID info by user' },
-
+        
         // Server Management
         { name: 'lockdown-end', args: {}, description: 'End server lockdown' },
         { name: 'lockdown-initiate', args: {}, description: 'Initiate server lockdown' },
-
+        
         // Activity Logging
         { name: 'log-add', args: { user: testUser, log: 'Test log entry for user' }, description: 'Add user activity log' },
         { name: 'log-lb', args: {}, description: 'View activity logs leaderboard' },
         { name: 'log-remove', args: { user: testUser, log_id: 'TEST-LOG-123' }, description: 'Remove user activity log' },
         { name: 'log-view', args: { user: testUser }, description: 'View user activity logs' },
-
+        
         // Candy System
         { name: 'balance', args: { user: testUser }, description: 'Check candy balance' },
         { name: 'daily', args: {}, description: 'Claim daily candy reward' },
         { name: 'candy-transfer', args: { user: testUser, amount: 10 }, description: 'Transfer candy to user' },
         { name: 'candy-leaderboard', args: {}, description: 'View candy leaderboard' },
-
+        
         // Roblox Integration
         { name: 'roblox', args: { username: 'TestUser123', amount: '500' }, description: 'Automate Roblox payment' },
-
+        
         // Role & Color Management
         { name: 'role-color', args: { role: 'TestRole' }, description: 'Find role color match' },
-
+        
         // Suggestion System
         { name: 'suggestion-approve', args: { suggestion_id: 'TEST-SUGG-123' }, description: 'Approve suggestion' },
         { name: 'suggestion-create', args: { suggestion: 'Test suggestion for bot improvement' }, description: 'Create new suggestion' },
         { name: 'suggestion-deny', args: { suggestion_id: 'TEST-SUGG-456', reason: 'Test denial reason' }, description: 'Deny suggestion' },
         { name: 'suggestion-disable', args: {}, description: 'Disable suggestion channels' },
         { name: 'suggestion-setup', args: { channel: testGuild?.channels?.cache?.first() }, description: 'Setup suggestion channels' },
-
+        
         // Support & Tags
         { name: 'tag-manager', args: { tag: '.hwid' }, description: 'MacSploit support tag manager' },
-
+        
         // Transfer System
         { name: 'transfer', args: { from_user: testUser.id, to_user: 'TEST-USER-789' }, description: 'Transfer license data between users' },
-
+        
         // Dashboard Integration
         { name: 'generate-dashboard-key', args: {}, description: 'Generate dashboard access key' },
         { name: 'revoke-dashboard-key', args: {}, description: 'Revoke dashboard access key' },
         { name: 'dashboard-key-info', args: {}, description: 'View dashboard key information' },
-
+        
         // Moderation Tools
         { name: 'say', args: { message: 'Test bot message', channel: testGuild?.channels?.cache?.first() }, description: 'Make bot say message' },
         { name: 'dm', args: { user: testUser, message: 'Test DM message' }, description: 'Send DM to user' },
@@ -5994,14 +5994,14 @@ Please purchase using PayPal on the website.`,
       ];
 
       await interaction.deferReply({ ephemeral: true });
-
+      
       await interaction.editReply({
         content: '🧪 Starting comprehensive command testing...\nThis may take a moment.'
       });
 
       let completedTests = 0;
       const totalTestsCount = commandTests.length;
-
+      
       // Function to create progress bar
       const createProgressBar = (current: number, total: number, width: number = 20) => {
         const percentage = Math.round((current / total) * 100);
@@ -6014,11 +6014,11 @@ Please purchase using PayPal on the website.`,
       for (const test of commandTests) {
         try {
           const startTime = Date.now();
-
+          
           // Simulate command execution by calling storage methods directly
           let result = '';
           let success = true;
-
+          
           switch (test.name) {
             // Authentication & Verification
             case 'verify':
@@ -6030,11 +6030,11 @@ Please purchase using PayPal on the website.`,
               const testKeyId = this.generateKeyId();
               result = `Key generation system active - generated: ${testKeyId}`;
               break;
-
+              
             case 'dewhitelist':
               result = 'Key revocation system ready';
               break;
-
+              
             case 'userinfo':
               try {
                 const user = await storage.getDiscordUserByDiscordId(testUser.id);
@@ -6043,19 +6043,19 @@ Please purchase using PayPal on the website.`,
                 result = 'User lookup system ready';
               }
               break;
-
+              
             case 'hwidinfo':
               result = 'HWID lookup system ready';
               break;
-
+              
             case 'link':
               result = 'Key linking system ready';
               break;
-
+              
             case 'keyinfo':
               result = 'Key info system ready';
               break;
-
+              
             case 'add':
               const newKeyId = this.generateKeyId();
               result = `License key system active - would create: ${newKeyId}`;
@@ -6070,11 +6070,11 @@ Please purchase using PayPal on the website.`,
                 result = 'Backup system ready';
               }
               break;
-
+              
             case 'restore':
               result = 'Restore system ready';
               break;
-
+              
             case 'backups':
               try {
                 const backupList = await this.getAllBackups();
@@ -6088,31 +6088,31 @@ Please purchase using PayPal on the website.`,
             case 'whitelist-user':
               result = 'User whitelist system ready';
               break;
-
+              
             case 'unwhitelist-user':
               result = 'User removal system ready';
               break;
-
+              
             case 'whitelist-list':
               result = 'Whitelist system ready';
               break;
-
+              
             case 'whitelist-add':
               result = 'Advanced whitelist system ready';
               break;
-
+              
             case 'whitelist-admin-add':
               result = 'Admin whitelist system ready';
               break;
-
+              
             case 'whitelist-admin-list':
               result = 'Admin list system active';
               break;
-
+              
             case 'whitelist-admin-remove':
               result = 'Admin removal system ready';
               break;
-
+              
             case 'whitelist-remove':
               result = 'Whitelist removal system ready';
               break;
@@ -6121,15 +6121,15 @@ Please purchase using PayPal on the website.`,
             case 'help':
               result = 'Help system active - command information available';
               break;
-
+              
             case 'ping':
               result = `Pong! Response time: ${Date.now() - startTime}ms`;
               break;
-
+              
             case 'poke':
               result = 'Poke system responsive';
               break;
-
+              
             case 'avatar':
               result = 'Avatar fetching system ready';
               break;
@@ -6138,11 +6138,11 @@ Please purchase using PayPal on the website.`,
             case 'bug-report':
               result = 'Bug reporting system active - would store report in database';
               break;
-
+              
             case 'bypass':
               result = 'Link bypass system ready';
               break;
-
+              
             case 'eval':
               result = 'Code evaluation system active (admin restricted)';
               break;
@@ -6158,42 +6158,42 @@ Please purchase using PayPal on the website.`,
               const btcKey = this.generateKeyId();
               result = `Bitcoin payment key generated: ${btcKey}`;
               break;
-
+              
             case 'generatekey-cashapp':
               const cashKey = this.generateKeyId();
               result = `CashApp payment key generated: ${cashKey}`;
               break;
-
+              
             case 'generatekey-custom':
               const customKey = this.generateKeyId();
               result = `Custom payment key generated: ${customKey}`;
               break;
-
+              
             case 'generatekey-ethereum':
               const ethKey = this.generateKeyId();
               result = `Ethereum payment key generated: ${ethKey}`;
               break;
-
+              
             case 'generatekey-g2a':
               const g2aKey = this.generateKeyId();
               result = `G2A gift code key generated: ${g2aKey}`;
               break;
-
+              
             case 'generatekey-litecoin':
               const ltcKey = this.generateKeyId();
               result = `Litecoin payment key generated: ${ltcKey}`;
               break;
-
+              
             case 'generatekey-paypal':
               const paypalKey = this.generateKeyId();
               result = `PayPal payment key generated: ${paypalKey}`;
               break;
-
+              
             case 'generatekey-robux':
               const robuxKey = this.generateKeyId();
               result = `Robux payment key generated: ${robuxKey}`;
               break;
-
+              
             case 'generatekey-venmo':
               const venmoKey = this.generateKeyId();
               result = `Venmo payment key generated: ${venmoKey}`;
@@ -6204,7 +6204,7 @@ Please purchase using PayPal on the website.`,
               const hwidKeys = await storage.getDiscordKeysByHwid('TEST-HWID-456');
               result = `HWID system active - ${hwidKeys.length} keys associated`;
               break;
-
+              
             case 'hwidinfo-user':
               const userKeys = await storage.getDiscordKeysByUserId(testUser.id);
               result = `User HWID lookup active - ${userKeys.length} keys found`;
@@ -6214,7 +6214,7 @@ Please purchase using PayPal on the website.`,
             case 'lockdown-end':
               result = 'Server lockdown end system ready';
               break;
-
+              
             case 'lockdown-initiate':
               result = 'Server lockdown initiation system ready';
               break;
@@ -6223,7 +6223,7 @@ Please purchase using PayPal on the website.`,
             case 'log-add':
               result = 'Activity log addition system ready';
               break;
-
+              
             case 'log-lb':
               try {
                 const activityLogs = await storage.getActivityLogs(10);
@@ -6232,11 +6232,11 @@ Please purchase using PayPal on the website.`,
                 result = 'Activity logs system ready';
               }
               break;
-
+              
             case 'log-remove':
               result = 'Activity log removal system ready';
               break;
-
+              
             case 'log-view':
               try {
                 const userLogs = await storage.getActivityLogs(10);
@@ -6256,7 +6256,7 @@ Please purchase using PayPal on the website.`,
                 result = 'Candy balance system ready';
               }
               break;
-
+              
             case 'daily':
               try {
                 const canClaim = await storage.checkDailyCandy(testUser.id);
@@ -6265,11 +6265,11 @@ Please purchase using PayPal on the website.`,
                 result = 'Daily candy system ready';
               }
               break;
-
+              
             case 'candy-transfer':
               result = 'Candy transfer system ready - would transfer 10 candy';
               break;
-
+              
             case 'candy-leaderboard':
               try {
                 const leaderboard = await storage.getCandyLeaderboard(5);
@@ -6293,19 +6293,19 @@ Please purchase using PayPal on the website.`,
             case 'suggestion-approve':
               result = 'Suggestion approval system ready';
               break;
-
+              
             case 'suggestion-create':
               result = 'Suggestion creation system active';
               break;
-
+              
             case 'suggestion-deny':
               result = 'Suggestion denial system ready';
               break;
-
+              
             case 'suggestion-disable':
               result = 'Suggestion system disable functionality ready';
               break;
-
+              
             case 'suggestion-setup':
               result = 'Suggestion channel setup system ready';
               break;
@@ -6325,11 +6325,11 @@ Please purchase using PayPal on the website.`,
             case 'generate-dashboard-key':
               result = 'Dashboard key generation system ready';
               break;
-
+              
             case 'revoke-dashboard-key':
               result = 'Dashboard key revocation system ready';
               break;
-
+              
             case 'dashboard-key-info':
               result = 'Dashboard key info system active';
               break;
@@ -6338,34 +6338,34 @@ Please purchase using PayPal on the website.`,
             case 'say':
               result = 'Bot message system ready';
               break;
-
+              
             case 'dm':
               result = 'Direct message system ready';
               break;
-
+              
             case 'nickname':
               result = 'Nickname change system ready';
               break;
-
+              
             case 'purge':
               result = 'Message purging system ready';
               break;
-
+              
             case 'timeout':
               result = 'User timeout system ready';
               break;
-
+              
             case 'announce':
               result = 'Announcement system ready';
               break;
-
+              
             default:
               result = `Command "${test.name}" test case not implemented`;
               success = false;
           }
-
+          
           const executionTime = Date.now() - startTime;
-
+          
           testResults.push({
             command: test.name,
             description: test.description,
@@ -6376,7 +6376,7 @@ Please purchase using PayPal on the website.`,
           });
 
           completedTests++;
-
+          
           // Update progress every 15 tests or on completion (reduce frequency)
           if (completedTests % 15 === 0 || completedTests === totalTestsCount) {
             const progressBar = createProgressBar(completedTests, totalTestsCount);
@@ -6389,7 +6389,7 @@ Please purchase using PayPal on the website.`,
               console.log('Progress update skipped');
             }
           }
-
+          
         } catch (error) {
           testResults.push({
             command: test.name,
@@ -6399,7 +6399,7 @@ Please purchase using PayPal on the website.`,
             executionTime: 'N/A',
             error: error instanceof Error ? error.message : String(error)
           });
-
+          
           completedTests++;
         }
       }
@@ -6413,7 +6413,7 @@ Please purchase using PayPal on the website.`,
       const totalTestsCompleted = testResults.length;
       const avgTime = Math.round(testResults.reduce((sum, r) => sum + (parseInt(r.executionTime) || 0), 0) / totalTestsCompleted);
       const successRate = Math.round((passedTests / totalTestsCompleted) * 100);
-
+      
       // Send minimal summary with just content (no embed to avoid field issues)
       try {
         await interaction.editReply({

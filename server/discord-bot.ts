@@ -980,12 +980,21 @@ export class RaptorBot {
     try {
       console.log('🔄 Started refreshing application (/) commands.');
 
-      await rest.put(
-        Routes.applicationCommands(CLIENT_ID!),
-        { body: commands },
-      );
+      // Register commands to all guilds for immediate availability
+      const guilds = Array.from(this.client.guilds.cache.values());
+      for (const guild of guilds) {
+        try {
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: commands },
+          );
+          console.log(`✅ Commands registered for guild: ${guild.name}`);
+        } catch (guildError) {
+          console.error(`❌ Failed to register commands for guild ${guild.name}:`, guildError);
+        }
+      }
 
-      console.log('✅ Successfully reloaded application (/) commands.');
+      console.log('✅ Successfully reloaded application (/) commands for all guilds.');
     } catch (error) {
       console.error('❌ Error registering commands:', error);
     }

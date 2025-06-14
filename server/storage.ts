@@ -83,7 +83,10 @@ export interface IStorage {
 
   addUserLog(userId: string, message: string): Promise<void>;
   addUserLogs(userId: string, count: number, reason: string): Promise<void>;
+  removeUserLogs(userId: string, count: number, reason: string): Promise<void>;
   getUserLogs(userId: string): Promise<any[]>;
+  getUserLogLeaderboard(limit: number): Promise<any[]>;
+  clearUserLogs(userId: string): Promise<void>;
 
   addToWhitelist(userId: string): Promise<void>;
   removeFromWhitelist(userId: string): Promise<void>;

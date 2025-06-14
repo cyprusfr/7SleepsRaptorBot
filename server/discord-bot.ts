@@ -3575,6 +3575,185 @@ export class RaptorBot {
     }
   }
 
+  private async handleTagManagerCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const action = interaction.options.getString('action', true);
+      const tagName = interaction.options.getString('tag');
+      const query = interaction.options.getString('query');
+
+      switch (action) {
+        case 'list':
+          const allTags = Object.keys(this.predefinedTags);
+          const tagsByCategory = {
+            'Installation & Setup': ['.install', '.elevated', '.zsh'],
+            'Crashes & Errors': ['.crash', '.uicrash', '.fwaeh', '.badcpu'],
+            'Payment Methods': ['.paypal', '.robux', '.giftcard'],
+            'Script & Execution': ['.scripts', '.autoexe', '.iy', '.offline'],
+            'System Information': ['.hwid', '.user', '.cookie'],
+            'Store & Links': ['.sellsn', '.rapejaml'],
+            'Security & Detection': ['.anticheat', '.multi-instance'],
+            'Miscellaneous': ['.nigger']
+          };
+
+          const embed = new EmbedBuilder()
+            .setTitle('📋 MacSploit Support Tags Manager')
+            .setDescription(`Total Tags: **${allTags.length}**\n\nUse \`/tag-manager view tag:<name>\` to see content`)
+            .setColor(0x00ff00)
+            .setTimestamp();
+
+          Object.entries(tagsByCategory).forEach(([category, tags]) => {
+            const validTags = tags.filter(tag => this.predefinedTags[tag]);
+            if (validTags.length > 0) {
+              embed.addFields({
+                name: category,
+                value: validTags.map(tag => `\`${tag}\``).join(', '),
+                inline: false
+              });
+            }
+          });
+
+          await interaction.reply({ embeds: [embed] });
+          success = true;
+          break;
+
+        case 'view':
+          if (!tagName) {
+            await interaction.reply({ 
+              content: '❌ Please specify a tag name to view.',
+              ephemeral: true 
+            });
+            return;
+          }
+
+          const fullTagName = tagName.startsWith('.') ? tagName : `.${tagName}`;
+          const tagContent = this.predefinedTags[fullTagName];
+
+          if (!tagContent) {
+            await interaction.reply({ 
+              content: `❌ Tag \`${fullTagName}\` not found.`,
+              ephemeral: true 
+            });
+            return;
+          }
+
+          const viewEmbed = new EmbedBuilder()
+            .setTitle(`📄 Support Tag: ${fullTagName}`)
+            .setDescription(`\`\`\`\n${tagContent}\n\`\`\``)
+            .setColor(0x0099ff)
+            .setFooter({ text: `Usage: Type ${fullTagName} in chat` })
+            .setTimestamp();
+
+          await interaction.reply({ embeds: [viewEmbed] });
+          success = true;
+          break;
+
+        case 'search':
+          if (!query) {
+            await interaction.reply({ 
+              content: '❌ Please provide a search query.',
+              ephemeral: true 
+            });
+            return;
+          }
+
+          const searchResults = Object.entries(this.predefinedTags)
+            .filter(([tag, content]) => 
+              tag.toLowerCase().includes(query.toLowerCase()) ||
+              content.toLowerCase().includes(query.toLowerCase())
+            )
+            .slice(0, 10);
+
+          if (searchResults.length === 0) {
+            await interaction.reply({ 
+              content: `❌ No tags found matching "${query}".`,
+              ephemeral: true 
+            });
+            return;
+          }
+
+          const searchEmbed = new EmbedBuilder()
+            .setTitle(`🔍 Search Results for "${query}"`)
+            .setDescription(`Found ${searchResults.length} matching tags:`)
+            .setColor(0xffaa00)
+            .setTimestamp();
+
+          searchResults.forEach(([tag, content]) => {
+            const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+            searchEmbed.addFields({
+              name: tag,
+              value: `\`\`\`${preview}\`\`\``,
+              inline: false
+            });
+          });
+
+          await interaction.reply({ embeds: [searchEmbed] });
+          success = true;
+          break;
+
+        default:
+          await interaction.reply({ 
+            content: '❌ Invalid action specified.',
+            ephemeral: true 
+          });
+          return;
+      }
+
+      await this.logCommandUsage(interaction, startTime, success, null);
+    } catch (error) {
+      console.error('Error in tag manager command:', error);
+      await this.logCommandUsage(interaction, startTime, false, error);
+      
+      await interaction.reply({ 
+        content: '❌ An error occurred while processing the tag manager command.',
+        ephemeral: true 
+      });
+    }
+  }
+
+  private async handleSupportTagCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const commandName = interaction.commandName;
+      const tagKey = `.${commandName}`;
+      const tagContent = this.predefinedTags[tagKey];
+
+      if (!tagContent) {
+        await interaction.reply({ 
+          content: `❌ Support tag \`${tagKey}\` not found.`,
+          ephemeral: true 
+        });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📋 MacSploit Support: ${tagKey}`)
+        .setDescription(tagContent)
+        .setColor(0x00ff00)
+        .setFooter({ text: 'MacSploit Support System' })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+      // Log the support tag usage
+      await this.logActivity('support_tag_used', `User ${interaction.user.username} used support tag ${tagKey}`);
+      await this.logCommandUsage(interaction, startTime, success, null);
+    } catch (error) {
+      console.error('Error in support tag command:', error);
+      await this.logCommandUsage(interaction, startTime, false, error);
+      
+      await interaction.reply({ 
+        content: '❌ An error occurred while retrieving the support information.',
+        ephemeral: true 
+      });
+    }
+  }
+
   public async start(): Promise<void> {
     if (!DISCORD_TOKEN) {
       throw new Error('DISCORD_TOKEN environment variable is required');

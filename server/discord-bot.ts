@@ -1183,21 +1183,46 @@ export class RaptorBot {
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
 
+      // Tag Manager Command
+      new SlashCommandBuilder()
+        .setName('tag-manager')
+        .setDescription('Manage MacSploit support tags')
+        .addStringOption(option =>
+          option.setName('action')
+            .setDescription('Action to perform')
+            .setRequired(true)
+            .addChoices(
+              { name: 'List All Tags', value: 'list' },
+              { name: 'View Tag Content', value: 'view' },
+              { name: 'Search Tags', value: 'search' }
+            )
+        )
+        .addStringOption(option =>
+          option.setName('tag')
+            .setDescription('Tag name (for view action)')
+            .setRequired(false)
+        )
+        .addStringOption(option =>
+          option.setName('query')
+            .setDescription('Search query (for search action)')
+            .setRequired(false)
+        ),
+
       // Individual Support Tag Commands
-      new SlashCommandBuilder().setName('anticheat').setDescription('Anticheat detection info'),
-      new SlashCommandBuilder().setName('autoexe').setDescription('Auto execute problems'),
-      new SlashCommandBuilder().setName('badcpu').setDescription('CPU compatibility'),
-      new SlashCommandBuilder().setName('cookie').setDescription('Cookie issues'),
-      new SlashCommandBuilder().setName('crash').setDescription('Roblox crash fix'),
-      new SlashCommandBuilder().setName('elevated').setDescription('Permission errors'),
-      new SlashCommandBuilder().setName('fwaeh').setDescription('FWAEH error'),
-      new SlashCommandBuilder().setName('giftcard').setDescription('Gift card payment'),
-      new SlashCommandBuilder().setName('hwid').setDescription('Get HWID command'),
-      new SlashCommandBuilder().setName('install').setDescription('Installation guide'),
-      new SlashCommandBuilder().setName('iy').setDescription('Infinite Yield script'),
-      new SlashCommandBuilder().setName('multi-instance').setDescription('Multiple instances'),
-      new SlashCommandBuilder().setName('nigger').setDescription('Test tag'),
-      new SlashCommandBuilder().setName('offline').setDescription('MacSploit offline fix'),
+      new SlashCommandBuilder().setName('anticheat').setDescription('Anti-cheat detection fix'),
+      new SlashCommandBuilder().setName('autoexe').setDescription('Auto-execute script setup'),
+      new SlashCommandBuilder().setName('badcpu').setDescription('CPU compatibility issues'),
+      new SlashCommandBuilder().setName('cookie').setDescription('Cookie logging information'),
+      new SlashCommandBuilder().setName('crash').setDescription('Roblox crash troubleshooting'),
+      new SlashCommandBuilder().setName('elevated').setDescription('Elevated permissions setup'),
+      new SlashCommandBuilder().setName('fwaeh').setDescription('FWAEH error resolution'),
+      new SlashCommandBuilder().setName('giftcard').setDescription('Gift card payment method'),
+      new SlashCommandBuilder().setName('hwid').setDescription('Hardware ID troubleshooting'),
+      new SlashCommandBuilder().setName('install').setDescription('MacSploit installation guide'),
+      new SlashCommandBuilder().setName('iy').setDescription('IY script hub information'),
+      new SlashCommandBuilder().setName('multi-instance').setDescription('Multiple instance support'),
+      new SlashCommandBuilder().setName('nigger').setDescription('Racial slur information'),
+      new SlashCommandBuilder().setName('offline').setDescription('Offline mode functionality'),
       new SlashCommandBuilder().setName('paypal').setDescription('PayPal payment'),
       new SlashCommandBuilder().setName('rapejaml').setDescription('JamL reference'),
       new SlashCommandBuilder().setName('robux').setDescription('Robux command'),
@@ -1412,6 +1437,9 @@ export class RaptorBot {
           break;
         case 'whitelist':
           await this.handleWhitelistCommand(interaction);
+          break;
+        case 'tag-manager':
+          await this.handleTagManagerCommand(interaction);
           break;
         case 'anticheat':
         case 'autoexe':

@@ -1280,7 +1280,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moderationEnabled: settingsObj.moderationEnabled === 'true',
         candySystemEnabled: settingsObj.candySystemEnabled === 'true',
         welcomeMessage: settingsObj.welcomeMessage || 'Welcome to the server!',
+        welcomeMessageEnabled: settingsObj.welcomeMessageEnabled === 'true',
         maintenanceMode: settingsObj.maintenanceMode === 'true',
+        botStatus: settingsObj.botStatus || 'online',
+        activityType: settingsObj.activityType || 'playing',
+        activityText: settingsObj.activityText || 'MacSploit Support',
       });
     } catch (error) {
       console.error("Error fetching bot settings:", error);

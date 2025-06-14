@@ -6004,10 +6004,68 @@ Please purchase using PayPal on the website.`,
         console.log(`🍬 Candy system ${settings.candySystemEnabled ? 'enabled' : 'disabled'}`);
       }
 
+      if (settings.welcomeMessageEnabled !== undefined) {
+        console.log(`👋 Welcome messages ${settings.welcomeMessageEnabled ? 'enabled' : 'disabled'}`);
+      }
+
+      // Update bot status if provided
+      if (settings.botStatus !== undefined) {
+        await this.updateBotStatus(settings.botStatus);
+      }
+
+      // Update bot activity if provided
+      if (settings.activityType !== undefined || settings.activityText !== undefined) {
+        const activityType = settings.activityType || this.settings.get('activityType') || 'playing';
+        const activityText = settings.activityText || this.settings.get('activityText') || 'MacSploit Support';
+        await this.updateBotActivity(activityType, activityText);
+      }
+
       console.log('✅ Bot settings updated successfully');
     } catch (error) {
       console.error('❌ Error updating bot settings:', error);
       throw error;
+    }
+  }
+
+  private async updateBotStatus(status: string): Promise<void> {
+    try {
+      if (!this.client.user) return;
+
+      const discordStatuses = {
+        'online': 'online',
+        'idle': 'idle', 
+        'dnd': 'dnd',
+        'invisible': 'invisible'
+      } as const;
+
+      const discordStatus = discordStatuses[status as keyof typeof discordStatuses] || 'online';
+      
+      await this.client.user.setStatus(discordStatus);
+      console.log(`🔄 Bot status updated to: ${status}`);
+    } catch (error) {
+      console.error('❌ Error updating bot status:', error);
+    }
+  }
+
+  private async updateBotActivity(activityType: string, activityText: string): Promise<void> {
+    try {
+      if (!this.client.user) return;
+
+      const { ActivityType } = await import('discord.js');
+      
+      const activityTypes = {
+        'playing': ActivityType.Playing,
+        'watching': ActivityType.Watching,
+        'listening': ActivityType.Listening,
+        'competing': ActivityType.Competing
+      } as const;
+
+      const discordActivityType = activityTypes[activityType as keyof typeof activityTypes] || ActivityType.Playing;
+      
+      await this.client.user.setActivity(activityText, { type: discordActivityType });
+      console.log(`🎮 Bot activity updated: ${activityType} ${activityText}`);
+    } catch (error) {
+      console.error('❌ Error updating bot activity:', error);
     }
   }
 }

@@ -67,8 +67,12 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - ✅ Suggestion system with approval workflow
 - ✅ Bug reporting system with tracking
 - ✅ Comprehensive error handling and validation
-- ✅ Candy system commands (balance, daily, transfer, leaderboard)
-- ✅ Fully resilient comprehensive testing command (/test) with progress bar, complete error handling, and multi-page text results for all 57+ commands
+- ✅ Complete candy system implementation (balance, daily, beg, credit-card-scam, gamble, leaderboard, pay, deposit)
+- ✅ MacSploit support tags (.sellsn, .uicrash, .user, .zsh, .anticheat, .autoexe, .badcpu, .cookie, .crash, .elevated, .fwaeh, .giftcard, .hwid, .install, .iy, .multi-instance, .offline, .paypal, .robux, .scripts)
+- ✅ Rate limiting (10 commands per 30 seconds)
+- ✅ Permission-based command access with role checking
+- ✅ Real-time Discord verification system for dashboard access
+- ✅ Comprehensive command logging with execution time tracking
 
 ## User Preferences
 - Professional Discord bot commands replacing gaming-focused features

@@ -845,45 +845,237 @@ export class RaptorBot {
     });
   }
 
-  // Placeholder methods - will implement with existing storage functionality
-  private async handleVerificationMessage(message: any) {
-    // Existing implementation
-  }
-
+  // MacSploit Support Tags - predefined responses for common issues
   private predefinedTags: Record<string, any> = {
-    // Existing predefined tags
+    '.sellsn': {
+      title: 'Selling Serial Numbers',
+      description: 'Information about serial number selling policies and procedures.'
+    },
+    '.uicrash': {
+      title: 'UI Crash Issues',
+      description: 'Troubleshooting steps for UI crashes and interface problems.'
+    },
+    '.user': {
+      title: 'User Account Help',
+      description: 'General user account assistance and common questions.'
+    },
+    '.zsh': {
+      title: 'ZSH Terminal Issues',
+      description: 'Solutions for ZSH terminal configuration and execution problems.'
+    },
+    '.anticheat': {
+      title: 'Anticheat Detection',
+      description: 'Information about anticheat systems and bypass methods.'
+    },
+    '.autoexe': {
+      title: 'Auto Execute Problems',
+      description: 'Troubleshooting auto-execution features and script loading.'
+    },
+    '.badcpu': {
+      title: 'CPU Compatibility',
+      description: 'CPU compatibility issues and performance optimization.'
+    },
+    '.cookie': {
+      title: 'Cookie Management',
+      description: 'Cookie handling, storage, and authentication issues.'
+    },
+    '.crash': {
+      title: 'General Crashes',
+      description: 'Troubleshooting application crashes and stability issues.'
+    },
+    '.elevated': {
+      title: 'Elevated Permissions',
+      description: 'Running with administrator/elevated permissions requirements.'
+    },
+    '.fwaeh': {
+      title: 'Firewall Issues',
+      description: 'Firewall configuration and connection problems.'
+    },
+    '.giftcard': {
+      title: 'Gift Card Payments',
+      description: 'Gift card payment processing and verification.'
+    },
+    '.hwid': {
+      title: 'HWID Problems',
+      description: 'Hardware ID issues, resets, and key linking problems.'
+    },
+    '.install': {
+      title: 'Installation Guide',
+      description: 'Step-by-step installation instructions and common errors.'
+    },
+    '.iy': {
+      title: 'IY Script Issues',
+      description: 'Infinite Yield script compatibility and execution problems.'
+    },
+    '.multi-instance': {
+      title: 'Multiple Instances',
+      description: 'Running multiple instances and session management.'
+    },
+    '.offline': {
+      title: 'Offline Mode',
+      description: 'Offline functionality and connectivity requirements.'
+    },
+    '.paypal': {
+      title: 'PayPal Payments',
+      description: 'PayPal payment processing and transaction issues.'
+    },
+    '.robux': {
+      title: 'Robux Payments',
+      description: 'Robux payment methods and verification procedures.'
+    },
+    '.scripts': {
+      title: 'Script Execution',
+      description: 'Script loading, execution, and compatibility issues.'
+    }
   };
 
   private async handlePredefinedTag(message: any, tagName: string) {
-    // Existing implementation
+    const tag = this.predefinedTags[tagName];
+    if (!tag) return;
+
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(`📋 ${tag.title}`)
+      .setDescription(tag.description)
+      .setFooter({ text: 'MacSploit Support • Use /help for more commands' })
+      .setTimestamp();
+
+    await message.reply({ embeds: [embed] });
+  }
+
+  private async handleVerificationMessage(message: any) {
+    if (message.channel.type !== 1) return; // Only handle DMs
+    
+    const content = message.content.trim();
+    if (content.length === 6 && /^\d{6}$/.test(content)) {
+      try {
+        const session = await storage.getVerificationSessionByDiscordUserId(message.author.id);
+        if (session && session.dashboardCode === content) {
+          await storage.completeVerificationSession(session.sessionId, content);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('✅ Verification Complete')
+            .setDescription('Your dashboard access has been verified successfully!')
+            .setTimestamp();
+            
+          await message.reply({ embeds: [embed] });
+        } else {
+          await message.reply('❌ Invalid verification code or session expired.');
+        }
+      } catch (error) {
+        console.error('Error handling verification:', error);
+        await message.reply('❌ Error processing verification code.');
+      }
+    }
   }
 
   private async syncServerData() {
-    // Existing implementation
+    if (!this.client.guilds) return;
+    
+    const guilds = Array.from(this.client.guilds.cache.values());
+    for (const guild of guilds) {
+      await this.addServer(guild);
+    }
   }
 
   private async addServer(guild: any) {
-    // Existing implementation
+    try {
+      await storage.upsertDiscordServer({
+        serverId: guild.id,
+        serverName: guild.name,
+        memberCount: guild.memberCount || 0,
+        permissions: {},
+        isActive: true
+      });
+    } catch (error) {
+      console.error('Error adding server:', error);
+    }
   }
 
   private hasRequiredPermissions(interaction: ChatInputCommandInteraction): boolean {
-    // Existing implementation
-    return true;
+    if (!interaction.guild) return false;
+    
+    const member = interaction.member as any;
+    if (!member) return false;
+    
+    // Check for required roles
+    const requiredRole = this.getSetting('required_role', 'Raptor Admin');
+    const keySystemRole = this.getSetting('key_system_role', 'Key System');
+    
+    const hasRequiredRole = member.roles.cache.some((role: any) => 
+      role.name === requiredRole || 
+      role.name === keySystemRole ||
+      role.permissions.has(PermissionFlagsBits.Administrator)
+    );
+    
+    return hasRequiredRole;
   }
 
   private rateLimitMap = new Map<string, number[]>();
 
   private async isRateLimited(userId: string): Promise<boolean> {
-    // Existing implementation
+    const now = Date.now();
+    const windowMs = 30 * 1000; // 30 seconds
+    const maxRequests = 10; // 10 commands per 30 seconds
+    
+    if (!this.rateLimitMap.has(userId)) {
+      this.rateLimitMap.set(userId, []);
+    }
+    
+    const userRequests = this.rateLimitMap.get(userId)!;
+    
+    // Remove old requests
+    const validRequests = userRequests.filter(time => now - time < windowMs);
+    this.rateLimitMap.set(userId, validRequests);
+    
+    if (validRequests.length >= maxRequests) {
+      return true;
+    }
+    
+    validRequests.push(now);
+    this.rateLimitMap.set(userId, validRequests);
     return false;
   }
 
   private async storeUserData(user: any, member: any, guild: any) {
-    // Existing implementation
+    try {
+      await storage.upsertDiscordUser({
+        discordId: user.id,
+        username: user.username || user.globalName || 'Unknown',
+        discriminator: user.discriminator || '0000',
+        avatarUrl: user.displayAvatarURL?.() || null,
+        roles: member?.roles?.cache?.map((role: any) => role.name) || [],
+        metadata: {
+          guildId: guild?.id,
+          guildName: guild?.name
+        }
+      });
+    } catch (error) {
+      console.error('Error storing user data:', error);
+    }
   }
 
   private async logCommandUsage(interaction: ChatInputCommandInteraction, startTime: number, success: boolean = true, errorMessage?: string): Promise<void> {
-    // Existing implementation
+    try {
+      const executionTime = Date.now() - startTime;
+      
+      await storage.logCommand({
+        commandName: interaction.commandName,
+        userId: interaction.user.id,
+        username: interaction.user.username || 'Unknown',
+        serverId: interaction.guild?.id || null,
+        serverName: interaction.guild?.name || null,
+        channelId: interaction.channel?.id || null,
+        channelName: (interaction.channel as any)?.name || null,
+        arguments: interaction.options.data || {},
+        executionTime,
+        success,
+        errorMessage: errorMessage || null
+      });
+    } catch (error) {
+      console.error('Error logging command usage:', error);
+    }
   }
 
   // Command handlers - implementing with placeholders for now
@@ -974,23 +1166,198 @@ export class RaptorBot {
   }
 
   private async handleDaily(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: '🎁 Daily reward claimed!', ephemeral: true });
+    try {
+      const userId = interaction.user.id;
+      
+      const canClaim = await storage.checkDailyCandy(userId);
+      if (!canClaim) {
+        await interaction.reply({ 
+          content: '❌ You have already claimed your daily reward today! Come back tomorrow.', 
+          ephemeral: true 
+        });
+        return;
+      }
+      
+      const amount = await storage.claimDailyCandy(userId);
+      
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('🎁 Daily Reward Claimed!')
+        .setDescription(`You received **${amount.toLocaleString()}** candies!`)
+        .addFields(
+          { name: '💰 Reward', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '⏰ Next Claim', value: 'Tomorrow', inline: true }
+        )
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error in daily command:', error);
+      await interaction.reply({ content: 'Error claiming daily reward.', ephemeral: true });
+    }
   }
 
   private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: '🏦 Deposit successful!', ephemeral: true });
+    try {
+      const amount = interaction.options.getInteger('amount', true);
+      const userId = interaction.user.id;
+      
+      if (amount < 1) {
+        await interaction.reply({ content: '❌ You must deposit at least 1 candy.', ephemeral: true });
+        return;
+      }
+      
+      const balance = await storage.getCandyBalance(userId);
+      if (balance.wallet < amount) {
+        await interaction.reply({ content: '❌ You don\'t have enough candies in your wallet to deposit.', ephemeral: true });
+        return;
+      }
+      
+      await storage.depositCandy(userId, amount);
+      
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('🏦 Deposit Successful')
+        .setDescription(`You successfully deposited **${amount.toLocaleString()}** candies into your bank!`)
+        .addFields(
+          { name: '💰 Deposited', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '🏦 Bank Balance', value: `${(balance.bank + amount).toLocaleString()} candies`, inline: true }
+        )
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error in candy deposit command:', error);
+      await interaction.reply({ content: 'Error processing deposit.', ephemeral: true });
+    }
   }
 
   private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: '🎰 Gamble result!', ephemeral: true });
+    try {
+      const amount = interaction.options.getInteger('amount', true);
+      const userId = interaction.user.id;
+      
+      if (amount < 1) {
+        await interaction.reply({ content: '❌ You must gamble at least 1 candy.', ephemeral: true });
+        return;
+      }
+      
+      const balance = await storage.getCandyBalance(userId);
+      if (balance.wallet < amount) {
+        await interaction.reply({ content: '❌ You don\'t have enough candies to gamble.', ephemeral: true });
+        return;
+      }
+      
+      const winChance = 0.45; // 45% win chance
+      const won = Math.random() < winChance;
+      
+      let resultAmount = amount;
+      let resultMessage = '';
+      let color = '#FF0000';
+      
+      if (won) {
+        const multiplier = Math.random() * 1.5 + 1.2; // 1.2x to 2.7x multiplier
+        resultAmount = Math.floor(amount * multiplier);
+        await storage.updateCandyBalance(userId, resultAmount - amount);
+        color = '#00FF00';
+        resultMessage = `🎉 **YOU WON!** You gained **${(resultAmount - amount).toLocaleString()}** candies!`;
+      } else {
+        await storage.updateCandyBalance(userId, -amount);
+        color = '#FF0000';
+        resultMessage = `💸 **You lost!** You lost **${amount.toLocaleString()}** candies.`;
+      }
+      
+      const embed = new EmbedBuilder()
+        .setColor(color as any)
+        .setTitle('🎰 Gambling Results')
+        .setDescription(resultMessage)
+        .addFields(
+          { name: '💰 Bet Amount', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: won ? '🎁 Total Won' : '💸 Total Lost', value: `${won ? resultAmount.toLocaleString() : amount.toLocaleString()} candies`, inline: true }
+        )
+        .setFooter({ text: '99.99% of gamblers quit before they hit big' })
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error in candy gamble command:', error);
+      await interaction.reply({ content: 'Error processing gamble.', ephemeral: true });
+    }
   }
 
   private async handleCandyLeaderboard(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: '🏆 Candy leaderboard!', ephemeral: true });
+    try {
+      const leaderboard = await storage.getCandyLeaderboard(10);
+      
+      if (leaderboard.length === 0) {
+        await interaction.reply({ content: 'No candy data available yet.', ephemeral: true });
+        return;
+      }
+      
+      let description = '';
+      for (let i = 0; i < leaderboard.length; i++) {
+        const user = leaderboard[i];
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        description += `${medal} <@${user.discordId}> - **${user.candyBalance.toLocaleString()}** candies\n`;
+      }
+      
+      const embed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('🏆 Candy Leaderboard')
+        .setDescription('**Top 10 Users with the Highest Amount of Candies**\n\n' + description)
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error in candy leaderboard command:', error);
+      await interaction.reply({ content: 'Error fetching leaderboard.', ephemeral: true });
+    }
   }
 
   private async handleCandyPay(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: '💸 Payment sent!', ephemeral: true });
+    try {
+      const targetUser = interaction.options.getUser('user', true);
+      const amount = interaction.options.getInteger('amount', true);
+      const userId = interaction.user.id;
+      
+      if (targetUser.id === userId) {
+        await interaction.reply({ content: '❌ You cannot pay yourself.', ephemeral: true });
+        return;
+      }
+      
+      if (amount < 1) {
+        await interaction.reply({ content: '❌ You must pay at least 1 candy.', ephemeral: true });
+        return;
+      }
+      
+      const balance = await storage.getCandyBalance(userId);
+      if (balance.wallet < amount) {
+        await interaction.reply({ content: '❌ You don\'t have enough candies to make this payment.', ephemeral: true });
+        return;
+      }
+      
+      await storage.transferCandy(userId, targetUser.id, amount);
+      
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('💸 Payment Successful')
+        .setDescription(`You successfully paid **${amount.toLocaleString()}** candies to ${targetUser.toString()}!`)
+        .addFields(
+          { name: '💰 Amount', value: `${amount.toLocaleString()} candies`, inline: true },
+          { name: '👤 Recipient', value: targetUser.toString(), inline: true }
+        )
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error in candy pay command:', error);
+      await interaction.reply({ content: 'Error processing payment.', ephemeral: true });
+    }
   }
 
   public async start() {

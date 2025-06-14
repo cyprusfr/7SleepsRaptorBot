@@ -3464,14 +3464,8 @@ export class RaptorBot {
     }
     
     try {
-      const embed = new EmbedBuilder()
-        .setTitle('🔧 MacSploit Support')
-        .setDescription(response)
-        .setColor(0x0099ff)
-        .setFooter({ text: 'MacSploit Support System' })
-        .setTimestamp();
-
-      await message.reply({ embeds: [embed] });
+      const replyText = `**🔧 MacSploit Support**\n\n${response}\n\n*MacSploit Support System*`;
+      await message.reply(replyText);
       
       // Log tag usage
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);

@@ -520,58 +520,38 @@ export class RaptorBot {
         .setDescription('Evaluate JavaScript code')
         .addStringOption(option => option.setName('code').setDescription('Code to evaluate').setRequired(true)),
 
-      // Generate Key Commands - All payment methods
+      // Generate Key Commands - Simplified payment methods matching screenshot
       new SlashCommandBuilder()
         .setName('generatekey')
         .setDescription('Generate license keys for various payment methods')
         .addSubcommand(subcommand =>
           subcommand
             .setName('bitcoin')
-            .setDescription('Generate a key for a bitcoin payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('txid').setDescription('Transaction ID').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Payment amount').setRequired(false)))
+            .setDescription('Generate a key for a bitcoin payment'))
         .addSubcommand(subcommand =>
           subcommand
             .setName('cashapp')
-            .setDescription('Generate a key for a cashapp payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('identifier').setDescription('Payment identifier').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Payment amount').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('ethereum')
-            .setDescription('Generate a key for an ethereum payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('txid').setDescription('Transaction ID').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Payment amount').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('paypal')
-            .setDescription('Generate a key for a paypal payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('email').setDescription('PayPal email').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Payment amount').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('robux')
-            .setDescription('Generate a key for a robux payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Robux amount').setRequired(true))
-            .addStringOption(option => option.setName('group').setDescription('Roblox group').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('venmo')
-            .setDescription('Generate a key for a venmo payment')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('username').setDescription('Venmo username').setRequired(true))
-            .addStringOption(option => option.setName('amount').setDescription('Payment amount').setRequired(false)))
+            .setDescription('Generate a key for a cashapp payment'))
         .addSubcommand(subcommand =>
           subcommand
             .setName('custom')
-            .setDescription('Generate a custom key')
-            .addStringOption(option => option.setName('user').setDescription('User').setRequired(true))
-            .addStringOption(option => option.setName('note').setDescription('Custom note').setRequired(true))),
+            .setDescription('Generate a custom key'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('ethereum')
+            .setDescription('Generate a key for an ethereum payment'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('paypal')
+            .setDescription('Generate a key for a paypal payment'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('robux')
+            .setDescription('Generate a key for a robux payment'))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('venmo')
+            .setDescription('Generate a key for a venmo payment')),
 
       // Get Command
       new SlashCommandBuilder()
@@ -2746,16 +2726,122 @@ export class RaptorBot {
   }
 
   private async handleGenerateKeyCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+    
     const subcommand = interaction.options.getSubcommand();
     
-    // Implementation based on your screenshots would go here
-    const embed = new EmbedBuilder()
-      .setTitle('🔑 Generate Key')
-      .setDescription(`Payment method: ${subcommand}`)
-      .setColor(0x00ff00)
-      .setTimestamp();
-    
-    await interaction.reply({ embeds: [embed] });
+    try {
+      // Generate unique key ID
+      const keyId = this.generateKeyId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      
+      let paymentMethod = '';
+      let paymentAmount = '';
+      let paymentAddress = '';
+      let embedColor = 0x00ff00;
+      
+      switch (subcommand) {
+        case 'bitcoin':
+          paymentMethod = 'Bitcoin (BTC)';
+          paymentAmount = '$25.00 USD (≈ 0.0005 BTC)';
+          paymentAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
+          embedColor = 0xf7931a;
+          break;
+        case 'ethereum':
+          paymentMethod = 'Ethereum (ETH)';
+          paymentAmount = '$25.00 USD (≈ 0.01 ETH)';
+          paymentAddress = '0x742b4e3a8f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f';
+          embedColor = 0x627eea;
+          break;
+        case 'paypal':
+          paymentMethod = 'PayPal';
+          paymentAmount = '$25.00 USD';
+          paymentAddress = 'payments@macsploit.com';
+          embedColor = 0x0070ba;
+          break;
+        case 'cashapp':
+          paymentMethod = 'CashApp';
+          paymentAmount = '$25.00 USD';
+          paymentAddress = '$MacSploitOfficial';
+          embedColor = 0x00d632;
+          break;
+        case 'venmo':
+          paymentMethod = 'Venmo';
+          paymentAmount = '$25.00 USD';
+          paymentAddress = '@MacSploit-Official';
+          embedColor = 0x1e88e5;
+          break;
+        case 'robux':
+          paymentMethod = 'Robux';
+          paymentAmount = '2,000 Robux';
+          paymentAddress = 'MacSploitOfficial (Roblox)';
+          embedColor = 0x00b2ff;
+          break;
+        case 'custom':
+          paymentMethod = 'Custom Payment';
+          paymentAmount = 'Contact Admin';
+          paymentAddress = 'DM @MacSploit for details';
+          embedColor = 0x9c27b0;
+          break;
+        default:
+          throw new Error('Invalid payment method');
+      }
+      
+      // Store key in database
+      const keyData = {
+        keyId,
+        paymentMethod: subcommand,
+        status: 'pending',
+        generatedBy: interaction.user.id,
+        generatedAt: new Date(),
+        expiresAt,
+        isActive: true,
+        usedBy: null,
+        usedAt: null,
+        hwid: null,
+        metadata: {
+          amount: paymentAmount,
+          address: paymentAddress,
+          username: interaction.user.username
+        }
+      };
+      
+      await storage.createLicenseKey(keyData);
+      await this.logActivity('key_generated', `${interaction.user.username} generated ${subcommand} payment key: ${keyId}`);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Payment Key Generated')
+        .setDescription(`Your ${paymentMethod} payment key has been generated successfully.`)
+        .addFields(
+          { name: '🆔 Key ID', value: `\`${keyId}\``, inline: false },
+          { name: '💰 Payment Method', value: paymentMethod, inline: true },
+          { name: '💵 Amount', value: paymentAmount, inline: true },
+          { name: '📍 Send Payment To', value: `\`${paymentAddress}\``, inline: false },
+          { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:F>`, inline: true },
+          { name: '📋 Status', value: '⏳ Pending Payment', inline: true },
+          { name: '📝 Instructions', value: 
+            `1. Send **${paymentAmount}** to the address above\n` +
+            `2. Screenshot your payment confirmation\n` +
+            `3. DM the screenshot to MacSploit staff\n` +
+            `4. Your key will be activated within 24 hours`, inline: false }
+        )
+        .setColor(embedColor)
+        .setFooter({ text: 'MacSploit License System' })
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      
+    } catch (error) {
+      console.error('Error generating payment key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to generate payment key. Please try again.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
   }
 
   // Ping Command
@@ -2836,6 +2922,13 @@ export class RaptorBot {
     }
     
     return result;
+  }
+
+  private generateKeyId(): string {
+    const prefix = 'MSK';
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
   }
 
   private async logActivity(type: string, description: string) {

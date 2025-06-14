@@ -605,7 +605,7 @@ export class DatabaseStorage implements IStorage {
     const logs = await db
       .select()
       .from(activityLogs)
-      .orderBy(desc(activityLogs.createdAt))
+      .orderBy(desc(activityLogs.timestamp))
       .limit(limit);
     return logs;
   }
@@ -624,7 +624,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(activityLogs)
       .where(eq(activityLogs.type, 'error'))
-      .orderBy(desc(activityLogs.createdAt))
+      .orderBy(desc(activityLogs.timestamp))
       .limit(limit);
     return logs;
   }

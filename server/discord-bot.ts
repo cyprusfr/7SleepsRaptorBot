@@ -3479,7 +3479,7 @@ export class RaptorBot {
           const activityLogs = await storage.getActivityLogs(Math.floor(maxLimit / 2));
           const commandLogs = await storage.getCommandLogs(Math.floor(maxLimit / 2));
           logs = [...activityLogs, ...commandLogs].sort((a, b) => 
-            new Date(b.createdAt || b.timestamp).getTime() - new Date(a.createdAt || a.timestamp).getTime()
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
           ).slice(0, maxLimit);
           title = '📋 System Logs';
           description = 'Recent system activity and commands';
@@ -3499,7 +3499,7 @@ export class RaptorBot {
 
       let logText = '';
       for (const log of logs.slice(0, 15)) { // Limit to 15 entries for embed size
-        const timestamp = new Date(log.createdAt || log.timestamp);
+        const timestamp = new Date(log.timestamp);
         const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
         
         if (log.commandName) {

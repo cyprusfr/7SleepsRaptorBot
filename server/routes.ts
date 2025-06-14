@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start Discord bot asynchronously (non-blocking)
   setImmediate(async () => {
     try {
-      await raptorBot.start();
+      await discordBot.start();
       console.log("✅ Discord bot started successfully");
     } catch (error) {
       console.error("❌ Failed to start Discord bot:", error);

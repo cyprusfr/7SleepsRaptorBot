@@ -581,19 +581,18 @@ export class DatabaseStorage implements IStorage {
       .length;
 
     // Get bot statistics from Discord client
-    const { raptorBot } = await import('./discord-bot');
-    const botStats = raptorBot.getStats();
+    const { discordBot } = await import('./discord-bot');
     
     return {
       totalKeys: allKeys.length,
       activeKeys: allKeys.filter(k => k.status === 'active').length,
       totalUsers: allUsers.length,
       connectedServers: allServers.filter(s => s.isActive).length,
-      botStatus: raptorBot.isOnline() ? "online" : "offline",
+      botStatus: discordBot.isClientReady() ? "online" : "offline",
       lastSync: new Date().toISOString(),
       totalCandy,
       activeGames,
-      uptime: botStats.uptime ? Math.floor(botStats.uptime / 1000) : 0,
+      uptime: 0,
     };
   }
 
@@ -627,13 +626,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCandyBalance(userId: string, amount: number): Promise<void> {
-    const currentBalance = await this.getCandyBalance(userId);
-    const newBalance = Math.max(0, currentBalance.wallet + amount);
-    
-    await db
-      .update(discordUsers)
-      .set({ candyBalance: newBalance })
-      .where(eq(discordUsers.discordId, userId));
+    await this.addCandyBalance(userId, amount);
   }
 
   async withdrawCandy(userId: string, amount: number): Promise<void> {

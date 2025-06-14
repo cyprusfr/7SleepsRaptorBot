@@ -43,8 +43,8 @@ app.use((req, res, next) => {
     console.log('✅ Routes registered successfully');
     
     // Start Discord bot
-    const { raptorBot } = await import("./discord-bot");
-    await raptorBot.start();
+    const { discordBot } = await import("./discord-bot");
+    await discordBot.start();
     console.log('✅ Discord bot started');
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

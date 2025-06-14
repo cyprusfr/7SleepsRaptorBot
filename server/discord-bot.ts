@@ -2214,7 +2214,18 @@ export class RaptorBot {
       throw new Error('Discord client ID is required. Set DISCORD_CLIENT_ID environment variable.');
     }
 
-    await this.client.login(DISCORD_TOKEN);
+    // Wait for bot to be fully ready before continuing
+    return new Promise<void>((resolve, reject) => {
+      this.client.once('ready', () => {
+        resolve();
+      });
+
+      this.client.once('error', (error) => {
+        reject(error);
+      });
+
+      this.client.login(DISCORD_TOKEN).catch(reject);
+    });
   }
 
   public isOnline(): boolean {

@@ -300,10 +300,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateLastDaily(userId: string): Promise<void> {
+    // Update both tables to ensure consistency
+    const now = new Date();
+    
+    // Update discordUsers table
     await db
       .update(discordUsers)
-      .set({ lastDaily: new Date() })
+      .set({ lastDaily: now })
       .where(eq(discordUsers.discordId, userId));
+    
+    // Also update candyBalances table if it exists
+    try {
+      await db
+        .update(candyBalances)
+        .set({ lastDaily: now })
+        .where(eq(candyBalances.userId, userId));
+    } catch (error) {
+      // Create candy balance record if it doesn't exist
+      await db
+        .insert(candyBalances)
+        .values({
+          userId: userId,
+          balance: 0,
+          bankBalance: 0,
+          lastDaily: now,
+          totalEarned: 0,
+          totalSpent: 0
+        })
+        .onConflictDoNothing();
+    }
   }
 
   async updateLastBeg(userId: string): Promise<void> {

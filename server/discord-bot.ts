@@ -1982,6 +1982,9 @@ export class RaptorBot {
 
       await storage.addCandy(userId, finalAmount);
       await storage.updateLastDaily(userId);
+      
+      // Refresh user data to get updated lastDaily timestamp
+      user = await storage.getDiscordUserByDiscordId(userId) || user;
 
       await this.logActivity('candy_daily', `${interaction.user.username} claimed daily reward: ${finalAmount} candies`);
 
@@ -2858,12 +2861,7 @@ export class RaptorBot {
 
   private async logActivity(type: string, description: string) {
     try {
-      await storage.logActivity({
-        type: type,
-        description: description,
-        metadata: {},
-        userId: null
-      });
+      await storage.logActivity(type, description);
     } catch (error) {
       console.error('Error logging activity:', error);
     }

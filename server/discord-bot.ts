@@ -1080,18 +1080,38 @@ export class RaptorBot {
     try {
       console.log('🔄 Started refreshing application (/) commands.');
 
-      // Register commands to all guilds for immediate availability
+      // First clear all existing commands to force refresh
       const guilds = Array.from(this.client.guilds.cache.values());
       for (const guild of guilds) {
         try {
+          // Clear existing commands
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: [] },
+          );
+          
+          // Wait a moment then register new commands
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
           await rest.put(
             Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
             { body: commands },
           );
-          console.log(`✅ Commands registered for guild: ${guild.name}`);
+          console.log(`✅ Commands refreshed for guild: ${guild.name}`);
         } catch (guildError) {
           console.error(`❌ Failed to register commands for guild ${guild.name}:`, guildError);
         }
+      }
+
+      // Also register globally to ensure availability
+      try {
+        await rest.put(
+          Routes.applicationCommands(CLIENT_ID!),
+          { body: commands },
+        );
+        console.log('✅ Global commands registered');
+      } catch (globalError) {
+        console.log('⚠️ Global command registration failed (non-critical)');
       }
 
       console.log('✅ Successfully reloaded application (/) commands for all guilds.');

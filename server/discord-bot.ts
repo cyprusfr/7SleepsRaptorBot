@@ -61,13 +61,146 @@ export class RaptorBot {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessageReactions
       ],
     });
 
     this.backupChecker = new BackupIntegrityChecker();
     this.setupEventHandlers();
+    this.setupComprehensiveLogging();
     this.registerCommands();
     this.loadSettings();
+  }
+
+  private setupComprehensiveLogging() {
+    // Log ALL bot interactions and events
+    
+    // Command interactions
+    this.client.on('interactionCreate', async (interaction) => {
+      if (interaction.isChatInputCommand()) {
+        await storage.logBotActivity({
+          eventType: 'command_executed',
+          eventCategory: 'interaction',
+          eventData: {
+            commandName: interaction.commandName,
+            subcommand: interaction.options.getSubcommand(false),
+            options: interaction.options.data
+          },
+          userId: interaction.user.id,
+          username: interaction.user.username,
+          userDiscriminator: interaction.user.discriminator,
+          channelId: interaction.channelId,
+          channelName: interaction.channel?.name,
+          channelType: interaction.channel?.type.toString(),
+          guildId: interaction.guildId,
+          guildName: interaction.guild?.name,
+          commandName: interaction.commandName,
+          subcommandName: interaction.options.getSubcommand(false),
+          commandOptions: interaction.options.data
+        });
+      }
+    });
+
+    // Message events
+    this.client.on('messageCreate', async (message) => {
+      if (message.author.bot) return;
+      
+      await storage.logBotActivity({
+        eventType: 'message_created',
+        eventCategory: 'message',
+        eventData: {
+          messageId: message.id,
+          content: message.content,
+          attachments: message.attachments.map(att => ({ name: att.name, size: att.size })),
+          embeds: message.embeds.length,
+          reactions: message.reactions.cache.size
+        },
+        userId: message.author.id,
+        username: message.author.username,
+        userDiscriminator: message.author.discriminator,
+        channelId: message.channelId,
+        channelName: message.channel?.name,
+        channelType: message.channel?.type.toString(),
+        guildId: message.guildId,
+        guildName: message.guild?.name,
+        messageId: message.id,
+        messageContent: message.content,
+        messageAttachments: message.attachments.map(att => ({ name: att.name, size: att.size, url: att.url })),
+        messageEmbeds: message.embeds
+      });
+    });
+
+    // Member join/leave events
+    this.client.on('guildMemberAdd', async (member) => {
+      await storage.logBotActivity({
+        eventType: 'member_joined',
+        eventCategory: 'guild',
+        eventData: {
+          userId: member.id,
+          username: member.user.username,
+          joinedAt: member.joinedAt,
+          roles: member.roles.cache.map(role => role.name)
+        },
+        userId: member.id,
+        username: member.user.username,
+        userDiscriminator: member.user.discriminator,
+        guildId: member.guild.id,
+        guildName: member.guild.name,
+        memberJoinData: {
+          joinedAt: member.joinedAt,
+          roles: member.roles.cache.map(role => ({ id: role.id, name: role.name })),
+          bot: member.user.bot
+        }
+      });
+    });
+
+    // Voice state updates
+    this.client.on('voiceStateUpdate', async (oldState, newState) => {
+      await storage.logBotActivity({
+        eventType: 'voice_state_update',
+        eventCategory: 'voice',
+        eventData: {
+          userId: newState.id,
+          oldChannelId: oldState.channelId,
+          newChannelId: newState.channelId,
+          mute: newState.mute,
+          deaf: newState.deaf
+        },
+        userId: newState.id,
+        username: newState.member?.user.username,
+        userDiscriminator: newState.member?.user.discriminator,
+        channelId: newState.channelId,
+        channelName: newState.channel?.name,
+        guildId: newState.guild.id,
+        guildName: newState.guild.name,
+        voiceStateChange: {
+          oldChannel: oldState.channel?.name,
+          newChannel: newState.channel?.name,
+          mute: newState.mute,
+          deaf: newState.deaf,
+          selfMute: newState.selfMute,
+          selfDeaf: newState.selfDeaf
+        }
+      });
+    });
+
+    // Bot startup
+    this.client.on('ready', async () => {
+      await storage.logBotActivity({
+        eventType: 'bot_ready',
+        eventCategory: 'system',
+        eventData: {
+          botId: this.client.user?.id,
+          botUsername: this.client.user?.username,
+          guilds: this.client.guilds.cache.size,
+          users: this.client.users.cache.size
+        },
+        success: true
+      });
+    });
   }
 
   private async loadSettings() {

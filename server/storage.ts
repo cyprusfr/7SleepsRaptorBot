@@ -29,7 +29,8 @@ import {
   type InsertDiscordServer
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, or, gte, lte } from "drizzle-orm";
+import { eq, desc, sql, and, or, gte, lte, count } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -972,6 +973,306 @@ export class DatabaseStorage implements IStorage {
     await db.update(candyBalances)
       .set({ balance: 0, bankBalance: 0, updatedAt: new Date() })
       .where(eq(candyBalances.userId, userId));
+  }
+
+  // Complete Discord server backup
+  async createServerBackup(guild: any, createdBy: string): Promise<string> {
+    const backupId = nanoid();
+    const startTime = Date.now();
+
+    try {
+      // Fetch all server data
+      const [
+        channels,
+        roles,
+        members,
+        emojis,
+        stickers,
+        invites,
+        webhooks,
+        bans,
+        auditLogs
+      ] = await Promise.all([
+        guild.channels.fetch(),
+        guild.roles.fetch(),
+        guild.members.fetch(),
+        guild.emojis.fetch(),
+        guild.stickers.fetch(),
+        guild.invites.fetch(),
+        guild.fetchWebhooks(),
+        guild.bans.fetch(),
+        guild.fetchAuditLogs({ limit: 100 })
+      ]);
+
+      // Fetch messages from all text channels
+      const allMessages: any[] = [];
+      let totalMessageCount = 0;
+
+      for (const [, channel] of channels) {
+        if (channel.isTextBased && channel.isTextBased() && channel.viewable) {
+          try {
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const channelMessages = messages.map((msg: any) => ({
+              id: msg.id,
+              content: msg.content,
+              author: {
+                id: msg.author.id,
+                username: msg.author.username,
+                discriminator: msg.author.discriminator,
+                bot: msg.author.bot
+              },
+              channelId: channel.id,
+              channelName: channel.name,
+              timestamp: msg.createdAt,
+              attachments: msg.attachments.map((att: any) => ({
+                id: att.id,
+                name: att.name,
+                url: att.url,
+                size: att.size
+              })),
+              embeds: msg.embeds.map((embed: any) => ({
+                title: embed.title,
+                description: embed.description,
+                url: embed.url,
+                color: embed.color,
+                fields: embed.fields
+              })),
+              reactions: msg.reactions.cache.map((reaction: any) => ({
+                emoji: reaction.emoji.name,
+                count: reaction.count
+              }))
+            }));
+            allMessages.push(...channelMessages);
+            totalMessageCount += channelMessages.length;
+          } catch (error) {
+            console.log(`Couldn't fetch messages from ${channel.name}:`, error);
+          }
+        }
+      }
+
+      // Prepare backup data
+      const backupData = {
+        backupId,
+        serverId: guild.id,
+        serverName: guild.name,
+        serverIcon: guild.iconURL(),
+        serverBanner: guild.bannerURL(),
+        serverSplash: guild.splashURL(),
+        serverDescription: guild.description,
+        ownerInfo: {
+          id: guild.ownerId,
+          username: guild.members.cache.get(guild.ownerId)?.user.username
+        },
+        serverData: {
+          id: guild.id,
+          name: guild.name,
+          memberCount: guild.memberCount,
+          createdAt: guild.createdAt,
+          partnered: guild.partnered,
+          verified: guild.verified,
+          boostTier: guild.premiumTier,
+          boostCount: guild.premiumSubscriptionCount,
+          features: guild.features,
+          systemChannelId: guild.systemChannelId,
+          rulesChannelId: guild.rulesChannelId,
+          publicUpdatesChannelId: guild.publicUpdatesChannelId,
+          afkChannelId: guild.afkChannelId,
+          afkTimeout: guild.afkTimeout,
+          defaultMessageNotifications: guild.defaultMessageNotifications,
+          explicitContentFilter: guild.explicitContentFilter,
+          mfaLevel: guild.mfaLevel,
+          nsfwLevel: guild.nsfwLevel,
+          verificationLevel: guild.verificationLevel
+        },
+        channels: channels.map((channel: any) => ({
+          id: channel.id,
+          name: channel.name,
+          type: channel.type,
+          position: channel.position,
+          parentId: channel.parentId,
+          topic: channel.topic,
+          nsfw: channel.nsfw,
+          rateLimitPerUser: channel.rateLimitPerUser,
+          permissionOverwrites: channel.permissionOverwrites?.cache.map((overwrite: any) => ({
+            id: overwrite.id,
+            type: overwrite.type,
+            allow: overwrite.allow.toArray(),
+            deny: overwrite.deny.toArray()
+          }))
+        })),
+        roles: roles.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          hoist: role.hoist,
+          position: role.position,
+          permissions: role.permissions.toArray(),
+          managed: role.managed,
+          mentionable: role.mentionable,
+          members: role.members.map((member: any) => member.id)
+        })),
+        members: members.map((member: any) => ({
+          id: member.id,
+          username: member.user.username,
+          discriminator: member.user.discriminator,
+          nickname: member.nickname,
+          roles: member.roles.cache.map((role: any) => role.id),
+          joinedAt: member.joinedAt,
+          premiumSince: member.premiumSince,
+          bot: member.user.bot,
+          avatar: member.user.avatarURL()
+        })),
+        messages: allMessages,
+        emojis: emojis.map((emoji: any) => ({
+          id: emoji.id,
+          name: emoji.name,
+          animated: emoji.animated,
+          url: emoji.url,
+          author: emoji.author?.id
+        })),
+        stickers: stickers.map((sticker: any) => ({
+          id: sticker.id,
+          name: sticker.name,
+          description: sticker.description,
+          type: sticker.type,
+          format: sticker.format,
+          url: sticker.url
+        })),
+        invites: invites.map((invite: any) => ({
+          code: invite.code,
+          url: invite.url,
+          channelId: invite.channelId,
+          inviterId: invite.inviterId,
+          uses: invite.uses,
+          maxUses: invite.maxUses,
+          maxAge: invite.maxAge,
+          temporary: invite.temporary,
+          createdAt: invite.createdAt,
+          expiresAt: invite.expiresAt
+        })),
+        webhooks: webhooks.map((webhook: any) => ({
+          id: webhook.id,
+          name: webhook.name,
+          channelId: webhook.channelId,
+          guildId: webhook.guildId,
+          url: webhook.url,
+          avatar: webhook.avatarURL()
+        })),
+        integrations: [], // Would need additional API calls
+        auditLogs: auditLogs.entries.map((entry: any) => ({
+          id: entry.id,
+          action: entry.action,
+          executor: entry.executor?.id,
+          target: entry.target?.id,
+          reason: entry.reason,
+          changes: entry.changes,
+          createdAt: entry.createdAt
+        })),
+        bans: bans.map((ban: any) => ({
+          userId: ban.user.id,
+          username: ban.user.username,
+          reason: ban.reason
+        })),
+        voiceStates: guild.voiceStates.cache.map((state: any) => ({
+          userId: state.id,
+          channelId: state.channelId,
+          mute: state.mute,
+          deaf: state.deaf,
+          selfMute: state.selfMute,
+          selfDeaf: state.selfDeaf
+        })),
+        threads: [], // Would need additional fetching
+        scheduledEvents: guild.scheduledEvents?.cache.map((event: any) => ({
+          id: event.id,
+          name: event.name,
+          description: event.description,
+          scheduledStartAt: event.scheduledStartAt,
+          scheduledEndAt: event.scheduledEndAt,
+          status: event.status,
+          entityType: event.entityType
+        })) || [],
+        backupSize: JSON.stringify(allMessages).length + JSON.stringify(members).length,
+        messageCount: totalMessageCount,
+        memberCount: members.size,
+        channelCount: channels.size,
+        roleCount: roles.size,
+        emojiCount: emojis.size,
+        threadCount: 0,
+        createdBy,
+        backupDuration: Date.now() - startTime,
+        compressionRatio: 0,
+        integrityHash: `backup_${backupId}_${Date.now()}`
+      };
+
+      await db.insert(serverBackups).values(backupData);
+      return backupId;
+
+    } catch (error) {
+      console.error('Error creating server backup:', error);
+      throw error;
+    }
+  }
+
+  // Log comprehensive bot activity
+  async logBotActivity(activityData: {
+    eventType: string;
+    eventCategory: string;
+    eventData: any;
+    userId?: string;
+    username?: string;
+    userDiscriminator?: string;
+    channelId?: string;
+    channelName?: string;
+    channelType?: string;
+    guildId?: string;
+    guildName?: string;
+    commandName?: string;
+    subcommandName?: string;
+    commandOptions?: any;
+    messageId?: string;
+    messageContent?: string;
+    messageAttachments?: any;
+    messageEmbeds?: any;
+    reactionEmoji?: string;
+    reactionCount?: number;
+    memberJoinData?: any;
+    memberLeaveData?: any;
+    roleChanges?: any;
+    voiceStateChange?: any;
+    executionTime?: number;
+    success?: boolean;
+    errorMessage?: string;
+    errorStack?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    metadata?: any;
+  }): Promise<void> {
+    try {
+      await db.insert(botActivityLogs).values(activityData);
+    } catch (error) {
+      console.error('Error logging bot activity:', error);
+    }
+  }
+
+  // Get server backups
+  async getServerBackups(limit = 10): Promise<any[]> {
+    return await db.select().from(serverBackups)
+      .orderBy(desc(serverBackups.createdAt))
+      .limit(limit);
+  }
+
+  // Get specific backup
+  async getServerBackup(backupId: string): Promise<any> {
+    const [backup] = await db.select().from(serverBackups)
+      .where(eq(serverBackups.backupId, backupId));
+    return backup;
+  }
+
+  // Get bot activity logs
+  async getBotActivityLogs(limit = 100): Promise<any[]> {
+    return await db.select().from(botActivityLogs)
+      .orderBy(desc(botActivityLogs.timestamp))
+      .limit(limit);
   }
 }
 

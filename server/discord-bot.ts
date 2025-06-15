@@ -1232,17 +1232,22 @@ export class RaptorBot {
       new SlashCommandBuilder()
         .setName('total')
         .setDescription('Total logs commands')
-        .addSubcommand(subcommand =>
-          subcommand
+        .addSubcommandGroup(group =>
+          group
             .setName('logs')
-            .setDescription('Get total logs for a user or yourself')
-            .addUserOption(option => option.setName('user').setDescription('User to check logs for').setRequired(false))
-        )
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('lb')
-            .setDescription('View total logs leaderboard')
-            .addIntegerOption(option => option.setName('page').setDescription('Page number').setRequired(false))
+            .setDescription('Total logs management')
+            .addSubcommand(subcommand =>
+              subcommand
+                .setName('user')
+                .setDescription('Get total logs for a user or yourself')
+                .addUserOption(option => option.setName('user').setDescription('User to check logs for').setRequired(false))
+            )
+            .addSubcommand(subcommand =>
+              subcommand
+                .setName('lb')
+                .setDescription('View total logs leaderboard')
+                .addIntegerOption(option => option.setName('page').setDescription('Page number').setRequired(false))
+            )
         ),
 
       // Tag Manager Command
@@ -4252,20 +4257,28 @@ export class RaptorBot {
         return;
       }
 
+      const subcommandGroup = interaction.options.getSubcommandGroup();
       const subcommand = interaction.options.getSubcommand();
 
-      switch (subcommand) {
-        case 'logs':
-          await this.handleTotalLogs(interaction);
-          break;
-        case 'lb':
-          await this.handleTotalLogsLeaderboard(interaction);
-          break;
-        default:
-          await interaction.reply({ 
-            content: 'Invalid subcommand for total command.', 
-            ephemeral: true 
-          });
+      if (subcommandGroup === 'logs') {
+        switch (subcommand) {
+          case 'user':
+            await this.handleTotalLogs(interaction);
+            break;
+          case 'lb':
+            await this.handleTotalLogsLeaderboard(interaction);
+            break;
+          default:
+            await interaction.reply({ 
+              content: 'Invalid subcommand for total logs command.', 
+              ephemeral: true 
+            });
+        }
+      } else {
+        await interaction.reply({ 
+          content: 'Invalid subcommand group for total command.', 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       console.error('Error handling total command:', error);

@@ -84,7 +84,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Leaderboard Format Implementation**: Updated /logs view to show ranked leaderboard format with 1st/2nd/3rd place medals, proper ranking numbers, actual Discord usernames instead of IDs, and pagination system with 5 users per page as requested
 - **Navigation Button System**: Added interactive "← Previous" and "Next →" buttons to /logs view command for seamless page navigation without requiring manual page parameter input - buttons appear only when relevant pages exist
 - **Username Display Fix**: Updated /logs view to fetch and display actual Discord usernames instead of user IDs or mentions for clean, readable leaderboard presentation
-- **Total Logs System Implementation**: Added /total logs and /total lb commands that scan all 8 tracked channels for messages with images, exclude bot messages, and provide real-time counting with professional Discord embeds and interactive navigation buttons
+- **Total Logs System Implementation**: Added /total logs user and /total logs lb commands that scan all 8 tracked channels for messages with images, exclude bot messages, and provide real-time counting with professional Discord embeds and interactive navigation buttons
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

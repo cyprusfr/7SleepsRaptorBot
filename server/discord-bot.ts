@@ -195,8 +195,11 @@ export class RaptorBot {
     });
 
     this.client.on('interactionCreate', async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
-      await this.handleCommand(interaction);
+      if (interaction.isChatInputCommand()) {
+        await this.handleCommand(interaction);
+      } else if (interaction.isButton()) {
+        await this.handleButtonInteraction(interaction);
+      }
     });
 
     this.client.on('guildCreate', async (guild) => {
@@ -1297,6 +1300,41 @@ export class RaptorBot {
       console.log('✅ Successfully reloaded application (/) commands for all guilds.');
     } catch (error) {
       console.error('❌ Error registering commands:', error);
+    }
+  }
+
+  private async handleButtonInteraction(interaction: any) {
+    try {
+      if (interaction.customId.startsWith('logs_view_')) {
+        const page = parseInt(interaction.customId.replace('logs_view_', ''));
+        
+        // Create a mock interaction with the page parameter
+        const mockOptions = {
+          getInteger: (name: string) => name === 'page' ? page : null,
+          getString: () => null,
+          getUser: () => null,
+          getBoolean: () => null
+        };
+        
+        const mockInteraction = {
+          ...interaction,
+          options: mockOptions,
+          deferReply: () => interaction.deferUpdate(),
+          editReply: (content: any) => interaction.editReply(content)
+        };
+        
+        await this.handleLogsView(mockInteraction as any);
+      }
+    } catch (error) {
+      console.error('Error handling button interaction:', error);
+      try {
+        await interaction.reply({ 
+          content: 'An error occurred while processing the button click.', 
+          ephemeral: true 
+        });
+      } catch (replyError) {
+        console.error('Failed to send error reply:', replyError);
+      }
     }
   }
 
@@ -3491,17 +3529,8 @@ export class RaptorBot {
           else if (globalRank === 3) rankDisplay = '🥉 3rd';
           else rankDisplay = `${globalRank}th`;
           
-          // Try to get username from Discord user cache
-          let userDisplay = `<@${log.userId}>`;
-          try {
-            const discordUser = await this.client.users.fetch(log.userId);
-            if (discordUser) {
-              userDisplay = discordUser.username;
-            }
-          } catch (fetchError) {
-            // Keep the mention format if user fetch fails
-            console.log(`Could not fetch username for ${log.userId}, using mention`);
-          }
+          // Always use Discord mentions for proper username display
+          const userDisplay = `<@${log.userId}>`;
           
           const entry = `${rankDisplay} ${userDisplay} ${log.totalLogs} logs\n`;
           
@@ -3525,8 +3554,38 @@ export class RaptorBot {
         .setColor(0x0099ff)
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
-      console.log('Successfully sent logs leaderboard response');
+      // Create navigation buttons
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+      
+      const row = new ActionRowBuilder<ButtonBuilder>();
+      
+      // Previous page button
+      if (currentPage > 1) {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`logs_view_${currentPage - 1}`)
+            .setLabel('← Previous')
+            .setStyle(ButtonStyle.Primary)
+        );
+      }
+      
+      // Next page button
+      if (currentPage < totalPages) {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`logs_view_${currentPage + 1}`)
+            .setLabel('Next →')
+            .setStyle(ButtonStyle.Primary)
+        );
+      }
+
+      const response: any = { embeds: [embed] };
+      if (row.components.length > 0) {
+        response.components = [row];
+      }
+
+      await interaction.editReply(response);
+      console.log('Successfully sent logs leaderboard response with navigation buttons');
       
     } catch (error) {
       console.error('Error in handleLogsView:', error);

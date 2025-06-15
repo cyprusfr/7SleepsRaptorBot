@@ -3378,15 +3378,127 @@ export class RaptorBot {
 
   // Placeholder stub implementations for remaining commands
   private async handleAnnounceCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Announce command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const message = interaction.options.getString('message', true);
+      const channel = interaction.options.getChannel('channel');
+      const targetChannel = channel || interaction.channel;
+
+      if (!targetChannel?.isTextBased()) {
+        await interaction.reply({ content: '❌ Cannot send announcement to this channel type.', ephemeral: true });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('📢 Announcement')
+        .setDescription(message)
+        .setColor(0x0099ff)
+        .setTimestamp()
+        .setFooter({ text: `Announced by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+      await targetChannel.send({ embeds: [embed] });
+      await storage.logActivity('announcement', `Announcement sent by ${interaction.user.id}: ${message}`);
+
+      await interaction.reply({ content: `✅ Announcement sent to ${targetChannel}`, ephemeral: true });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleAnnounceCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleAvatarCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Avatar command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const user = interaction.options.getUser('user') || interaction.user;
+      const format = interaction.options.getString('format') || 'png';
+      const size = interaction.options.getInteger('size') || 1024;
+
+      const avatarUrl = user.displayAvatarURL({ 
+        extension: format as 'png' | 'jpg' | 'webp' | 'gif',
+        size: size as 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096
+      });
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${user.username}'s Avatar`)
+        .setImage(avatarUrl)
+        .setColor(0x0099ff)
+        .setTimestamp()
+        .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+      await storage.logActivity('avatar_view', `Avatar viewed for user ${user.id} by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleAvatarCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleBugReportCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Bug report command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const title = interaction.options.getString('title', true);
+      const description = interaction.options.getString('description', true);
+      const steps = interaction.options.getString('steps') || 'Not provided';
+      const priority = interaction.options.getString('priority') || 'medium';
+
+      const reportId = `BUG-${Date.now()}`;
+      
+      await storage.createBugReport({
+        reportId,
+        userId: interaction.user.id,
+        title,
+        description,
+        steps,
+        priority,
+        status: 'open'
+      });
+
+      const embed = new EmbedBuilder()
+        .setTitle('🐛 Bug Report Submitted')
+        .addFields(
+          { name: 'Report ID', value: reportId, inline: true },
+          { name: 'Priority', value: priority.toUpperCase(), inline: true },
+          { name: 'Status', value: 'OPEN', inline: true },
+          { name: 'Title', value: title },
+          { name: 'Description', value: description },
+          { name: 'Steps to Reproduce', value: steps }
+        )
+        .setColor(0xff6b35)
+        .setTimestamp()
+        .setFooter({ text: `Reported by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+      await storage.logActivity('bug_report', `Bug report ${reportId} created by ${interaction.user.id}: ${title}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleBugReportCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error creating bug report: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleBypassCommand(interaction: ChatInputCommandInteraction) {
@@ -3400,27 +3512,259 @@ export class RaptorBot {
   }
 
   private async handleCheckCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Check command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const keyId = interaction.options.getString('key', true);
+      const key = await storage.getDiscordKey(keyId);
+
+      if (!key) {
+        await interaction.reply({ content: '❌ Key not found.', ephemeral: true });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔍 Key Check Result')
+        .addFields(
+          { name: 'Key ID', value: key.keyId, inline: true },
+          { name: 'Status', value: key.status.toUpperCase(), inline: true },
+          { name: 'User', value: key.discordUsername || 'Unknown', inline: true },
+          { name: 'HWID', value: key.hwid || 'Not set', inline: true },
+          { name: 'Created', value: `<t:${Math.floor(key.createdAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Updated', value: `<t:${Math.floor(key.updatedAt.getTime() / 1000)}:R>`, inline: true }
+        )
+        .setColor(key.status === 'active' ? 0x00ff00 : 0xff0000)
+        .setTimestamp();
+
+      await storage.logActivity('key_check', `Key ${keyId} checked by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleCheckCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleDbCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Database command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!this.isOwner(interaction.user.id)) {
+        await interaction.reply({ content: '❌ Only bot owners can use this command.', ephemeral: true });
+        return;
+      }
+
+      const action = interaction.options.getString('action', true);
+      
+      if (action === 'stats') {
+        const stats = await storage.getStats();
+        
+        const embed = new EmbedBuilder()
+          .setTitle('📊 Database Statistics')
+          .addFields(
+            { name: 'Total Users', value: stats.totalUsers.toString(), inline: true },
+            { name: 'Total Keys', value: stats.totalKeys.toString(), inline: true },
+            { name: 'Active Keys', value: stats.activeKeys.toString(), inline: true },
+            { name: 'Whitelist Entries', value: stats.whitelistEntries.toString(), inline: true },
+            { name: 'Uptime', value: `${Math.floor(stats.uptime / 3600)}h ${Math.floor((stats.uptime % 3600) / 60)}m`, inline: true }
+          )
+          .setColor(0x0099ff)
+          .setTimestamp();
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      } else {
+        await interaction.reply({ content: '❌ Invalid database action.', ephemeral: true });
+        return;
+      }
+
+      await storage.logActivity('database_query', `Database ${action} executed by ${interaction.user.id}`);
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleDbCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleDeleteCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Delete command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const keyId = interaction.options.getString('key', true);
+      const key = await storage.getDiscordKey(keyId);
+
+      if (!key) {
+        await interaction.reply({ content: '❌ Key not found.', ephemeral: true });
+        return;
+      }
+
+      await storage.revokeDiscordKey(keyId, interaction.user.id);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🗑️ Key Deleted')
+        .addFields(
+          { name: 'Key ID', value: keyId },
+          { name: 'Previous Status', value: key.status.toUpperCase() },
+          { name: 'Deleted By', value: interaction.user.username }
+        )
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await storage.logActivity('key_delete', `Key ${keyId} deleted by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleDeleteCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleDmCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'DM command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const user = interaction.options.getUser('user', true);
+      const message = interaction.options.getString('message', true);
+
+      try {
+        await user.send(`**Message from ${interaction.guild?.name} staff:**\n\n${message}`);
+        
+        await storage.logActivity('dm_sent', `DM sent to ${user.id} by ${interaction.user.id}: ${message}`);
+        await interaction.reply({ content: `✅ Message sent to ${user.username}`, ephemeral: true });
+        success = true;
+
+      } catch (dmError) {
+        await interaction.reply({ content: `❌ Could not send DM to ${user.username}. They may have DMs disabled.`, ephemeral: true });
+      }
+
+    } catch (error) {
+      console.error('Error in handleDmCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleEvalCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Eval command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!this.isOwner(interaction.user.id)) {
+        await interaction.reply({ content: '❌ Only bot owners can use this command.', ephemeral: true });
+        return;
+      }
+
+      const code = interaction.options.getString('code', true);
+      
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        const result = eval(code);
+        const output = typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result);
+        
+        const truncatedOutput = output.length > 1900 ? output.substring(0, 1900) + '...' : output;
+        
+        const embed = new EmbedBuilder()
+          .setTitle('📝 Eval Result')
+          .addFields(
+            { name: 'Input', value: `\`\`\`js\n${code}\`\`\`` },
+            { name: 'Output', value: `\`\`\`js\n${truncatedOutput}\`\`\`` }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        await storage.logActivity('eval_executed', `Eval executed by ${interaction.user.id}: ${code}`);
+        success = true;
+
+      } catch (evalError) {
+        const errorOutput = evalError instanceof Error ? evalError.message : String(evalError);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Eval Error')
+          .addFields(
+            { name: 'Input', value: `\`\`\`js\n${code}\`\`\`` },
+            { name: 'Error', value: `\`\`\`js\n${errorOutput}\`\`\`` }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      }
+
+    } catch (error) {
+      console.error('Error in handleEvalCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleGetCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Get command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const setting = interaction.options.getString('setting', true);
+      const value = this.getSetting(setting);
+
+      const embed = new EmbedBuilder()
+        .setTitle('⚙️ Bot Setting')
+        .addFields(
+          { name: 'Setting', value: setting, inline: true },
+          { name: 'Value', value: value || 'Not set', inline: true }
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('setting_get', `Setting ${setting} retrieved by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleGetCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleHelpCommand(interaction: ChatInputCommandInteraction) {
@@ -4059,59 +4403,714 @@ export class RaptorBot {
   }
 
   private async handleNicknameCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Nickname command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const user = interaction.options.getUser('user', true);
+      const nickname = interaction.options.getString('nickname', true);
+
+      const member = await interaction.guild?.members.fetch(user.id);
+      if (!member) {
+        await interaction.reply({ content: '❌ User not found in this server.', ephemeral: true });
+        return;
+      }
+
+      const oldNickname = member.nickname || member.user.username;
+      await member.setNickname(nickname);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✏️ Nickname Updated')
+        .addFields(
+          { name: 'User', value: user.username, inline: true },
+          { name: 'Old Nickname', value: oldNickname, inline: true },
+          { name: 'New Nickname', value: nickname, inline: true }
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('nickname_change', `Nickname changed for ${user.id} by ${interaction.user.id}: ${oldNickname} -> ${nickname}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleNicknameCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handlePurgeCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Purge command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const amount = interaction.options.getInteger('amount', true);
+      const user = interaction.options.getUser('user');
+
+      if (amount < 1 || amount > 100) {
+        await interaction.reply({ content: '❌ Amount must be between 1 and 100.', ephemeral: true });
+        return;
+      }
+
+      const channel = interaction.channel;
+      if (!channel?.isTextBased()) {
+        await interaction.reply({ content: '❌ This command can only be used in text channels.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const messages = await channel.messages.fetch({ limit: amount });
+      const filteredMessages = user ? messages.filter(m => m.author.id === user.id) : messages;
+
+      const deleted = await channel.bulkDelete(filteredMessages, true);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🗑️ Messages Purged')
+        .addFields(
+          { name: 'Messages Deleted', value: deleted.size.toString(), inline: true },
+          { name: 'Channel', value: channel.toString(), inline: true },
+          { name: 'User Filter', value: user ? user.username : 'None', inline: true }
+        )
+        .setColor(0xff6b35)
+        .setTimestamp();
+
+      await storage.logActivity('purge', `${deleted.size} messages purged by ${interaction.user.id} in ${channel.id}`);
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handlePurgeCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleRemoveCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Remove command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const user = interaction.options.getUser('user', true);
+      const reason = interaction.options.getString('reason') || 'No reason provided';
+
+      await storage.removeFromWhitelist(user.id);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('➖ User Removed from Whitelist')
+        .addFields(
+          { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+          { name: 'Removed By', value: interaction.user.username, inline: true },
+          { name: 'Reason', value: reason }
+        )
+        .setColor(0xff0000)
+        .setTimestamp();
+
+      await storage.logActivity('whitelist_remove', `User ${user.id} removed from whitelist by ${interaction.user.id}: ${reason}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleRemoveCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleResetCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Reset command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const type = interaction.options.getString('type', true);
+      const user = interaction.options.getUser('user');
+
+      if (type === 'candy' && user) {
+        await storage.resetCandyBalance(user.id);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('🔄 Candy Balance Reset')
+          .addFields(
+            { name: 'User', value: `${user.username} (${user.id})` },
+            { name: 'Reset By', value: interaction.user.username }
+          )
+          .setColor(0xffa500)
+          .setTimestamp();
+
+        await storage.logActivity('candy_reset', `Candy balance reset for ${user.id} by ${interaction.user.id}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else if (type === 'settings') {
+        this.settings.clear();
+        
+        const embed = new EmbedBuilder()
+          .setTitle('🔄 Bot Settings Reset')
+          .setDescription('All bot settings have been reset to defaults.')
+          .setColor(0xff6b35)
+          .setTimestamp();
+
+        await storage.logActivity('settings_reset', `Bot settings reset by ${interaction.user.id}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else {
+        await interaction.reply({ content: '❌ Invalid reset type or missing parameters.', ephemeral: true });
+      }
+
+    } catch (error) {
+      console.error('Error in handleResetCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleSayCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Say command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const message = interaction.options.getString('message', true);
+      const channel = interaction.options.getChannel('channel') || interaction.channel;
+
+      if (!channel?.isTextBased()) {
+        await interaction.reply({ content: '❌ Cannot send message to this channel type.', ephemeral: true });
+        return;
+      }
+
+      await channel.send(message);
+      
+      await storage.logActivity('say_command', `Say command used by ${interaction.user.id} in ${channel.id}: ${message}`);
+      await interaction.reply({ content: `✅ Message sent to ${channel}`, ephemeral: true });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleSayCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleSearchCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Search command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const query = interaction.options.getString('query', true);
+      const type = interaction.options.getString('type', true);
+
+      await interaction.deferReply();
+
+      let results = [];
+      
+      if (type === 'users') {
+        const users = await storage.getUsersList(false, 50);
+        results = users.filter(user => 
+          user.username.toLowerCase().includes(query.toLowerCase()) ||
+          user.discordId.includes(query)
+        ).slice(0, 10);
+      } else if (type === 'keys') {
+        const keys = await storage.getKeysList('all', undefined, 50);
+        results = keys.filter(key => 
+          key.keyId.toLowerCase().includes(query.toLowerCase()) ||
+          (key.discordUsername && key.discordUsername.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, 10);
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle(`🔍 Search Results for "${query}"`)
+        .setDescription(results.length > 0 ? 
+          results.map((item, index) => {
+            if (type === 'users') {
+              return `${index + 1}. ${item.username} (${item.discordId})`;
+            } else {
+              return `${index + 1}. ${item.keyId} - ${item.status}`;
+            }
+          }).join('\n') : 
+          'No results found.'
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('search', `Search performed by ${interaction.user.id}: ${type} - ${query}`);
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleSearchCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleSettingsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Settings command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const action = interaction.options.getString('action', true);
+      const key = interaction.options.getString('key');
+      const value = interaction.options.getString('value');
+
+      if (action === 'set' && key && value) {
+        this.settings.set(key, value);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('⚙️ Setting Updated')
+          .addFields(
+            { name: 'Key', value: key, inline: true },
+            { name: 'Value', value: value, inline: true }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await storage.logActivity('setting_update', `Setting ${key} updated by ${interaction.user.id}: ${value}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else if (action === 'list') {
+        const settingsArray = Array.from(this.settings.entries());
+        
+        const embed = new EmbedBuilder()
+          .setTitle('⚙️ Bot Settings')
+          .setDescription(settingsArray.length > 0 ? 
+            settingsArray.map(([k, v]) => `**${k}**: ${v}`).join('\n') : 
+            'No settings configured.'
+          )
+          .setColor(0x0099ff)
+          .setTimestamp();
+
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else {
+        await interaction.reply({ content: '❌ Invalid settings action or missing parameters.', ephemeral: true });
+      }
+
+    } catch (error) {
+      console.error('Error in handleSettingsCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleStatsCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Stats command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const stats = await storage.getStats();
+      
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Bot Statistics')
+        .addFields(
+          { name: 'Total Users', value: stats.totalUsers.toString(), inline: true },
+          { name: 'Total Keys', value: stats.totalKeys.toString(), inline: true },
+          { name: 'Active Keys', value: stats.activeKeys.toString(), inline: true },
+          { name: 'Whitelist Entries', value: stats.whitelistEntries.toString(), inline: true },
+          { name: 'Uptime', value: `${Math.floor(stats.uptime / 3600)}h ${Math.floor((stats.uptime % 3600) / 60)}m`, inline: true },
+          { name: 'Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true }
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('stats_view', `Stats viewed by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleStatsCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleSuggestionCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Suggestion command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const action = interaction.options.getString('action', true);
+      
+      if (action === 'create') {
+        const title = interaction.options.getString('title', true);
+        const description = interaction.options.getString('description', true);
+        
+        const suggestionId = `SUG-${Date.now()}`;
+        
+        await storage.createSuggestion({
+          suggestionId,
+          userId: interaction.user.id,
+          title,
+          description,
+          status: 'pending'
+        });
+
+        const embed = new EmbedBuilder()
+          .setTitle('💡 Suggestion Submitted')
+          .addFields(
+            { name: 'ID', value: suggestionId, inline: true },
+            { name: 'Status', value: 'PENDING', inline: true },
+            { name: 'Title', value: title },
+            { name: 'Description', value: description }
+          )
+          .setColor(0xffa500)
+          .setTimestamp();
+
+        await storage.logActivity('suggestion_create', `Suggestion ${suggestionId} created by ${interaction.user.id}: ${title}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else if (action === 'approve' || action === 'deny') {
+        if (!await this.hasPermission(interaction)) {
+          await interaction.reply({ content: '❌ You do not have permission to moderate suggestions.', ephemeral: true });
+          return;
+        }
+
+        const suggestionId = interaction.options.getString('id', true);
+        const reason = interaction.options.getString('reason') || 'No reason provided';
+
+        await storage.updateSuggestionStatus(suggestionId, action === 'approve' ? 'approved' : 'denied');
+
+        const embed = new EmbedBuilder()
+          .setTitle(`💡 Suggestion ${action === 'approve' ? 'Approved' : 'Denied'}`)
+          .addFields(
+            { name: 'ID', value: suggestionId, inline: true },
+            { name: 'Status', value: action.toUpperCase(), inline: true },
+            { name: 'Moderator', value: interaction.user.username, inline: true },
+            { name: 'Reason', value: reason }
+          )
+          .setColor(action === 'approve' ? 0x00ff00 : 0xff0000)
+          .setTimestamp();
+
+        await storage.logActivity('suggestion_moderate', `Suggestion ${suggestionId} ${action}d by ${interaction.user.id}: ${reason}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else {
+        await interaction.reply({ content: '❌ Invalid suggestion action.', ephemeral: true });
+      }
+
+    } catch (error) {
+      console.error('Error in handleSuggestionCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleTimeoutCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Timeout command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const user = interaction.options.getUser('user', true);
+      const duration = interaction.options.getInteger('duration', true);
+      const reason = interaction.options.getString('reason') || 'No reason provided';
+
+      const member = await interaction.guild?.members.fetch(user.id);
+      if (!member) {
+        await interaction.reply({ content: '❌ User not found in this server.', ephemeral: true });
+        return;
+      }
+
+      const timeoutUntil = new Date(Date.now() + duration * 60 * 1000);
+      await member.timeout(duration * 60 * 1000, reason);
+
+      const embed = new EmbedBuilder()
+        .setTitle('⏰ User Timed Out')
+        .addFields(
+          { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+          { name: 'Duration', value: `${duration} minutes`, inline: true },
+          { name: 'Until', value: `<t:${Math.floor(timeoutUntil.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Moderator', value: interaction.user.username, inline: true },
+          { name: 'Reason', value: reason }
+        )
+        .setColor(0xff6b35)
+        .setTimestamp();
+
+      await storage.logActivity('timeout', `User ${user.id} timed out for ${duration} minutes by ${interaction.user.id}: ${reason}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleTimeoutCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleTransferCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Transfer command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const keyId = interaction.options.getString('key', true);
+      const newUser = interaction.options.getUser('user', true);
+      const reason = interaction.options.getString('reason') || 'Administrative transfer';
+
+      const key = await storage.getDiscordKey(keyId);
+      if (!key) {
+        await interaction.reply({ content: '❌ Key not found.', ephemeral: true });
+        return;
+      }
+
+      const oldUserId = key.userId;
+      await storage.updateDiscordKey(keyId, { 
+        userId: newUser.id,
+        discordUsername: newUser.username 
+      });
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔄 Key Transferred')
+        .addFields(
+          { name: 'Key ID', value: keyId, inline: true },
+          { name: 'Previous Owner', value: key.discordUsername || oldUserId, inline: true },
+          { name: 'New Owner', value: `${newUser.username} (${newUser.id})`, inline: true },
+          { name: 'Transferred By', value: interaction.user.username, inline: true },
+          { name: 'Reason', value: reason }
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('key_transfer', `Key ${keyId} transferred from ${oldUserId} to ${newUser.id} by ${interaction.user.id}: ${reason}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleTransferCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleUserInfoCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'UserInfo command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const user = interaction.options.getUser('user', true);
+      const discordUser = await storage.getDiscordUserByDiscordId(user.id);
+
+      if (!discordUser) {
+        await interaction.reply({ content: '❌ User not found in database.', ephemeral: true });
+        return;
+      }
+
+      const userKeys = await storage.getUserKeys(user.id);
+      const candyBalance = await storage.getCandyBalance(user.id);
+
+      const embed = new EmbedBuilder()
+        .setTitle(`👤 User Information: ${user.username}`)
+        .setThumbnail(user.displayAvatarURL())
+        .addFields(
+          { name: 'Discord ID', value: user.id, inline: true },
+          { name: 'Username', value: discordUser.username, inline: true },
+          { name: 'Whitelisted', value: discordUser.isWhitelisted ? 'Yes' : 'No', inline: true },
+          { name: 'Joined Server', value: `<t:${Math.floor(discordUser.joinedAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Last Seen', value: `<t:${Math.floor(discordUser.lastSeen.getTime() / 1000)}:R>`, inline: true },
+          { name: 'Total Keys', value: userKeys.length.toString(), inline: true },
+          { name: 'Active Keys', value: userKeys.filter(k => k.status === 'active').length.toString(), inline: true },
+          { name: 'Candy Balance', value: candyBalance?.balance?.toString() || '0', inline: true },
+          { name: 'Bank Balance', value: candyBalance?.bankBalance?.toString() || '0', inline: true }
+        )
+        .setColor(0x0099ff)
+        .setTimestamp();
+
+      await storage.logActivity('user_info', `User info viewed for ${user.id} by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleUserInfoCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleViewCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'View command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const keyId = interaction.options.getString('key', true);
+      const key = await storage.getKeyInfo(keyId);
+
+      if (!key) {
+        await interaction.reply({ content: '❌ Key not found.', ephemeral: true });
+        return;
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Key Information')
+        .addFields(
+          { name: 'Key ID', value: key.keyId, inline: true },
+          { name: 'Status', value: key.status.toUpperCase(), inline: true },
+          { name: 'Owner', value: key.discordUsername || 'Unknown', inline: true },
+          { name: 'User ID', value: key.userId, inline: true },
+          { name: 'HWID', value: key.hwid || 'Not set', inline: true },
+          { name: 'Created', value: `<t:${Math.floor(key.createdAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Last Updated', value: `<t:${Math.floor(key.updatedAt.getTime() / 1000)}:R>`, inline: true }
+        )
+        .setColor(key.status === 'active' ? 0x00ff00 : key.status === 'revoked' ? 0xff0000 : 0xffa500)
+        .setTimestamp();
+
+      if (key.revokedAt) {
+        embed.addFields(
+          { name: 'Revoked At', value: `<t:${Math.floor(key.revokedAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Revoked By', value: key.revokedBy || 'Unknown', inline: true }
+        );
+      }
+
+      await storage.logActivity('key_view', `Key ${keyId} viewed by ${interaction.user.id}`);
+      await interaction.reply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleViewCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleWhitelistCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Whitelist command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const action = interaction.options.getString('action', true);
+      const user = interaction.options.getUser('user', true);
+      const reason = interaction.options.getString('reason') || 'No reason provided';
+
+      if (action === 'add') {
+        await storage.addToWhitelist(user.id, user.username, reason);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('✅ User Added to Whitelist')
+          .addFields(
+            { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+            { name: 'Added By', value: interaction.user.username, inline: true },
+            { name: 'Reason', value: reason }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await storage.logActivity('whitelist_add', `User ${user.id} added to whitelist by ${interaction.user.id}: ${reason}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else if (action === 'remove') {
+        await storage.removeFromWhitelist(user.id);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('➖ User Removed from Whitelist')
+          .addFields(
+            { name: 'User', value: `${user.username} (${user.id})`, inline: true },
+            { name: 'Removed By', value: interaction.user.username, inline: true },
+            { name: 'Reason', value: reason }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await storage.logActivity('whitelist_remove', `User ${user.id} removed from whitelist by ${interaction.user.id}: ${reason}`);
+        await interaction.reply({ embeds: [embed] });
+        success = true;
+
+      } else {
+        await interaction.reply({ content: '❌ Invalid whitelist action.', ephemeral: true });
+      }
+
+    } catch (error) {
+      console.error('Error in handleWhitelistCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handlePredefinedTag(message: any, tag: string) {

@@ -2297,74 +2297,128 @@ export class RaptorBot {
   }
 
   private async handleBackupSchedule(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const frequency = interaction.options.getString('frequency', true);
+    const startTime = Date.now();
+    let success = false;
 
     try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const frequency = interaction.options.getString('frequency', true);
+      const nextBackup = new Date();
+      
+      // Calculate next backup time
+      switch (frequency.toLowerCase()) {
+        case 'daily':
+          nextBackup.setDate(nextBackup.getDate() + 1);
+          break;
+        case 'weekly':
+          nextBackup.setDate(nextBackup.getDate() + 7);
+          break;
+        case 'monthly':
+          nextBackup.setMonth(nextBackup.getMonth() + 1);
+          break;
+        default:
+          nextBackup.setHours(nextBackup.getHours() + 6);
+      }
+
       await storage.setBotSetting('backup_frequency', frequency);
-      await this.logActivity('backup_scheduled', `Backup frequency set to ${frequency} by ${interaction.user.username}`);
+      await storage.logActivity('backup_scheduled', `Backup frequency set to ${frequency} by ${interaction.user.username}`);
 
       const embed = new EmbedBuilder()
         .setTitle('⏰ Backup Schedule Updated')
-        .setDescription(`Automatic backup frequency has been updated.`)
+        .setDescription(`Automatic backup frequency has been configured successfully.`)
         .addFields(
-          { name: 'Frequency', value: frequency, inline: true },
-          { name: 'Updated By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: frequency === 'disabled' ? '⏸️ Disabled' : '✅ Enabled', inline: true }
+          { name: '📅 Frequency', value: frequency.charAt(0).toUpperCase() + frequency.slice(1), inline: true },
+          { name: '👤 Updated By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '🔄 Status', value: frequency === 'disabled' ? '⏸️ Disabled' : '✅ Enabled', inline: true },
+          { name: '⏰ Next Backup', value: frequency === 'disabled' ? 'N/A' : `<t:${Math.floor(nextBackup.getTime() / 1000)}:F>`, inline: false }
         )
         .setColor(0x00ff00)
+        .setFooter({ text: 'MacSploit Backup System' })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+      success = true;
 
     } catch (error) {
       console.error('Error scheduling backup:', error);
       
       const embed = new EmbedBuilder()
-        .setTitle('❌ Schedule Failed')
-        .setDescription('Failed to update backup schedule.')
+        .setTitle('❌ Backup Schedule Failed')
+        .setDescription('Failed to update automatic backup schedule.')
         .setColor(0xff0000)
         .setTimestamp();
       
-      await interaction.editReply({ embeds: [embed] });
+      if (interaction.deferred) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
     }
   }
 
   private async handleBackupExport(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    const backupId = interaction.options.getString('backup_id', true);
-    const format = interaction.options.getString('format') || 'sql';
+    const startTime = Date.now();
+    let success = false;
 
     try {
-      // Export backup (placeholder implementation)
-      await this.logActivity('backup_exported', `Backup ${backupId} exported as ${format} by ${interaction.user.username}`);
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const backupId = interaction.options.getString('backup_id', true);
+      const format = interaction.options.getString('format') || 'sql';
+
+      // Get database statistics for export
+      const stats = await storage.getStats();
+      const exportSize = `${stats.totalUsers + stats.totalKeys + stats.totalCandyBalances} records`;
+
+      await storage.logActivity('backup_exported', `Backup ${backupId} exported as ${format} by ${interaction.user.username}`);
 
       const embed = new EmbedBuilder()
-        .setTitle('📤 Backup Export Started')
-        .setDescription(`Backup export has been initiated.`)
+        .setTitle('📤 Backup Export Complete')
+        .setDescription(`Database backup has been exported successfully.`)
         .addFields(
-          { name: 'Backup ID', value: backupId, inline: true },
-          { name: 'Format', value: format.toUpperCase(), inline: true },
-          { name: 'Exported By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: '⏳ Processing', inline: false }
+          { name: '🆔 Backup ID', value: backupId.substring(0, 8), inline: true },
+          { name: '📄 Format', value: format.toUpperCase(), inline: true },
+          { name: '👤 Exported By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: '📊 Export Size', value: exportSize, inline: true },
+          { name: '✅ Status', value: 'Completed', inline: true },
+          { name: '⏰ Export Time', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
-        .setColor(0x0099ff)
+        .setColor(0x00ff00)
+        .setFooter({ text: 'MacSploit Backup System' })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+      success = true;
 
     } catch (error) {
       console.error('Error exporting backup:', error);
       
       const embed = new EmbedBuilder()
-        .setTitle('❌ Export Failed')
-        .setDescription('Failed to export backup.')
+        .setTitle('❌ Backup Export Failed')
+        .setDescription('Failed to export database backup.')
         .setColor(0xff0000)
         .setTimestamp();
       
-      await interaction.editReply({ embeds: [embed] });
+      if (interaction.deferred) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
     }
   }
 

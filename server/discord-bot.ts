@@ -1228,6 +1228,23 @@ export class RaptorBot {
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
 
+      // Total Command
+      new SlashCommandBuilder()
+        .setName('total')
+        .setDescription('Total logs commands')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('logs')
+            .setDescription('Get total logs for a user or yourself')
+            .addUserOption(option => option.setName('user').setDescription('User to check logs for').setRequired(false))
+        )
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('lb')
+            .setDescription('View total logs leaderboard')
+            .addIntegerOption(option => option.setName('page').setDescription('Page number').setRequired(false))
+        ),
+
       // Tag Manager Command
       new SlashCommandBuilder()
         .setName('tag-manager')
@@ -1324,6 +1341,25 @@ export class RaptorBot {
         };
         
         await this.handleLogsView(mockInteraction as any);
+      } else if (interaction.customId.startsWith('total_lb_')) {
+        const page = parseInt(interaction.customId.replace('total_lb_', ''));
+        
+        // Create a mock interaction with the page parameter
+        const mockOptions = {
+          getInteger: (name: string) => name === 'page' ? page : null,
+          getString: () => null,
+          getUser: () => null,
+          getBoolean: () => null
+        };
+        
+        const mockInteraction = {
+          ...interaction,
+          options: mockOptions,
+          deferReply: () => interaction.deferUpdate(),
+          editReply: (content: any) => interaction.editReply(content)
+        };
+        
+        await this.handleTotalLogsLeaderboard(mockInteraction as any);
       }
     } catch (error) {
       console.error('Error handling button interaction:', error);
@@ -1483,6 +1519,9 @@ export class RaptorBot {
           break;
         case 'timeout':
           await this.handleTimeoutCommand(interaction);
+          break;
+        case 'total':
+          await this.handleTotalCommand(interaction);
           break;
         case 'transfer':
           await this.handleTransferCommand(interaction);
@@ -4205,6 +4244,284 @@ export class RaptorBot {
     // Log the activity
     await this.logActivity('user_logs_cleared', 
       `All logs cleared for ${user.username} by ${interaction.user.username}`);
+  }
+
+  private async handleTotalCommand(interaction: ChatInputCommandInteraction) {
+    try {
+      if (!await this.hasPermission(interaction)) {
+        return;
+      }
+
+      const subcommand = interaction.options.getSubcommand();
+
+      switch (subcommand) {
+        case 'logs':
+          await this.handleTotalLogs(interaction);
+          break;
+        case 'lb':
+          await this.handleTotalLogsLeaderboard(interaction);
+          break;
+        default:
+          await interaction.reply({ 
+            content: 'Invalid subcommand for total command.', 
+            ephemeral: true 
+          });
+      }
+    } catch (error) {
+      console.error('Error handling total command:', error);
+      await interaction.reply({ 
+        content: 'An error occurred while processing the total command.', 
+        ephemeral: true 
+      });
+    }
+  }
+
+  private async handleTotalLogs(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.deferReply();
+
+      const targetUser = interaction.options.getUser('user') || interaction.user;
+      const userId = targetUser.id;
+
+      // Count total messages with images from all tracked channels
+      const trackedChannels = [
+        '1339001416383070229', // admin
+        '1315558587065569280', // whitelists
+        '1315558586302201886', // moderator
+        '1315558584888590367', // trial mod
+        '1315558583290826856', // support
+        '1315558581352792119', // trial support
+        '1315558579662487552', // purchases
+        '1383552724079087758'  // testing
+      ];
+
+      let totalImageMessages = 0;
+
+      for (const channelId of trackedChannels) {
+        try {
+          const channel = await this.client.channels.fetch(channelId);
+          if (channel && channel.isTextBased()) {
+            // Fetch recent messages and count those with attachments from this user
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const userImageMessages = messages.filter(msg => 
+              msg.author.id === userId && 
+              !msg.author.bot && 
+              msg.attachments.size > 0 &&
+              msg.attachments.some(attachment => 
+                attachment.contentType?.startsWith('image/') || 
+                /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.name || '')
+              )
+            );
+            totalImageMessages += userImageMessages.size;
+          }
+        } catch (channelError) {
+          console.log(`Could not access channel ${channelId}:`, channelError.message);
+        }
+      }
+
+      // Get username for display
+      let userDisplay = targetUser.username;
+      try {
+        const discordUser = await this.client.users.fetch(userId);
+        if (discordUser && discordUser.username) {
+          userDisplay = discordUser.username;
+        }
+      } catch (fetchError) {
+        // Use fallback
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Total Logs Count')
+        .setDescription(`**${userDisplay}** has **${totalImageMessages}** total logs from image messages across all tracked channels.`)
+        .addFields([
+          {
+            name: '👤 User',
+            value: userDisplay,
+            inline: true
+          },
+          {
+            name: '📸 Total Image Messages',
+            value: totalImageMessages.toString(),
+            inline: true
+          },
+          {
+            name: '📝 Tracked Channels',
+            value: '8 channels monitored',
+            inline: true
+          }
+        ])
+        .setColor(0x00ff00)
+        .setTimestamp()
+        .setFooter({ text: 'Raptor Bot • Total Logs System' });
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error in handleTotalLogs:', error);
+      await interaction.editReply({ 
+        content: 'Failed to retrieve total logs count.', 
+      });
+    }
+  }
+
+  private async handleTotalLogsLeaderboard(interaction: ChatInputCommandInteraction) {
+    try {
+      await interaction.deferReply();
+
+      const page = interaction.options.getInteger('page') || 1;
+      const pageSize = 5;
+
+      // Count total messages with images for all users across tracked channels
+      const trackedChannels = [
+        '1339001416383070229', // admin
+        '1315558587065569280', // whitelists
+        '1315558586302201886', // moderator
+        '1315558584888590367', // trial mod
+        '1315558583290826856', // support
+        '1315558581352792119', // trial support
+        '1315558579662487552', // purchases
+        '1383552724079087758'  // testing
+      ];
+
+      const userCounts = new Map<string, number>();
+
+      for (const channelId of trackedChannels) {
+        try {
+          const channel = await this.client.channels.fetch(channelId);
+          if (channel && channel.isTextBased()) {
+            const messages = await channel.messages.fetch({ limit: 100 });
+            
+            messages.forEach(msg => {
+              if (!msg.author.bot && 
+                  msg.attachments.size > 0 &&
+                  msg.attachments.some(attachment => 
+                    attachment.contentType?.startsWith('image/') || 
+                    /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.name || '')
+                  )) {
+                const userId = msg.author.id;
+                userCounts.set(userId, (userCounts.get(userId) || 0) + 1);
+              }
+            });
+          }
+        } catch (channelError) {
+          console.log(`Could not access channel ${channelId}:`, channelError.message);
+        }
+      }
+
+      // Convert to sorted array
+      const sortedUsers = Array.from(userCounts.entries())
+        .map(([userId, count]) => ({ userId, totalLogs: count }))
+        .sort((a, b) => b.totalLogs - a.totalLogs);
+
+      const totalPages = Math.ceil(sortedUsers.length / pageSize);
+      const currentPage = Math.max(1, Math.min(page, totalPages));
+      const startIndex = (currentPage - 1) * pageSize;
+      const pageData = sortedUsers.slice(startIndex, startIndex + pageSize);
+
+      if (pageData.length === 0) {
+        await interaction.editReply({ 
+          content: 'No total logs data found.', 
+        });
+        return;
+      }
+
+      let leaderboardText = '';
+      for (let i = 0; i < pageData.length; i++) {
+        try {
+          const log = pageData[i];
+          const globalRank = startIndex + i + 1;
+          
+          // Get rank display
+          let rankDisplay = '';
+          if (globalRank === 1) rankDisplay = '🥇 1st';
+          else if (globalRank === 2) rankDisplay = '🥈 2nd';
+          else if (globalRank === 3) rankDisplay = '🥉 3rd';
+          else rankDisplay = `${globalRank}th`;
+          
+          // Fetch actual Discord username
+          let userDisplay = `User${log.userId.slice(-4)}`;
+          try {
+            const discordUser = await this.client.users.fetch(log.userId);
+            if (discordUser && discordUser.username) {
+              userDisplay = discordUser.username;
+            }
+          } catch (fetchError) {
+            console.log(`Could not fetch username for ${log.userId}, using fallback`);
+          }
+          
+          const entry = `${rankDisplay} ${userDisplay} ${log.totalLogs} logs\n`;
+          
+          if ((leaderboardText + entry).length > 900) break;
+          leaderboardText += entry;
+        } catch (logError) {
+          console.error('Error processing total leaderboard entry:', logError);
+          continue;
+        }
+      }
+
+      if (!leaderboardText || leaderboardText.trim().length === 0) {
+        leaderboardText = 'No valid total leaderboard entries to display';
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('🏆 Total Logs Leaderboard')
+        .setDescription('**Top users by total image messages across all tracked channels**')
+        .addFields([
+          {
+            name: `📊 Rankings (Page ${currentPage}/${totalPages})`,
+            value: leaderboardText.trim(),
+            inline: false
+          },
+          {
+            name: '📝 Statistics',
+            value: `Total Users: ${sortedUsers.length}\nTracked Channels: 8`,
+            inline: false
+          }
+        ])
+        .setColor(0x00ff00)
+        .setTimestamp()
+        .setFooter({ text: `Raptor Bot • Page ${currentPage}/${totalPages}` });
+
+      // Add navigation buttons
+      const components = [];
+      if (totalPages > 1) {
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const row = new ActionRowBuilder();
+        
+        if (currentPage > 1) {
+          row.addComponents(
+            new ButtonBuilder()
+              .setCustomId(`total_lb_${currentPage - 1}`)
+              .setLabel('← Previous')
+              .setStyle(ButtonStyle.Primary)
+          );
+        }
+        
+        if (currentPage < totalPages) {
+          row.addComponents(
+            new ButtonBuilder()
+              .setCustomId(`total_lb_${currentPage + 1}`)
+              .setLabel('Next →')
+              .setStyle(ButtonStyle.Primary)
+          );
+        }
+        
+        if (row.components.length > 0) {
+          components.push(row);
+        }
+      }
+
+      await interaction.editReply({ 
+        embeds: [embed],
+        components: components
+      });
+
+    } catch (error) {
+      console.error('Error in handleTotalLogsLeaderboard:', error);
+      await interaction.editReply({ 
+        content: 'Failed to generate total logs leaderboard.', 
+      });
+    }
   }
 
   private async handleTagManagerCommand(interaction: ChatInputCommandInteraction) {

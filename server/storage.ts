@@ -948,6 +948,28 @@ export class DatabaseStorage implements IStorage {
       uptime: process.uptime()
     };
   }
+
+  async createSuggestion(suggestion: any): Promise<void> {
+    await db.insert(suggestions).values({
+      suggestionId: suggestion.suggestionId,
+      userId: suggestion.userId,
+      title: suggestion.title,
+      description: suggestion.description,
+      status: suggestion.status
+    });
+  }
+
+  async updateSuggestionStatus(suggestionId: string, status: string): Promise<void> {
+    await db.update(suggestions)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(suggestions.suggestionId, suggestionId));
+  }
+
+  async resetCandyBalance(userId: string): Promise<void> {
+    await db.update(candyBalances)
+      .set({ balance: 0, bankBalance: 0, updatedAt: new Date() })
+      .where(eq(candyBalances.userId, userId));
+  }
 }
 
 export const storage = new DatabaseStorage();

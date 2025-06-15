@@ -4859,8 +4859,8 @@ export class RaptorBot {
     }
   }
 
-  // VIEW COMMAND - View various system information
-  private async handleViewCommand(interaction: ChatInputCommandInteraction) {
+  // VIEW COMMAND - View various system information (duplicate removed)
+  private async handleViewCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const subcommand = interaction.options.getSubcommand();

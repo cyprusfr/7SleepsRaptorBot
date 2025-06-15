@@ -263,6 +263,21 @@ export const whitelist = pgTable("whitelist", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Suggestions table
+export const suggestions = pgTable("suggestions", {
+  id: serial("id").primaryKey(),
+  suggestionId: varchar("suggestion_id", { length: 16 }).notNull().unique(),
+  userId: varchar("user_id").notNull(), // Discord user ID
+  username: varchar("username").notNull(), // Discord username
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, denied
+  reviewedBy: varchar("reviewed_by"), // Who reviewed it
+  reviewNote: text("review_note"), // Review comments
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,

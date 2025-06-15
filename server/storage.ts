@@ -12,6 +12,7 @@ import {
   discordServers,
   botSettings,
   whitelist,
+  suggestions,
   verificationSessions,
   type User, 
   type UpsertUser,
@@ -606,34 +607,34 @@ export class DatabaseStorage implements IStorage {
   // Additional statistics methods for bot commands
   async getDiscordUserCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(discordUsers);
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   async getDiscordKeyCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(discordKeys);
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   async getActiveDiscordKeyCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` })
       .from(discordKeys)
       .where(eq(discordKeys.status, 'active'));
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   async getTotalUserLogCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(userLogs);
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   async getSuggestionCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(suggestions);
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   async getBugReportCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(bugReports);
-    return parseInt(result[0]?.count || '0');
+    return parseInt(result[0]?.count as string || '0');
   }
 
   // Get all discord keys with limit

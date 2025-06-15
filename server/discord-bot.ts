@@ -3469,9 +3469,7 @@ export class RaptorBot {
     await interaction.reply({ content: 'KeyInfo command not yet fully implemented', ephemeral: true });
   }
 
-  private async handleKeyCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'Key command not yet fully implemented', ephemeral: true });
-  }
+
 
   private async handleListCommand(interaction: ChatInputCommandInteraction) {
     await interaction.reply({ content: 'List command not yet fully implemented', ephemeral: true });
@@ -4660,8 +4658,8 @@ export class RaptorBot {
 
 
 
-  // STATS COMMAND - Show comprehensive bot statistics
-  private async handleStatsCommand(interaction: ChatInputCommandInteraction) {
+  // STATS COMMAND - Show comprehensive bot statistics (duplicate removed)
+  private async handleStatsCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     try {
@@ -4781,8 +4779,8 @@ export class RaptorBot {
     }
   }
 
-  // RESET COMMAND - Reset user data or system components
-  private async handleResetCommand(interaction: ChatInputCommandInteraction) {
+  // RESET COMMAND - Reset user data or system components (duplicate removed)
+  private async handleResetCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const subcommand = interaction.options.getSubcommand();

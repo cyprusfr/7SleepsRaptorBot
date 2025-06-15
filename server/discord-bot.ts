@@ -4660,6 +4660,311 @@ export class RaptorBot {
 
 
 
+  // STATS COMMAND - Show comprehensive bot statistics
+  private async handleStatsCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    try {
+      // Get various statistics from storage
+      const totalUsers = await storage.getDiscordUserCount();
+      const totalKeys = await storage.getDiscordKeyCount();
+      const activeKeys = await storage.getActiveDiscordKeyCount();
+      const totalLogs = await storage.getTotalUserLogCount();
+      const totalSuggestions = await storage.getSuggestionCount();
+      const totalBugReports = await storage.getBugReportCount();
+      
+      // Bot uptime
+      const uptime = process.uptime();
+      const days = Math.floor(uptime / 86400);
+      const hours = Math.floor((uptime % 86400) / 3600);
+      const minutes = Math.floor((uptime % 3600) / 60);
+      const uptimeString = `${days}d ${hours}h ${minutes}m`;
+
+      // Memory usage
+      const memUsage = process.memoryUsage();
+      const memUsed = Math.round(memUsage.heapUsed / 1024 / 1024 * 100) / 100;
+
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Bot Statistics')
+        .setDescription('**MacSploit Raptor Bot Statistics**')
+        .addFields([
+          { name: '👥 Total Users', value: totalUsers.toString(), inline: true },
+          { name: '🔑 Total Keys', value: totalKeys.toString(), inline: true },
+          { name: '✅ Active Keys', value: activeKeys.toString(), inline: true },
+          { name: '📝 Total Logs', value: totalLogs.toString(), inline: true },
+          { name: '💡 Suggestions', value: totalSuggestions.toString(), inline: true },
+          { name: '🐛 Bug Reports', value: totalBugReports.toString(), inline: true },
+          { name: '⏱️ Uptime', value: uptimeString, inline: true },
+          { name: '💾 Memory Usage', value: `${memUsed} MB`, inline: true },
+          { name: '🤖 Bot Version', value: 'v2.1.0', inline: true }
+        ])
+        .setColor(0x00ff00)
+        .setTimestamp()
+        .setFooter({ text: 'Raptor Bot Statistics' });
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error fetching bot statistics:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to retrieve bot statistics.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // KEY COMMAND - Comprehensive key validation and management
+  private async handleKeyCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const keyValue = interaction.options.getString('key', true);
+
+    try {
+      // Get key information
+      const keyInfo = await storage.getDiscordKey(keyValue);
+
+      if (!keyInfo) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Key Not Found')
+          .setDescription(`License key \`${keyValue}\` was not found in the database.`)
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Check key status
+      const isExpired = keyInfo.expiresAt && new Date() > keyInfo.expiresAt;
+      const statusEmoji = keyInfo.status === 'active' ? '✅' : keyInfo.status === 'revoked' ? '❌' : '⏸️';
+      const statusText = isExpired ? 'Expired' : keyInfo.status;
+
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 License Key Information')
+        .addFields([
+          { name: 'Key ID', value: keyInfo.keyId || 'Unknown', inline: true },
+          { name: 'Status', value: `${statusEmoji} ${statusText}`, inline: true },
+          { name: 'Owner', value: keyInfo.discordUsername || 'Unknown', inline: true },
+          { name: 'HWID', value: keyInfo.hwid || 'Not bound', inline: true },
+          { name: 'Created', value: keyInfo.createdAt ? `<t:${Math.floor(keyInfo.createdAt.getTime() / 1000)}:R>` : 'Unknown', inline: true },
+          { name: 'Expires', value: keyInfo.expiresAt ? `<t:${Math.floor(keyInfo.expiresAt.getTime() / 1000)}:R>` : 'Never', inline: true }
+        ])
+        .setColor(keyInfo.status === 'active' && !isExpired ? 0x00ff00 : 0xff0000)
+        .setTimestamp();
+
+      if (keyInfo.revokedBy) {
+        embed.addFields([
+          { name: 'Revoked By', value: keyInfo.revokedBy, inline: true },
+          { name: 'Revoked At', value: keyInfo.revokedAt ? `<t:${Math.floor(keyInfo.revokedAt.getTime() / 1000)}:R>` : 'Unknown', inline: true }
+        ]);
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+
+      // Log key check
+      await this.logActivity('key_checked', `Key ${keyValue} checked by ${interaction.user.username}`);
+
+    } catch (error) {
+      console.error('Error checking key:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to check license key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // RESET COMMAND - Reset user data or system components
+  private async handleResetCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const subcommand = interaction.options.getSubcommand();
+    const targetUser = interaction.options.getUser('user', true);
+
+    try {
+      switch (subcommand) {
+        case 'candy':
+          await storage.resetCandyBalance(targetUser.id);
+          
+          const embed = new EmbedBuilder()
+            .setTitle('🍭 Candy Balance Reset')
+            .setDescription(`Successfully reset candy balance for <@${targetUser.id}>`)
+            .addFields([
+              { name: 'Target User', value: targetUser.username, inline: true },
+              { name: 'Reset By', value: interaction.user.username, inline: true },
+              { name: 'New Balance', value: '0 candies', inline: true }
+            ])
+            .setColor(0x00ff00)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+          await this.logActivity('candy_reset', `Candy balance reset for ${targetUser.username} by ${interaction.user.username}`);
+          break;
+
+        case 'logs':
+          await storage.clearUserLogs(targetUser.id);
+          
+          const logsEmbed = new EmbedBuilder()
+            .setTitle('📝 User Logs Reset')
+            .setDescription(`Successfully reset all logs for <@${targetUser.id}>`)
+            .addFields([
+              { name: 'Target User', value: targetUser.username, inline: true },
+              { name: 'Reset By', value: interaction.user.username, inline: true },
+              { name: 'Logs Cleared', value: 'All logs removed', inline: true }
+            ])
+            .setColor(0x00ff00)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [logsEmbed] });
+          await this.logActivity('logs_reset', `User logs reset for ${targetUser.username} by ${interaction.user.username}`);
+          break;
+
+        case 'hwid':
+          await storage.resetUserHwid(targetUser.id);
+          
+          const hwidEmbed = new EmbedBuilder()
+            .setTitle('💻 HWID Reset')
+            .setDescription(`Successfully reset HWID for <@${targetUser.id}>`)
+            .addFields([
+              { name: 'Target User', value: targetUser.username, inline: true },
+              { name: 'Reset By', value: interaction.user.username, inline: true },
+              { name: 'Status', value: 'HWID cleared from all keys', inline: true }
+            ])
+            .setColor(0x00ff00)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [hwidEmbed] });
+          await this.logActivity('hwid_reset', `HWID reset for ${targetUser.username} by ${interaction.user.username}`);
+          break;
+
+        default:
+          await interaction.editReply({ content: 'Invalid reset type specified.' });
+      }
+
+    } catch (error) {
+      console.error('Error in reset command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to perform reset operation.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
+  // VIEW COMMAND - View various system information
+  private async handleViewCommand(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
+    const subcommand = interaction.options.getSubcommand();
+
+    try {
+      switch (subcommand) {
+        case 'keys':
+          const keys = await storage.getAllDiscordKeys(20);
+          
+          if (keys.length === 0) {
+            const embed = new EmbedBuilder()
+              .setTitle('🔑 License Keys')
+              .setDescription('No license keys found in the database.')
+              .setColor(0xff9900)
+              .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+            return;
+          }
+
+          let keysList = '';
+          keys.forEach((key, index) => {
+            const status = key.status === 'active' ? '✅' : key.status === 'revoked' ? '❌' : '⏸️';
+            const owner = key.discordUsername || 'Unknown';
+            keysList += `${index + 1}. ${status} \`${key.keyId}\` - ${owner}\n`;
+          });
+
+          const keysEmbed = new EmbedBuilder()
+            .setTitle('🔑 Recent License Keys')
+            .setDescription(`**Latest 20 Keys:**\n\n${keysList}`)
+            .setFooter({ text: `Total Keys: ${keys.length}` })
+            .setColor(0x0099ff)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [keysEmbed] });
+          break;
+
+        case 'users':
+          const users = await storage.getAllDiscordUsers(20);
+          
+          if (users.length === 0) {
+            const usersEmbed = new EmbedBuilder()
+              .setTitle('👥 Discord Users')
+              .setDescription('No users found in the database.')
+              .setColor(0xff9900)
+              .setTimestamp();
+
+            await interaction.editReply({ embeds: [usersEmbed] });
+            return;
+          }
+
+          let usersList = '';
+          users.forEach((user, index) => {
+            const status = user.isWhitelisted ? '✅' : '❌';
+            const balance = user.candyBalance || 0;
+            usersList += `${index + 1}. ${status} ${user.username} - ${balance} candies\n`;
+          });
+
+          const usersEmbed = new EmbedBuilder()
+            .setTitle('👥 Recent Discord Users')
+            .setDescription(`**Latest 20 Users:**\n\n${usersList}`)
+            .setFooter({ text: `Total Users: ${users.length}` })
+            .setColor(0x0099ff)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [usersEmbed] });
+          break;
+
+        case 'settings':
+          const settings = await storage.getAllBotSettings();
+          
+          let settingsList = '';
+          Object.entries(settings).forEach(([key, value]) => {
+            settingsList += `**${key}:** \`${value}\`\n`;
+          });
+
+          const settingsEmbed = new EmbedBuilder()
+            .setTitle('⚙️ Bot Settings')
+            .setDescription(settingsList || 'No settings configured.')
+            .setColor(0x0099ff)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [settingsEmbed] });
+          break;
+
+        default:
+          await interaction.editReply({ content: 'Invalid view type specified.' });
+      }
+
+    } catch (error) {
+      console.error('Error in view command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to retrieve view information.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  }
+
   public async start(): Promise<void> {
     if (!DISCORD_TOKEN) {
       throw new Error('DISCORD_TOKEN environment variable is required');

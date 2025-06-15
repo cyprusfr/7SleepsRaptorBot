@@ -25,7 +25,7 @@ import {
   type InsertDiscordServer
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, or, gte, lte } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -601,6 +601,85 @@ export class DatabaseStorage implements IStorage {
     
     // Log the activity
     await this.logActivity('user_logs_cleared', `All logs cleared for user ${userId}`);
+  }
+
+  // Additional statistics methods for bot commands
+  async getDiscordUserCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(discordUsers);
+    return parseInt(result[0]?.count || '0');
+  }
+
+  async getDiscordKeyCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(discordKeys);
+    return parseInt(result[0]?.count || '0');
+  }
+
+  async getActiveDiscordKeyCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` })
+      .from(discordKeys)
+      .where(eq(discordKeys.status, 'active'));
+    return parseInt(result[0]?.count || '0');
+  }
+
+  async getTotalUserLogCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(userLogs);
+    return parseInt(result[0]?.count || '0');
+  }
+
+  async getSuggestionCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(suggestions);
+    return parseInt(result[0]?.count || '0');
+  }
+
+  async getBugReportCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(bugReports);
+    return parseInt(result[0]?.count || '0');
+  }
+
+  // Get all discord keys with limit
+  async getAllDiscordKeys(limit: number = 50): Promise<any[]> {
+    return await db.select()
+      .from(discordKeys)
+      .orderBy(desc(discordKeys.createdAt))
+      .limit(limit);
+  }
+
+  // Get all discord users with limit
+  async getAllDiscordUsers(limit: number = 50): Promise<any[]> {
+    return await db.select()
+      .from(discordUsers)
+      .orderBy(desc(discordUsers.createdAt))
+      .limit(limit);
+  }
+
+  // Get all bot settings as object
+  async getAllBotSettings(): Promise<Record<string, string>> {
+    const settings = await db.select().from(botSettings);
+    const settingsObject: Record<string, string> = {};
+    settings.forEach(setting => {
+      settingsObject[setting.key] = setting.value;
+    });
+    return settingsObject;
+  }
+
+  // Reset candy balance for user
+  async resetCandyBalance(userId: string): Promise<void> {
+    await db.update(candyBalances)
+      .set({ balance: 0, bankBalance: 0, updatedAt: new Date() })
+      .where(eq(candyBalances.userId, userId));
+  }
+
+  // Reset user HWID
+  async resetUserHwid(userId: string): Promise<void> {
+    await db.update(discordKeys)
+      .set({ hwid: null, updatedAt: new Date() })
+      .where(eq(discordKeys.userId, userId));
+  }
+
+  // Get discord key by key value
+  async getDiscordKey(keyValue: string): Promise<any | undefined> {
+    const [key] = await db.select().from(discordKeys).where(eq(discordKeys.keyId, keyValue));
+    return key;
   }
 
   async getUserLogs(userId: string): Promise<any[]> {

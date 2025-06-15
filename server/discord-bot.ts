@@ -1899,24 +1899,44 @@ export class RaptorBot {
   }
 
   private async handleVerifyList(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
 
     try {
-      // Get all pending verifications (you'd need to implement this in storage)
-      // For now, showing a placeholder implementation
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      // Get verification sessions from database
+      const allSessions = await db.select().from(verificationSessions).orderBy(desc(verificationSessions.createdAt)).limit(20);
+      const activeSessions = allSessions.filter(s => s.status === 'pending' || s.status === 'bot_verified');
+      const expiredSessions = allSessions.filter(s => new Date() > s.expiresAt);
       
+      const sessionsList = allSessions.slice(0, 10).map((session, index) => {
+        const status = new Date() > session.expiresAt ? 'Expired' : session.status;
+        const timeLeft = session.expiresAt.getTime() - Date.now();
+        const timeDisplay = timeLeft > 0 ? `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>` : 'Expired';
+        
+        return `${index + 1}. User: <@${session.discordUserId}>\n   Status: ${status}\n   Expires: ${timeDisplay}`;
+      }).join('\n\n');
+
       const embed = new EmbedBuilder()
-        .setTitle('🔐 Pending Verifications')
-        .setDescription('List of pending verification sessions')
+        .setTitle('🔐 Verification Sessions')
+        .setDescription(sessionsList || 'No verification sessions found.')
         .addFields(
-          { name: 'Total Sessions', value: '0', inline: true },
-          { name: 'Active Sessions', value: '0', inline: true },
-          { name: 'Expired Sessions', value: '0', inline: true }
+          { name: 'Total Sessions', value: allSessions.length.toString(), inline: true },
+          { name: 'Active Sessions', value: activeSessions.length.toString(), inline: true },
+          { name: 'Expired Sessions', value: expiredSessions.length.toString(), inline: true }
         )
         .setColor(0x0099ff)
         .setTimestamp();
 
+      await storage.logActivity('verify_list', `Verification sessions listed by ${interaction.user.id}`);
       await interaction.editReply({ embeds: [embed] });
+      success = true;
 
     } catch (error) {
       console.error('Error listing verifications:', error);
@@ -1927,30 +1947,53 @@ export class RaptorBot {
         .setColor(0xff0000)
         .setTimestamp();
       
-      await interaction.editReply({ embeds: [embed] });
+      if (interaction.deferred) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
     }
   }
 
   private async handleVerifyExpire(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
 
     try {
-      // Expire old verification codes (placeholder implementation)
-      const expiredCount = 0; // You'd implement the actual logic here
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
 
-      await this.logActivity('verification_cleanup', `Expired ${expiredCount} old verification codes by ${interaction.user.username}`);
+      await interaction.deferReply({ ephemeral: true });
+
+      // Delete expired verification sessions
+      const expiredSessions = await db.delete(verificationSessions)
+        .where(or(
+          eq(verificationSessions.status, 'expired'),
+          sql`${verificationSessions.expiresAt} < NOW()`
+        ))
+        .returning();
+
+      const expiredCount = expiredSessions.length;
+
+      await storage.logActivity('verification_cleanup', `Expired ${expiredCount} old verification codes by ${interaction.user.username}`);
 
       const embed = new EmbedBuilder()
-        .setTitle('✅ Verification Cleanup')
-        .setDescription(`Expired ${expiredCount} old verification codes.`)
+        .setTitle('✅ Verification Cleanup Complete')
+        .setDescription(`Successfully cleaned up expired verification sessions.`)
         .addFields(
           { name: 'Expired Sessions', value: expiredCount.toString(), inline: true },
-          { name: 'Cleaned By', value: `<@${interaction.user.id}>`, inline: true }
+          { name: 'Cleaned By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Cleanup Time', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
         )
         .setColor(0x00ff00)
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+      success = true;
 
     } catch (error) {
       console.error('Error expiring verifications:', error);
@@ -1961,7 +2004,13 @@ export class RaptorBot {
         .setColor(0xff0000)
         .setTimestamp();
       
-      await interaction.editReply({ embeds: [embed] });
+      if (interaction.deferred) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
     }
   }
 

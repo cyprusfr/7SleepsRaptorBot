@@ -603,16 +603,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUserLogs(limit: number): Promise<any[]> {
-    const logs = await db
-      .select({
-        userId: userLogs.userId,
-        logCount: userLogs.logCount,
-        lastUpdated: userLogs.lastUpdated
-      })
-      .from(userLogs)
-      .orderBy(desc(userLogs.lastUpdated))
-      .limit(limit);
-    return logs;
+    try {
+      const logs = await db
+        .select({
+          userId: userLogs.userId,
+          logCount: userLogs.logCount,
+          lastUpdated: userLogs.lastUpdated
+        })
+        .from(userLogs)
+        .orderBy(desc(userLogs.lastUpdated))
+        .limit(limit);
+      
+      console.log(`Retrieved ${logs.length} user logs from database`);
+      return logs;
+    } catch (error) {
+      console.error('Error in getAllUserLogs:', error);
+      return [];
+    }
   }
 
   async getActivityLogs(limit: number): Promise<any[]> {

@@ -578,17 +578,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserLogLeaderboard(limit: number): Promise<any[]> {
-    const result = await db
-      .select({
-        userId: userLogs.userId,
-        totalLogs: sql<number>`SUM(${userLogs.logCount})`.as('totalLogs')
-      })
-      .from(userLogs)
-      .groupBy(userLogs.userId)
-      .orderBy(sql`SUM(${userLogs.logCount}) DESC`)
-      .limit(limit);
-    
-    return result;
+    try {
+      const result = await db
+        .select({
+          userId: userLogs.userId,
+          totalLogs: userLogs.logCount
+        })
+        .from(userLogs)
+        .orderBy(desc(userLogs.logCount))
+        .limit(limit);
+      
+      console.log(`Retrieved ${result.length} leaderboard entries from database`);
+      return result;
+    } catch (error) {
+      console.error('Error in getUserLogLeaderboard:', error);
+      return [];
+    }
   }
 
   async clearUserLogs(userId: string): Promise<void> {

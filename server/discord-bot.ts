@@ -928,18 +928,8 @@ export class RaptorBot {
         .addSubcommand(subcommand =>
           subcommand
             .setName('view')
-            .setDescription('View system logs')
-            .addStringOption(option => 
-              option.setName('type')
-                .setDescription('Log type')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'activity', value: 'activity' },
-                  { name: 'commands', value: 'commands' },
-                  { name: 'errors', value: 'errors' },
-                  { name: 'all', value: 'all' }
-                ))
-            .addIntegerOption(option => option.setName('limit').setDescription('Number of entries').setRequired(false)))
+            .setDescription('View user engagement leaderboard')
+            .addIntegerOption(option => option.setName('page').setDescription('Page number (5 users per page)').setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('clear')
@@ -3447,32 +3437,30 @@ export class RaptorBot {
   }
 
   private async handleLogsView(interaction: ChatInputCommandInteraction) {
-    const type = interaction.options.getString('type') || 'all';
-    const limit = interaction.options.getInteger('limit') || 20;
-    const maxLimit = Math.min(limit, 50);
+    const page = interaction.options.getInteger('page') || 1;
+    const pageSize = 5; // 5 users per page as requested
 
     await interaction.deferReply();
-    console.log(`Processing /logs view command for user ${interaction.user.id}`);
+    console.log(`Processing /logs view command for user ${interaction.user.id}, page ${page}`);
 
     try {
-      // Add timeout protection for database queries
       const startTime = Date.now();
       
-      // Get user engagement logs from the 8 tracked channels
-      const logs = await Promise.race([
-        storage.getAllUserLogs(maxLimit),
+      // Get all user engagement logs and sort by log count (leaderboard style)
+      const allLogs = await Promise.race([
+        storage.getUserLogLeaderboard(100), // Get top 100 for pagination
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database query timeout')), 10000)
         )
       ]) as any[];
 
       const queryTime = Date.now() - startTime;
-      console.log(`Database query completed in ${queryTime}ms, found ${logs.length} logs`);
+      console.log(`Database query completed in ${queryTime}ms, found ${allLogs.length} logs`);
 
-      const title = '📊 User Engagement Logs';
-      const description = 'Recent user activity in tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing)';
+      const title = '🏆 User Engagement Leaderboard';
+      const description = 'Top users by log points from tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing)';
 
-      if (logs.length === 0) {
+      if (allLogs.length === 0) {
         const embed = new EmbedBuilder()
           .setTitle(title)
           .setDescription('No user engagement logs found. Users get log points when posting images in tracked channels.')
@@ -3483,52 +3471,69 @@ export class RaptorBot {
         return;
       }
 
-      let logText = '';
-      for (const log of logs.slice(0, 15)) {
+      // Calculate pagination
+      const totalPages = Math.ceil(allLogs.length / pageSize);
+      const currentPage = Math.min(Math.max(1, page), totalPages);
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const pageData = allLogs.slice(startIndex, endIndex);
+
+      let leaderboardText = '';
+      for (let i = 0; i < pageData.length; i++) {
         try {
-          const timestamp = new Date(log.lastUpdated);
-          if (isNaN(timestamp.getTime())) {
-            console.error('Invalid timestamp for log:', log);
-            continue;
+          const log = pageData[i];
+          const globalRank = startIndex + i + 1;
+          
+          // Get rank emoji/text
+          let rankDisplay = '';
+          if (globalRank === 1) rankDisplay = '🥇 1st';
+          else if (globalRank === 2) rankDisplay = '🥈 2nd';
+          else if (globalRank === 3) rankDisplay = '🥉 3rd';
+          else rankDisplay = `${globalRank}th`;
+          
+          // Try to get username from Discord user cache
+          let userDisplay = `<@${log.userId}>`;
+          try {
+            const discordUser = await this.client.users.fetch(log.userId);
+            if (discordUser) {
+              userDisplay = discordUser.username;
+            }
+          } catch (fetchError) {
+            // Keep the mention format if user fetch fails
+            console.log(`Could not fetch username for ${log.userId}, using mention`);
           }
           
-          const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
-          const logIcon = '📈';
-          const entry = `${logIcon} <@${log.userId}> - ${log.logCount} logs - ${timeStr}\n`;
+          const entry = `${rankDisplay} ${userDisplay} ${log.totalLogs} logs\n`;
           
-          if ((logText + entry).length > 900) break;
-          logText += entry;
+          if ((leaderboardText + entry).length > 900) break;
+          leaderboardText += entry;
         } catch (logError) {
-          console.error('Error processing individual log entry:', logError, log);
+          console.error('Error processing leaderboard entry:', logError, pageData[i]);
           continue;
         }
       }
 
-      if (!logText || logText.trim().length === 0) {
-        logText = 'No valid log entries to display';
-      }
-      
-      if (logText.length > 1020) {
-        logText = logText.substring(0, 1000) + '\n...truncated';
+      if (!leaderboardText || leaderboardText.trim().length === 0) {
+        leaderboardText = 'No valid leaderboard entries to display';
       }
 
       const embed = new EmbedBuilder()
         .setTitle(title)
         .setDescription(description)
-        .addFields({ name: 'Recent Entries', value: logText, inline: false })
-        .setFooter({ text: `Showing ${Math.min(logs.length, 15)} of ${logs.length} entries` })
+        .addFields({ name: `Page ${currentPage} of ${totalPages}`, value: leaderboardText, inline: false })
+        .setFooter({ text: `Page ${currentPage}/${totalPages} • Total users: ${allLogs.length}` })
         .setColor(0x0099ff)
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
-      console.log('Successfully sent logs view response');
+      console.log('Successfully sent logs leaderboard response');
       
     } catch (error) {
       console.error('Error in handleLogsView:', error);
       
       const embed = new EmbedBuilder()
         .setTitle('❌ Error')
-        .setDescription(`Failed to retrieve user engagement logs: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        .setDescription(`Failed to retrieve user engagement leaderboard: ${error instanceof Error ? error.message : 'Unknown error'}`)
         .setColor(0xff0000)
         .setTimestamp();
       

@@ -3462,17 +3462,347 @@ export class RaptorBot {
   }
 
   private async handleHwidCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'HWID command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const subcommand = interaction.options.getSubcommand();
+      const user = interaction.options.getUser('user', true);
+      const userId = user.id;
+
+      if (subcommand === 'view') {
+        // Get user's HWID information
+        const discordUser = await storage.getDiscordUser(userId);
+        const keys = await storage.getUserKeys(userId);
+
+        const embed = new EmbedBuilder()
+          .setTitle('🖥️ HWID Information')
+          .setColor(0x00ff00)
+          .addFields(
+            { name: 'User', value: `<@${userId}>`, inline: true },
+            { name: 'Username', value: discordUser?.username || 'Unknown', inline: true },
+            { name: 'HWID', value: discordUser?.hwid || 'Not set', inline: false },
+            { name: 'Active Keys', value: keys.length.toString(), inline: true },
+            { name: 'Last Updated', value: discordUser?.updatedAt ? `<t:${Math.floor(discordUser.updatedAt.getTime() / 1000)}:R>` : 'Never', inline: true }
+          )
+          .setTimestamp()
+          .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+        if (keys.length > 0) {
+          const keyList = keys.slice(0, 5).map(key => `\`${key.keyId}\` - ${key.status}`).join('\n');
+          embed.addFields({ name: 'Recent Keys', value: keyList, inline: false });
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+
+      } else if (subcommand === 'reset') {
+        // Reset user's HWID
+        await storage.updateDiscordUser(userId, { hwid: null });
+        await storage.logActivity('hwid_reset', `HWID reset for user ${userId} by ${interaction.user.id}`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('✅ HWID Reset')
+          .setDescription(`HWID has been reset for <@${userId}>`)
+          .setColor(0x00ff00)
+          .setTimestamp()
+          .setFooter({ text: `Reset by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+
+      } else if (subcommand === 'set') {
+        const hwid = interaction.options.getString('hwid', true);
+        
+        // Set user's HWID
+        await storage.updateDiscordUser(userId, { hwid });
+        await storage.logActivity('hwid_set', `HWID set to ${hwid} for user ${userId} by ${interaction.user.id}`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('✅ HWID Set')
+          .setDescription(`HWID has been set for <@${userId}>`)
+          .addFields({ name: 'New HWID', value: `\`${hwid}\``, inline: false })
+          .setColor(0x00ff00)
+          .setTimestamp()
+          .setFooter({ text: `Set by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+      }
+
+    } catch (error) {
+      console.error('Error in handleHwidCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleKeyInfoCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'KeyInfo command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const keyId = interaction.options.getString('key', true);
+      
+      // Get key information
+      const keyInfo = await storage.getKeyInfo(keyId);
+      
+      if (!keyInfo) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Key Not Found')
+          .setDescription(`No key found with ID: \`${keyId}\``)
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Get associated user information
+      const discordUser = await storage.getDiscordUser(keyInfo.userId);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('🔑 Key Information')
+        .setColor(keyInfo.status === 'active' ? 0x00ff00 : keyInfo.status === 'expired' ? 0xff9900 : 0xff0000)
+        .addFields(
+          { name: 'Key ID', value: `\`${keyInfo.keyId}\``, inline: true },
+          { name: 'Status', value: keyInfo.status.toUpperCase(), inline: true },
+          { name: 'User', value: `<@${keyInfo.userId}>`, inline: true },
+          { name: 'Username', value: discordUser?.username || 'Unknown', inline: true },
+          { name: 'HWID', value: keyInfo.hwid || 'Not set', inline: true },
+          { name: 'Created', value: `<t:${Math.floor(keyInfo.createdAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Last Updated', value: `<t:${Math.floor(keyInfo.updatedAt.getTime() / 1000)}:R>`, inline: true }
+        )
+        .setTimestamp()
+        .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+      if (keyInfo.revokedAt && keyInfo.revokedBy) {
+        embed.addFields(
+          { name: 'Revoked At', value: `<t:${Math.floor(keyInfo.revokedAt.getTime() / 1000)}:F>`, inline: true },
+          { name: 'Revoked By', value: `<@${keyInfo.revokedBy}>`, inline: true }
+        );
+      }
+
+      // Get usage statistics
+      const stats = await storage.getKeyUsageStats(keyId);
+      if (stats && stats.lastUsed) {
+        embed.addFields(
+          { name: 'Last Used', value: `<t:${Math.floor(stats.lastUsed.getTime() / 1000)}:R>`, inline: true },
+          { name: 'Usage Count', value: stats.usageCount?.toString() || '0', inline: true }
+        );
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleKeyInfoCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
 
 
   private async handleListCommand(interaction: ChatInputCommandInteraction) {
-    await interaction.reply({ content: 'List command not yet fully implemented', ephemeral: true });
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const subcommand = interaction.options.getSubcommand();
+      const page = interaction.options.getInteger('page') || 1;
+      const limit = 10;
+      const offset = (page - 1) * limit;
+
+      if (subcommand === 'keys') {
+        const status = interaction.options.getString('status') || 'all';
+        const user = interaction.options.getUser('user');
+        
+        // Get keys with filters
+        const keys = await storage.getKeysList(status, user?.id, limit, offset);
+        const totalKeys = await storage.getKeysCount(status, user?.id);
+        const totalPages = Math.ceil(totalKeys / limit);
+
+        const embed = new EmbedBuilder()
+          .setTitle('🔑 License Keys List')
+          .setColor(0x0099ff)
+          .setTimestamp()
+          .setFooter({ 
+            text: `Page ${page}/${totalPages} • Total: ${totalKeys} keys`, 
+            iconURL: interaction.user.displayAvatarURL() 
+          });
+
+        if (keys.length === 0) {
+          embed.setDescription('No keys found matching the criteria.');
+        } else {
+          const keyList = keys.map((key, index) => {
+            const num = offset + index + 1;
+            const statusEmoji = key.status === 'active' ? '🟢' : key.status === 'expired' ? '🟡' : '🔴';
+            return `${num}. ${statusEmoji} \`${key.keyId}\` - <@${key.userId}> (${key.status})`;
+          }).join('\n');
+
+          embed.setDescription(keyList);
+        }
+
+        if (status !== 'all') {
+          embed.addFields({ name: 'Filter', value: `Status: ${status.toUpperCase()}`, inline: true });
+        }
+        if (user) {
+          embed.addFields({ name: 'User Filter', value: `<@${user.id}>`, inline: true });
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+
+      } else if (subcommand === 'users') {
+        const whitelistedOnly = interaction.options.getBoolean('whitelisted') || false;
+        
+        // Get users list
+        const users = await storage.getUsersList(whitelistedOnly, limit, offset);
+        const totalUsers = await storage.getUsersCount(whitelistedOnly);
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        const embed = new EmbedBuilder()
+          .setTitle('👥 Discord Users List')
+          .setColor(0x0099ff)
+          .setTimestamp()
+          .setFooter({ 
+            text: `Page ${page}/${totalPages} • Total: ${totalUsers} users`, 
+            iconURL: interaction.user.displayAvatarURL() 
+          });
+
+        if (users.length === 0) {
+          embed.setDescription('No users found matching the criteria.');
+        } else {
+          const userList = users.map((user, index) => {
+            const num = offset + index + 1;
+            const whitelistEmoji = user.isWhitelisted ? '✅' : '❌';
+            const lastSeen = user.lastSeen ? `<t:${Math.floor(user.lastSeen.getTime() / 1000)}:R>` : 'Never';
+            return `${num}. ${whitelistEmoji} <@${user.discordId}> - Last: ${lastSeen}`;
+          }).join('\n');
+
+          embed.setDescription(userList);
+        }
+
+        if (whitelistedOnly) {
+          embed.addFields({ name: 'Filter', value: 'Whitelisted users only', inline: true });
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+
+      } else if (subcommand === 'whitelist') {
+        // Get whitelist entries
+        const whitelist = await storage.getWhitelistEntries(limit, offset);
+        const totalEntries = await storage.getWhitelistCount();
+        const totalPages = Math.ceil(totalEntries / limit);
+
+        const embed = new EmbedBuilder()
+          .setTitle('✅ Whitelist Entries')
+          .setColor(0x00ff00)
+          .setTimestamp()
+          .setFooter({ 
+            text: `Page ${page}/${totalPages} • Total: ${totalEntries} entries`, 
+            iconURL: interaction.user.displayAvatarURL() 
+          });
+
+        if (whitelist.length === 0) {
+          embed.setDescription('No whitelist entries found.');
+        } else {
+          const whitelistList = whitelist.map((entry, index) => {
+            const num = offset + index + 1;
+            const adminEmoji = entry.isAdmin ? '👑' : '👤';
+            const addedTime = `<t:${Math.floor(entry.createdAt.getTime() / 1000)}:R>`;
+            return `${num}. ${adminEmoji} <@${entry.userId}> - Added ${addedTime} by <@${entry.addedBy}>`;
+          }).join('\n');
+
+          embed.setDescription(whitelistList);
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+
+      } else if (subcommand === 'logs') {
+        // Get activity logs
+        const logs = await storage.getActivityLogs(limit, offset);
+        const totalLogs = await storage.getActivityLogsCount();
+        const totalPages = Math.ceil(totalLogs / limit);
+
+        const embed = new EmbedBuilder()
+          .setTitle('📋 Activity Logs')
+          .setColor(0xff9900)
+          .setTimestamp()
+          .setFooter({ 
+            text: `Page ${page}/${totalPages} • Total: ${totalLogs} logs`, 
+            iconURL: interaction.user.displayAvatarURL() 
+          });
+
+        if (logs.length === 0) {
+          embed.setDescription('No activity logs found.');
+        } else {
+          const logList = logs.map((log, index) => {
+            const num = offset + index + 1;
+            const time = `<t:${Math.floor(log.createdAt.getTime() / 1000)}:R>`;
+            const description = log.description.length > 50 ? 
+              log.description.substring(0, 50) + '...' : 
+              log.description;
+            return `${num}. **${log.type}** - ${description} (${time})`;
+          }).join('\n');
+
+          embed.setDescription(logList);
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+        success = true;
+      }
+
+    } catch (error) {
+      console.error('Error in handleListCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
   }
 
   private async handleLogsCommand(interaction: ChatInputCommandInteraction) {

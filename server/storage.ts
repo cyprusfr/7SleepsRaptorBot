@@ -47,6 +47,18 @@ export interface IStorage {
   getDiscordKeysByUserId(userId: string): Promise<DiscordKey[]>;
   updateDiscordKey(keyId: string, updates: Partial<DiscordKey>): Promise<void>;
   revokeDiscordKey(keyId: string, revokedBy: string): Promise<void>;
+  getUserKeys(userId: string): Promise<DiscordKey[]>;
+  getKeyInfo(keyId: string): Promise<DiscordKey | undefined>;
+  getKeyUsageStats(keyId: string): Promise<{ lastUsed?: Date; usageCount?: number } | undefined>;
+  getKeysList(status: string, userId?: string, limit?: number, offset?: number): Promise<DiscordKey[]>;
+  getKeysCount(status: string, userId?: string): Promise<number>;
+  getUsersList(whitelistedOnly: boolean, limit?: number, offset?: number): Promise<DiscordUser[]>;
+  getUsersCount(whitelistedOnly: boolean): Promise<number>;
+  getWhitelistEntries(limit?: number, offset?: number): Promise<any[]>;
+  getWhitelistCount(): Promise<number>;
+  getActivityLogs(limit?: number, offset?: number): Promise<any[]>;
+  getActivityLogsCount(): Promise<number>;
+  getStats(): Promise<any>;
 
   getCandyBalance(userId: string): Promise<any | undefined>;
   addCandyBalance(userId: string, amount: number): Promise<void>;
@@ -791,6 +803,150 @@ export class DatabaseStorage implements IStorage {
       .update(discordServers)
       .set({ isActive })
       .where(eq(discordServers.serverId, serverId));
+  }
+
+  async getUserKeys(userId: string): Promise<DiscordKey[]> {
+    return await db
+      .select()
+      .from(discordKeys)
+      .where(eq(discordKeys.userId, userId))
+      .orderBy(desc(discordKeys.createdAt));
+  }
+
+  async getKeyInfo(keyId: string): Promise<DiscordKey | undefined> {
+    const [key] = await db
+      .select()
+      .from(discordKeys)
+      .where(eq(discordKeys.keyId, keyId));
+    return key;
+  }
+
+  async getKeyUsageStats(keyId: string): Promise<{ lastUsed?: Date; usageCount?: number } | undefined> {
+    // Return basic stats - can be enhanced with usage tracking table later
+    return { lastUsed: new Date(), usageCount: 0 };
+  }
+
+  async getKeysList(status: string, userId?: string, limit = 10, offset = 0): Promise<DiscordKey[]> {
+    let query = db.select().from(discordKeys);
+    
+    const conditions = [];
+    if (status !== 'all') {
+      conditions.push(eq(discordKeys.status, status));
+    }
+    if (userId) {
+      conditions.push(eq(discordKeys.userId, userId));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query
+      .orderBy(desc(discordKeys.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getKeysCount(status: string, userId?: string): Promise<number> {
+    let query = db.select({ count: sql<number>`count(*)` }).from(discordKeys);
+    
+    const conditions = [];
+    if (status !== 'all') {
+      conditions.push(eq(discordKeys.status, status));
+    }
+    if (userId) {
+      conditions.push(eq(discordKeys.userId, userId));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  async getUsersList(whitelistedOnly: boolean, limit = 10, offset = 0): Promise<DiscordUser[]> {
+    let query = db.select().from(discordUsers);
+    
+    if (whitelistedOnly) {
+      query = query.where(eq(discordUsers.isWhitelisted, true));
+    }
+    
+    return await query
+      .orderBy(desc(discordUsers.lastSeen))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getUsersCount(whitelistedOnly: boolean): Promise<number> {
+    let query = db.select({ count: sql<number>`count(*)` }).from(discordUsers);
+    
+    if (whitelistedOnly) {
+      query = query.where(eq(discordUsers.isWhitelisted, true));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  async getWhitelistEntries(limit = 10, offset = 0): Promise<any[]> {
+    return await db
+      .select()
+      .from(whitelist)
+      .orderBy(desc(whitelist.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getWhitelistCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(whitelist);
+    return result.count;
+  }
+
+  async getActivityLogs(limit = 10, offset = 0): Promise<any[]> {
+    return await db
+      .select()
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getActivityLogsCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(activityLogs);
+    return result.count;
+  }
+
+  async getStats(): Promise<any> {
+    const [usersCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(discordUsers);
+    
+    const [keysCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(discordKeys);
+    
+    const [activeKeysCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(discordKeys)
+      .where(eq(discordKeys.status, 'active'));
+    
+    const [whitelistCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(whitelist);
+    
+    return {
+      totalUsers: usersCount.count,
+      totalKeys: keysCount.count,
+      activeKeys: activeKeysCount.count,
+      whitelistEntries: whitelistCount.count,
+      uptime: process.uptime()
+    };
   }
 }
 

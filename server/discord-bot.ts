@@ -3452,21 +3452,30 @@ export class RaptorBot {
     const maxLimit = Math.min(limit, 50);
 
     await interaction.deferReply();
+    console.log(`Processing /logs view command for user ${interaction.user.id}`);
 
     try {
-      let logs: any[] = [];
-      let title = '';
-      let description = '';
-
+      // Add timeout protection for database queries
+      const startTime = Date.now();
+      
       // Get user engagement logs from the 8 tracked channels
-      logs = await storage.getAllUserLogs(maxLimit);
-      title = '📊 User Engagement Logs';
-      description = 'Recent user activity in tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing)';
+      const logs = await Promise.race([
+        storage.getAllUserLogs(maxLimit),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout')), 10000)
+        )
+      ]) as any[];
+
+      const queryTime = Date.now() - startTime;
+      console.log(`Database query completed in ${queryTime}ms, found ${logs.length} logs`);
+
+      const title = '📊 User Engagement Logs';
+      const description = 'Recent user activity in tracked channels (admin, whitelists, moderator, trial mod, support, trial support, purchases, testing)';
 
       if (logs.length === 0) {
         const embed = new EmbedBuilder()
           .setTitle(title)
-          .setDescription('No logs found for the specified type.')
+          .setDescription('No user engagement logs found. Users get log points when posting images in tracked channels.')
           .setColor(0x0099ff)
           .setTimestamp();
         
@@ -3475,25 +3484,30 @@ export class RaptorBot {
       }
 
       let logText = '';
-      for (const log of logs.slice(0, 15)) { // Show more user engagement entries
-        const timestamp = new Date(log.lastUpdated);
-        const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
-        
-        // User engagement log entry
-        const logIcon = '📈';
-        const entry = `${logIcon} <@${log.userId}> - ${log.logCount} logs - ${timeStr}\n`;
-        
-        // Check if adding this entry would exceed the limit
-        if ((logText + entry).length > 900) break;
-        logText += entry;
+      for (const log of logs.slice(0, 15)) {
+        try {
+          const timestamp = new Date(log.lastUpdated);
+          if (isNaN(timestamp.getTime())) {
+            console.error('Invalid timestamp for log:', log);
+            continue;
+          }
+          
+          const timeStr = `<t:${Math.floor(timestamp.getTime() / 1000)}:R>`;
+          const logIcon = '📈';
+          const entry = `${logIcon} <@${log.userId}> - ${log.logCount} logs - ${timeStr}\n`;
+          
+          if ((logText + entry).length > 900) break;
+          logText += entry;
+        } catch (logError) {
+          console.error('Error processing individual log entry:', logError, log);
+          continue;
+        }
       }
 
-      // Ensure logText fits Discord's 1024 character limit for embed fields
       if (!logText || logText.trim().length === 0) {
-        logText = 'No recent logs found';
+        logText = 'No valid log entries to display';
       }
       
-      // Truncate if too long (Discord limit is 1024 characters)
       if (logText.length > 1020) {
         logText = logText.substring(0, 1000) + '\n...truncated';
       }
@@ -3502,21 +3516,27 @@ export class RaptorBot {
         .setTitle(title)
         .setDescription(description)
         .addFields({ name: 'Recent Entries', value: logText, inline: false })
-        .setFooter({ text: `Showing ${Math.min(logs.length, 10)} of ${logs.length} entries` })
+        .setFooter({ text: `Showing ${Math.min(logs.length, 15)} of ${logs.length} entries` })
         .setColor(0x0099ff)
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+      console.log('Successfully sent logs view response');
+      
     } catch (error) {
-      console.error('Error viewing logs:', error);
+      console.error('Error in handleLogsView:', error);
       
       const embed = new EmbedBuilder()
         .setTitle('❌ Error')
-        .setDescription('Failed to retrieve system logs.')
+        .setDescription(`Failed to retrieve user engagement logs: ${error instanceof Error ? error.message : 'Unknown error'}`)
         .setColor(0xff0000)
         .setTimestamp();
       
-      await interaction.editReply({ embeds: [embed] });
+      try {
+        await interaction.editReply({ embeds: [embed] });
+      } catch (replyError) {
+        console.error('Failed to send error reply:', replyError);
+      }
     }
   }
 

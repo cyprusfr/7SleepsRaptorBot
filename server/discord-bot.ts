@@ -3529,8 +3529,16 @@ export class RaptorBot {
           else if (globalRank === 3) rankDisplay = '🥉 3rd';
           else rankDisplay = `${globalRank}th`;
           
-          // Always use Discord mentions for proper username display
-          const userDisplay = `<@${log.userId}>`;
+          // Fetch actual Discord username
+          let userDisplay = `User${log.userId.slice(-4)}`;
+          try {
+            const discordUser = await this.client.users.fetch(log.userId);
+            if (discordUser && discordUser.username) {
+              userDisplay = discordUser.username;
+            }
+          } catch (fetchError) {
+            console.log(`Could not fetch username for ${log.userId}, using fallback`);
+          }
           
           const entry = `${rankDisplay} ${userDisplay} ${log.totalLogs} logs\n`;
           

@@ -278,6 +278,83 @@ export const suggestions = pgTable("suggestions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Complete Discord server backups table
+export const serverBackups = pgTable("server_backups", {
+  id: serial("id").primaryKey(),
+  backupId: varchar("backup_id", { length: 36 }).notNull().unique(),
+  serverId: varchar("server_id").notNull(),
+  serverName: varchar("server_name").notNull(),
+  serverIcon: text("server_icon"),
+  serverBanner: text("server_banner"),
+  serverSplash: text("server_splash"),
+  serverDescription: text("server_description"),
+  ownerInfo: jsonb("owner_info").notNull(), // Server owner details
+  serverData: jsonb("server_data").notNull(), // Complete server metadata
+  channels: jsonb("channels").notNull(), // All channels with metadata and permissions
+  roles: jsonb("roles").notNull(), // All roles with permissions and members
+  members: jsonb("members").notNull(), // All members with roles and join dates
+  messages: jsonb("messages").notNull(), // All messages from all channels
+  emojis: jsonb("emojis").notNull(), // Custom emojis with metadata
+  stickers: jsonb("stickers").notNull(), // Custom stickers
+  invites: jsonb("invites").notNull(), // Active invites with usage stats
+  webhooks: jsonb("webhooks").notNull(), // All webhooks
+  integrations: jsonb("integrations").notNull(), // Bot integrations and connections
+  auditLogs: jsonb("audit_logs").notNull(), // Recent audit log entries
+  bans: jsonb("bans").notNull(), // Banned users with reasons
+  voiceStates: jsonb("voice_states"), // Voice channel states at backup time
+  threads: jsonb("threads"), // All threads with messages
+  scheduledEvents: jsonb("scheduled_events"), // Server events
+  backupSize: integer("backup_size").notNull(), // Size in bytes
+  messageCount: integer("message_count").notNull(),
+  memberCount: integer("member_count").notNull(),
+  channelCount: integer("channel_count").notNull(),
+  roleCount: integer("role_count").notNull(),
+  emojiCount: integer("emoji_count").notNull(),
+  threadCount: integer("thread_count").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  backupDuration: integer("backup_duration"), // Time taken to create backup in ms
+  compressionRatio: integer("compression_ratio"), // Compression percentage
+  integrityHash: varchar("integrity_hash"), // Checksum for verification
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Complete bot activity logging for every operation
+export const botActivityLogs = pgTable("bot_activity_logs", {
+  id: serial("id").primaryKey(),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // command, message, reaction, join, leave, etc.
+  eventCategory: varchar("event_category", { length: 30 }).notNull(), // interaction, guild, message, voice, etc.
+  eventData: jsonb("event_data").notNull(), // Complete event details
+  userId: varchar("user_id"),
+  username: varchar("username"),
+  userDiscriminator: varchar("user_discriminator"),
+  channelId: varchar("channel_id"),
+  channelName: varchar("channel_name"),
+  channelType: varchar("channel_type"),
+  guildId: varchar("guild_id"),
+  guildName: varchar("guild_name"),
+  commandName: varchar("command_name"),
+  subcommandName: varchar("subcommand_name"),
+  commandOptions: jsonb("command_options"),
+  messageId: varchar("message_id"),
+  messageContent: text("message_content"),
+  messageAttachments: jsonb("message_attachments"),
+  messageEmbeds: jsonb("message_embeds"),
+  reactionEmoji: varchar("reaction_emoji"),
+  reactionCount: integer("reaction_count"),
+  memberJoinData: jsonb("member_join_data"), // Join info, roles, etc.
+  memberLeaveData: jsonb("member_leave_data"), // Leave reason, roles lost, etc.
+  roleChanges: jsonb("role_changes"), // Role additions/removals
+  voiceStateChange: jsonb("voice_state_change"), // Voice channel joins/leaves
+  executionTime: integer("execution_time"), // Milliseconds
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+  ipAddress: varchar("ip_address"), // For webhook/API calls
+  userAgent: text("user_agent"), // For webhook/API calls
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 // Insert schemas
 export const insertDiscordKeySchema = createInsertSchema(discordKeys).omit({
   id: true,
@@ -295,6 +372,16 @@ export const insertDiscordServerSchema = createInsertSchema(discordServers).omit
   id: true,
   botJoinedAt: true,
   lastDataSync: true,
+});
+
+export const insertServerBackupSchema = createInsertSchema(serverBackups).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBotActivityLogSchema = createInsertSchema(botActivityLogs).omit({
+  id: true,
+  timestamp: true,
 });
 
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({

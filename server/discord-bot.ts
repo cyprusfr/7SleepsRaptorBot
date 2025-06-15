@@ -2184,31 +2184,36 @@ export class RaptorBot {
       }
 
       await interaction.deferReply();
-
+      
       const backupName = interaction.options.getString('name') || `backup_${Date.now()}`;
-      const backupId = crypto.randomUUID();
-      const timestamp = new Date();
+      const guild = interaction.guild;
+      if (!guild) {
+        throw new Error('Guild not found');
+      }
 
-      // Get database statistics for backup
-      const stats = await storage.getStats();
-      const backupSize = `${stats.totalUsers + stats.totalKeys} records`;
+      // Create comprehensive Discord server backup
+      const backupId = await storage.createServerBackup(guild, interaction.user.username);
+      const backup = await storage.getServerBackup(backupId);
 
-      // Store backup metadata in database
-      await storage.logActivity('backup_created', `Database backup created: ${backupName} (${backupId}) by ${interaction.user.username}`);
+      await storage.logActivity('backup_created', `Complete Discord server backup created: ${backupName} (ID: ${backupId}) by ${interaction.user.username}`);
 
       const embed = new EmbedBuilder()
-        .setTitle('✅ Database Backup Created')
-        .setDescription(`Backup snapshot has been created successfully.`)
+        .setTitle('✅ Server Backup Created')
+        .setDescription(`Successfully created full backup of ${guild.name}'s server`)
         .addFields(
-          { name: '📁 Backup Name', value: backupName, inline: true },
-          { name: '🆔 Backup ID', value: backupId.substring(0, 8), inline: true },
-          { name: '👤 Created By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: '⏰ Timestamp', value: `<t:${Math.floor(timestamp.getTime() / 1000)}:F>`, inline: false },
-          { name: '📊 Records', value: backupSize, inline: true },
-          { name: '✅ Status', value: 'Completed', inline: true }
+          { name: 'Progress', value: '████████████████████ 100%', inline: false },
+          { name: 'Status', value: 'Backup completed successfully!', inline: false },
+          { name: 'Backup Type', value: 'Full', inline: true },
+          { name: 'Data Size', value: `${Math.round(backup.backupSize / 1024)} KB`, inline: true },
+          { name: 'Duration', value: `${Math.round(backup.backupDuration / 1000)}s`, inline: true },
+          { name: 'Channels', value: backup.channelCount.toString(), inline: true },
+          { name: 'Members', value: backup.memberCount.toString(), inline: true },
+          { name: 'Roles', value: backup.roleCount.toString(), inline: true },
+          { name: 'Messages', value: backup.messageCount.toString(), inline: false },
+          { name: '🆔 Backup ID', value: `\`${backupId}\``, inline: false }
         )
         .setColor(0x00ff00)
-        .setFooter({ text: 'MacSploit Backup System' })
+        .setFooter({ text: 'MacSploit Complete Backup System' })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
@@ -2218,8 +2223,8 @@ export class RaptorBot {
       console.error('Error creating backup:', error);
       
       const embed = new EmbedBuilder()
-        .setTitle('❌ Backup Creation Failed')
-        .setDescription('Failed to create database backup snapshot.')
+        .setTitle('❌ Server Backup Creation Failed')
+        .setDescription('Failed to create complete Discord server backup.')
         .setColor(0xff0000)
         .setTimestamp();
       
@@ -2317,14 +2322,13 @@ export class RaptorBot {
 
       await interaction.deferReply();
 
-      // Get backup history from activity logs
-      const backupLogs = await storage.getActivityLogs();
-      const backupEntries = backupLogs.filter(log => log.type.includes('backup')).slice(0, 10);
+      // Get server backups from the database
+      const serverBackups = await storage.getServerBackups(10);
 
-      if (backupEntries.length === 0) {
+      if (serverBackups.length === 0) {
         const embed = new EmbedBuilder()
-          .setTitle('📁 Backup History')
-          .setDescription('No backup operations found in system logs.')
+          .setTitle('📁 Server Backup History')
+          .setDescription('No server backups found in the database.')
           .setColor(0xff9900)
           .setTimestamp();
 
@@ -2332,21 +2336,23 @@ export class RaptorBot {
         return;
       }
 
-      const backupsList = backupEntries.map((entry, index) => {
-        const timestamp = `<t:${Math.floor(entry.timestamp.getTime() / 1000)}:f>`;
-        const type = entry.type.includes('created') ? '🆕 Created' : '🔄 Restored';
-        return `${index + 1}. **${type}**\n   ${entry.description}\n   ${timestamp}`;
+      const backupsList = serverBackups.map((backup, index) => {
+        const timestamp = `<t:${Math.floor(backup.createdAt.getTime() / 1000)}:f>`;
+        const size = Math.round(backup.backupSize / 1024);
+        const duration = Math.round(backup.backupDuration / 1000);
+        return `${index + 1}. **${backup.serverName}**\n   🆔 ID: \`${backup.backupId}\`\n   📊 ${backup.messageCount} messages, ${backup.memberCount} members\n   💾 ${size} KB • ⏱️ ${duration}s\n   ${timestamp}`;
       }).join('\n\n');
 
       const embed = new EmbedBuilder()
-        .setTitle('📁 Backup Operation History')
-        .setDescription(backupsList || 'No backup operations found.')
+        .setTitle('📁 Server Backup History')
+        .setDescription(backupsList)
         .addFields(
-          { name: '📊 Total Operations', value: backupEntries.length.toString(), inline: true },
-          { name: '📅 Last Operation', value: backupEntries.length > 0 ? `<t:${Math.floor(backupEntries[0].timestamp.getTime() / 1000)}:R>` : 'None', inline: true }
+          { name: '📊 Total Backups', value: serverBackups.length.toString(), inline: true },
+          { name: '📅 Latest Backup', value: `<t:${Math.floor(serverBackups[0].createdAt.getTime() / 1000)}:R>`, inline: true },
+          { name: '💾 Total Data', value: `${Math.round(serverBackups.reduce((acc, b) => acc + b.backupSize, 0) / 1024)} KB`, inline: true }
         )
         .setColor(0x0099ff)
-        .setFooter({ text: 'MacSploit Backup System' })
+        .setFooter({ text: 'MacSploit Server Backup System' })
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });

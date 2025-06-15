@@ -1257,7 +1257,7 @@ export class DatabaseStorage implements IStorage {
   // Get server backups
   async getServerBackups(limit = 10): Promise<any[]> {
     return await db.select().from(serverBackups)
-      .orderBy(desc(serverBackups.createdAt))
+      .orderBy(sql`${serverBackups.createdAt} DESC`)
       .limit(limit);
   }
 
@@ -1271,7 +1271,7 @@ export class DatabaseStorage implements IStorage {
   // Get bot activity logs
   async getBotActivityLogs(limit = 100): Promise<any[]> {
     return await db.select().from(botActivityLogs)
-      .orderBy(desc(botActivityLogs.timestamp))
+      .orderBy(sql`${botActivityLogs.timestamp} DESC`)
       .limit(limit);
   }
 }

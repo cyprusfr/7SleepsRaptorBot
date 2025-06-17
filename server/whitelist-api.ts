@@ -144,9 +144,21 @@ export class WhitelistAPI {
       // Log dewhitelist attempt
       await storage.logActivity('dewhitelist_attempt', `Attempting to dewhitelist key: ${keyValue}`);
 
+      // First try to find the key in our database to get the contact info
+      let deleteValue = keyValue;
+      try {
+        const keyInfo = await storage.getKeyInfo(keyValue);
+        if (keyInfo && keyInfo.userId) {
+          deleteValue = keyInfo.userId; // Use the Discord ID that was used to generate the key
+          console.log(`Using Discord ID for dewhitelist: ${deleteValue}`);
+        }
+      } catch (dbError) {
+        console.log('Could not find key in database, using key value directly');
+      }
+
       const requestPayload = {
         api_key: API_KEY,
-        delete: keyValue // Send the actual key value to dewhitelist (API expects "delete" field)
+        delete: deleteValue // Try Discord ID first, then fallback to key
       };
 
       console.log('Dewhitelist API Request:', {

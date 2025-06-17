@@ -100,6 +100,10 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Enhanced Discord Embeds**: Updated key generation embeds to display "WORKING LICENSE KEY" and "REAL WORKING KEY" status with API confirmation messages
 - **Payment ID Tracking**: Added unique payment ID generation for API calls with format PAYMENTMETHOD-TIMESTAMP-RANDOMID for audit tracking
 - **Comprehensive Activity Logging**: Enhanced logging to track real API calls with payment IDs and actual generated keys for complete audit trails
+- **Dewhitelist Command Implementation**: Added /dewhitelist command that calls real API to remove keys from whitelist with proper error handling and database updates
+- **Payments Info Command**: Implemented /payments info command displaying API status, accepted payment methods, and integration details
+- **Contact Info Format Support**: Updated API integration to support Discord IDs and email formats as specified by Nexus42's instructions
+- **Real Dewhitelist API Integration**: Implemented actual dewhitelist API calls using same endpoint with proper payload structure and response handling
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

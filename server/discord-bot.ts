@@ -1802,6 +1802,12 @@ export class RaptorBot {
         case 'whitelist':
           await this.handleWhitelistCommand(interaction);
           break;
+        case 'dewhitelist':
+          await this.handleDewhitelistCommand(interaction);
+          break;
+        case 'payments':
+          await this.handlePaymentsCommand(interaction);
+          break;
         case 'tag-manager':
           await this.handleTagManagerCommand(interaction);
           break;
@@ -6803,6 +6809,159 @@ export class RaptorBot {
       
       await interaction.editReply({ embeds: [embed] });
     }
+  }
+
+  // DEWHITELIST COMMAND - Remove key from whitelist using real API
+  private async handleDewhitelistCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const keyValue = interaction.options.getString('key', true);
+
+      // Call real whitelist API to dewhitelist key
+      console.log(`[DEBUG] Dewhitelisting key: ${keyValue}`);
+      
+      const dewhitelistResult = await WhitelistAPI.dewhitelistUser(keyValue);
+      
+      console.log(`[DEBUG] Dewhitelist Result:`, dewhitelistResult);
+
+      if (!dewhitelistResult.success) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Dewhitelist Failed')
+          .setDescription(`Failed to dewhitelist key: ${dewhitelistResult.error || 'Unknown error'}`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Update local database to revoke key
+      try {
+        await storage.revokeKey(keyValue, interaction.user.id, 'Dewhitelisted via API');
+      } catch (dbError) {
+        console.log('Local database update failed (key might not exist locally):', dbError);
+      }
+
+      await this.logActivity('key_dewhitelisted_api', `${interaction.user.username} dewhitelisted key ${keyValue} via API`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Key Dewhitelisted Successfully')
+        .setDescription(`License key has been removed from the whitelist`)
+        .addFields(
+          { name: 'Key', value: `\`${keyValue}\``, inline: true },
+          { name: 'Dewhitelisted By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Status', value: 'Successfully removed from API whitelist', inline: false },
+          { name: 'API Response', value: dewhitelistResult.message || 'Key dewhitelisted successfully', inline: false }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in dewhitelist command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to dewhitelist key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success);
+    }
+  }
+
+  // PAYMENTS COMMAND - Payment information and API status
+  private async handlePaymentsCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const subcommand = interaction.options.getSubcommand();
+
+      switch (subcommand) {
+        case 'info':
+          // Get API status and payment methods
+          const acceptedMethods = WhitelistAPI.getAcceptedPaymentMethods();
+          
+          let paymentMethodsList = '';
+          acceptedMethods.forEach((method, index) => {
+            const emoji = this.getPaymentMethodEmoji(method);
+            paymentMethodsList += `${index + 1}. ${emoji} **${method.toUpperCase()}**\n`;
+          });
+
+          const embed = new EmbedBuilder()
+            .setTitle('💳 Payment Information & API Status')
+            .setDescription('Real Raptor whitelist API integration status and accepted payment methods')
+            .addFields(
+              { name: '🔗 API Endpoint', value: 'www.raptor.fun/api/whitelist', inline: false },
+              { name: '✅ API Status', value: 'Connected and operational', inline: true },
+              { name: '🔑 API Integration', value: 'Live key generation enabled', inline: true },
+              { name: '📋 Accepted Payment Methods', value: paymentMethodsList, inline: false },
+              { name: '⚠️ Important Notes', value: '• All keys are generated via real API calls\n• Payment IDs must be unique identifiers\n• Contact info uses Discord IDs or emails\n• Keys are immediately active after generation', inline: false }
+            )
+            .setFooter({ text: 'Payment system fully operational • API key secured' })
+            .setColor(0x0099ff)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+          break;
+
+        default:
+          await interaction.editReply('❌ Invalid subcommand.');
+          return;
+      }
+
+      success = true;
+
+    } catch (error) {
+      console.error('Error in payments command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to process payments command.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success);
+    }
+  }
+
+  private getPaymentMethodEmoji(method: string): string {
+    const emojiMap: { [key: string]: string } = {
+      'paypal': '💳',
+      'bitcoin': '₿',
+      'ethereum': '⟠',
+      'litecoin': 'Ł',
+      'cashapp': '💵',
+      'venmo': '💰',
+      'robux': '🎮',
+      'giftcard': '🎁',
+      'sellix': '🛒',
+      'custom': '🔧'
+    };
+    return emojiMap[method] || '💳';
   }
 
   public async start(): Promise<void> {

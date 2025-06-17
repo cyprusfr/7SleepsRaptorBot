@@ -146,7 +146,7 @@ export class WhitelistAPI {
 
       const requestPayload = {
         api_key: API_KEY,
-        key: keyValue // Send the actual key value to dewhitelist
+        delete: keyValue // Send the actual key value to dewhitelist (API expects "delete" field)
       };
 
       console.log('Dewhitelist API Request:', {

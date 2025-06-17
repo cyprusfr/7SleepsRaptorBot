@@ -6846,7 +6846,7 @@ export class RaptorBot {
 
       // Update local database to revoke key
       try {
-        await storage.revokeKey(keyValue, interaction.user.id, 'Dewhitelisted via API');
+        await storage.updateDiscordKeyStatus(keyValue, 'revoked', interaction.user.id, 'Dewhitelisted via API');
       } catch (dbError) {
         console.log('Local database update failed (key might not exist locally):', dbError);
       }

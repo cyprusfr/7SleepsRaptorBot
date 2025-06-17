@@ -18,6 +18,12 @@ const ACCEPTED_PAYMENT_METHODS = [
   "custom"
 ];
 
+// Payment ID examples based on Nexus42's instructions:
+// - PayPal: transaction ID (e.g., "FBDHFF23478HDJ")
+// - Robux: Roblox user ID 
+// - Giftcard: gift card code
+// - Contact info: Discord user ID (e.g., "708504312862474282") or email (e.g., "nexus42@raptor.fun")
+
 export interface WhitelistRequest {
   api_key: string;
   contact_info: string;
@@ -133,43 +139,52 @@ export class WhitelistAPI {
     }
   }
 
-  static async dewhitelistUser(keyId: string): Promise<WhitelistResponse> {
+  static async dewhitelistUser(keyValue: string): Promise<WhitelistResponse> {
     try {
-      // For dewhitelisting, we'll use a different endpoint or method
-      // This is a placeholder for the actual dewhitelist API call
+      // Log dewhitelist attempt
+      await storage.logActivity('dewhitelist_attempt', `Attempting to dewhitelist key: ${keyValue}`);
+
+      const requestPayload = {
+        api_key: API_KEY,
+        key: keyValue // Send the actual key value to dewhitelist
+      };
+
+      console.log('Dewhitelist API Request:', {
+        url: `${WHITELIST_API_BASE}/api/dewhitelist`,
+        payload: { ...requestPayload, api_key: '[REDACTED]' }
+      });
+
       const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Raptor-Discord-Bot/1.0'
         },
-        body: JSON.stringify({
-          api_key: API_KEY,
-          key_id: keyId
-        })
+        body: JSON.stringify(requestPayload)
       });
 
-      if (response.ok) {
-        const responseData = await response.json();
-        
+      const responseData = await response.json();
+      console.log('Dewhitelist API Response:', responseData);
+
+      if (response.ok && responseData.success) {
+        // Log successful dewhitelist operation
         await storage.logActivity('dewhitelist_success', 
-          `Key ${keyId} successfully dewhitelisted`
+          `Key ${keyValue} successfully dewhitelisted via API`
         );
 
         return {
           success: true,
-          message: responseData.message || 'Key successfully dewhitelisted'
+          message: responseData.message || 'Key dewhitelisted successfully'
         };
       } else {
-        const errorData = await response.json();
-        
+        // Log failed dewhitelist operation
         await storage.logActivity('dewhitelist_failed', 
-          `Failed to dewhitelist key ${keyId}: ${errorData.error || 'Unknown error'}`
+          `Failed to dewhitelist key ${keyValue}: ${responseData.error || responseData.message || 'Unknown error'} - Status: ${response.status}`
         );
 
         return {
           success: false,
-          error: errorData.error || 'Dewhitelist operation failed'
+          error: responseData.error || responseData.message || `HTTP ${response.status} error`
         };
       }
 
@@ -177,7 +192,7 @@ export class WhitelistAPI {
       console.error('Dewhitelist API error:', error);
       
       await storage.logActivity('dewhitelist_error', 
-        `Dewhitelist API error for key ${keyId}: ${error.message}`
+        `Dewhitelist API error for key ${keyValue}: ${error.message}`
       );
 
       return {

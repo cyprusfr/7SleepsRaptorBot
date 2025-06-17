@@ -1517,8 +1517,25 @@ export class RaptorBot {
             .setRequired(false)
         ),
 
+      // Dewhitelist Command
+      new SlashCommandBuilder()
+        .setName('dewhitelist')
+        .setDescription('Remove a key from the whitelist using the real API')
+        .addStringOption(option => 
+          option.setName('key')
+            .setDescription('License key to dewhitelist')
+            .setRequired(true)
+        ),
 
-
+      // Payments Command
+      new SlashCommandBuilder()
+        .setName('payments')
+        .setDescription('Payment information and management')
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('info')
+            .setDescription('Get payment information and API status')
+        ),
 
     ];
 

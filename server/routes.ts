@@ -125,6 +125,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
+  // Test dewhitelist API endpoint for comprehensive testing
+  app.post("/api/test-dewhitelist", async (req, res) => {
+    try {
+      const { key, contact } = req.body;
+      
+      if (!key || !contact) {
+        return res.status(400).json({ error: "Key and contact required" });
+      }
+
+      console.log('🔄 Starting comprehensive dewhitelist API testing...');
+      const { WhitelistAPI } = await import('./whitelist-api');
+      const result = await WhitelistAPI.dewhitelistUser(key, contact);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Dewhitelist test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Start Discord bot asynchronously (non-blocking)
   setImmediate(async () => {
     try {

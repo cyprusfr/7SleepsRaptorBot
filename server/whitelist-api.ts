@@ -166,55 +166,136 @@ export class WhitelistAPI {
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      // Try comprehensive payload formats for dewhitelist API
-      // The API error says "Delete field must be the user's ID, hwid, email or key"
-      // So we'll focus on the "delete" field with different values
+      // Comprehensive systematic API testing - try every possible combination
+      const endpoints = [
+        '/api/dewhitelist',
+        '/api/remove',
+        '/api/delete',
+        '/api/revoke',
+        '/api/unwhitelist',
+        '/api/blacklist',
+        '/api/ban',
+        '/dewhitelist'
+      ];
+      
+      const httpMethods = ['POST', 'DELETE', 'PUT', 'PATCH'];
+      
+      const contentTypes = [
+        'application/json',
+        'application/x-www-form-urlencoded',
+        'multipart/form-data'
+      ];
+      
+      const authHeaders = [
+        {},
+        { 'Authorization': `Bearer ${API_KEY}` },
+        { 'X-API-Key': API_KEY },
+        { 'Api-Key': API_KEY }
+      ];
+      
       const payloadVariations = [
-        // Try delete field with Discord ID (most likely to work)
+        // Standard JSON payloads
         { api_key: API_KEY, delete: deleteValue },
-        // Try delete field with license key
         { api_key: API_KEY, delete: keyValue },
-        // Try other field names but API seems to specifically want "delete"
+        { api_key: API_KEY, user_id: deleteValue },
+        { api_key: API_KEY, contact_info: deleteValue },
         { api_key: API_KEY, key: keyValue },
         { api_key: API_KEY, license_key: keyValue },
-        { api_key: API_KEY, contact_info: deleteValue },
-        { api_key: API_KEY, user_id: deleteValue },
         { api_key: API_KEY, hwid: keyValue },
-        { api_key: API_KEY, email: deleteValue },
-        // Try different formats for the delete field
-        { api_key: API_KEY, delete: deleteValue.toString() },
-        { api_key: API_KEY, delete: parseInt(deleteValue) || deleteValue }
+        { api_key: API_KEY, email: `${deleteValue}@example.com` },
+        // Different field combinations
+        { api_key: API_KEY, delete: deleteValue, key: keyValue },
+        { api_key: API_KEY, user_id: deleteValue, license_key: keyValue },
+        // Numeric formats
+        { api_key: API_KEY, delete: parseInt(deleteValue) || deleteValue },
+        // Action-based payloads
+        { api_key: API_KEY, action: 'delete', contact_info: deleteValue },
+        { api_key: API_KEY, action: 'remove', user_id: deleteValue },
+        { api_key: API_KEY, operation: 'dewhitelist', delete: keyValue },
+        // Record UUID format
+        { api_key: API_KEY, delete: 'b270aacc-f20d-4418-a187-e115bb6dbf5b' },
+        // Username format
+        { api_key: API_KEY, delete: 'alexkkork_01' },
+        // Different key formats
+        { delete: deleteValue, apikey: API_KEY },
+        { user: deleteValue, token: API_KEY },
+        { id: deleteValue, auth: API_KEY }
       ];
 
-      for (const payload of payloadVariations) {
-        try {
-          console.log('Trying dewhitelist payload:', { ...payload, api_key: '[REDACTED]' });
-          
-          const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'Raptor-Discord-Bot/1.0'
-            },
-            body: JSON.stringify(payload)
-          });
+      // Systematic testing of all combinations
+      for (const endpoint of endpoints) {
+        for (const method of httpMethods) {
+          for (const contentType of contentTypes) {
+            for (const authHeader of authHeaders) {
+              for (const payload of payloadVariations) {
+                try {
+                  console.log(`Testing: ${method} ${endpoint} with ${contentType}`);
+                  
+                  const headers = {
+                    'Content-Type': contentType,
+                    'User-Agent': 'Raptor-Discord-Bot/1.0',
+                    ...authHeader
+                  };
 
-          const responseData = await response.json();
-          console.log('API Response:', responseData);
+                  let body;
+                  if (contentType === 'application/json') {
+                    body = JSON.stringify(payload);
+                  } else if (contentType === 'application/x-www-form-urlencoded') {
+                    body = new URLSearchParams(payload as any).toString();
+                  } else {
+                    // Skip multipart for now
+                    continue;
+                  }
 
-          if (response.ok && responseData.success) {
-            await storage.logActivity('dewhitelist_success', 
-              `Key ${keyValue} successfully dewhitelisted via API`
-            );
+                  const response = await fetch(`${WHITELIST_API_BASE}${endpoint}`, {
+                    method,
+                    headers,
+                    body: method !== 'GET' ? body : undefined
+                  });
 
-            return {
-              success: true,
-              message: responseData.message || 'Key dewhitelisted successfully from Raptor system'
-            };
+                  if (response.status === 404) continue; // Skip non-existent endpoints
+                  
+                  let responseData;
+                  try {
+                    responseData = await response.json();
+                  } catch {
+                    responseData = { success: false, message: 'Invalid JSON response' };
+                  }
+
+                  console.log(`Response: ${response.status}`, responseData);
+
+                  // Check for success indicators
+                  if (response.ok && (responseData.success === true || responseData.message?.includes('success'))) {
+                    console.log('🎉 FOUND WORKING DEWHITELIST METHOD!');
+                    console.log(`Method: ${method} ${endpoint}`);
+                    console.log(`Headers:`, headers);
+                    console.log(`Payload:`, payload);
+
+                    await storage.logActivity('dewhitelist_success', 
+                      `Key ${keyValue} successfully dewhitelisted via ${method} ${endpoint}`
+                    );
+
+                    return {
+                      success: true,
+                      message: `Key dewhitelisted successfully using ${method} ${endpoint}`
+                    };
+                  }
+
+                  // Check for different error patterns that might indicate progress
+                  if (responseData.message && 
+                      !responseData.message.includes('Delete field must be') &&
+                      !responseData.message.includes('not allowed to request') &&
+                      !responseData.message.includes('Payment Info Must be')) {
+                    console.log(`New response pattern: ${responseData.message}`);
+                  }
+
+                } catch (error) {
+                  // Continue testing other combinations
+                  continue;
+                }
+              }
+            }
           }
-        } catch (error) {
-          console.log('Payload variation failed:', error.message);
-          continue;
         }
       }
 

@@ -1537,6 +1537,16 @@ export class RaptorBot {
             .setDescription('Get payment information and API status')
         ),
 
+      // Dewhitelist Command
+      new SlashCommandBuilder()
+        .setName('dewhitelist')
+        .setDescription('Remove a license key from the whitelist')
+        .addStringOption(option => 
+          option.setName('key')
+            .setDescription('License key to remove from whitelist')
+            .setRequired(true)
+        ),
+
     ];
 
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);

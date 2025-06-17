@@ -222,88 +222,34 @@ export class WhitelistAPI {
         { id: deleteValue, auth: API_KEY }
       ];
 
-      // Strategic testing with rate limiting and prioritized approaches
-      console.log('📊 Starting strategic dewhitelist API testing...');
+      // Quick API validation attempt
+      console.log('📊 Testing dewhitelist API endpoint...');
       
-      // Priority 1: Most likely working combinations based on API documentation
-      const priorityTests = [
-        {
-          endpoint: '/api/dewhitelist',
+      try {
+        const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
           method: 'POST',
-          contentType: 'application/json',
-          payload: { api_key: API_KEY, delete: keyValue }
-        },
-        {
-          endpoint: '/api/dewhitelist', 
-          method: 'POST',
-          contentType: 'application/x-www-form-urlencoded',
-          payload: { api_key: API_KEY, delete: keyValue }
-        },
-        {
-          endpoint: '/api/dewhitelist',
-          method: 'DELETE',
-          contentType: 'application/json',
-          payload: { api_key: API_KEY, key: keyValue }
-        }
-      ];
-
-      for (const test of priorityTests) {
-        try {
-          console.log(`🎯 Priority test: ${test.method} ${test.endpoint}`);
-          
-          const headers = {
-            'Content-Type': test.contentType,
+          headers: {
+            'Content-Type': 'application/json',
             'User-Agent': 'Raptor-Discord-Bot/1.0'
+          },
+          body: JSON.stringify({ api_key: API_KEY, delete: keyValue })
+        });
+
+        const responseData = await response.json();
+        console.log(`API Response: ${response.status}`, responseData);
+
+        if (response.ok && responseData.success === true) {
+          await storage.logActivity('dewhitelist_success', 
+            `Key ${keyValue} successfully dewhitelisted via API`
+          );
+
+          return {
+            success: true,
+            message: responseData.message || 'Key dewhitelisted successfully from Raptor system'
           };
-
-          let body;
-          if (test.contentType === 'application/json') {
-            body = JSON.stringify(test.payload);
-          } else {
-            body = new URLSearchParams(test.payload as any).toString();
-          }
-
-          const response = await fetch(`${WHITELIST_API_BASE}${test.endpoint}`, {
-            method: test.method,
-            headers,
-            body
-          });
-
-          if (response.status === 429) {
-            console.log('⚠️ Rate limited, waiting 30 seconds...');
-            await new Promise(resolve => setTimeout(resolve, 30000));
-            continue;
-          }
-
-          let responseData;
-          try {
-            responseData = await response.json();
-          } catch {
-            responseData = { success: false, message: 'Invalid JSON response' };
-          }
-
-          console.log(`📋 Response: ${response.status}`, responseData);
-
-          if (response.ok && responseData.success === true) {
-            console.log('✅ WORKING DEWHITELIST METHOD FOUND!');
-            
-            await storage.logActivity('dewhitelist_success', 
-              `Key ${keyValue} successfully dewhitelisted via API`
-            );
-
-            return {
-              success: true,
-              message: responseData.message || 'Key dewhitelisted successfully from Raptor system'
-            };
-          }
-
-          // Wait between requests to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-        } catch (error) {
-          console.log(`❌ Test failed: ${error.message}`);
-          continue;
         }
+      } catch (error) {
+        console.log(`API request failed: ${error.message}`);
       }
 
       // Document comprehensive testing results and provide accurate status

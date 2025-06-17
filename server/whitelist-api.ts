@@ -209,14 +209,6 @@ export class WhitelistAPI {
 
       // If all API attempts fail, mark as revoked locally
       try {
-        const keyInfo = await storage.getKeyInfo(keyValue);
-        if (!keyInfo) {
-          return {
-            success: false,
-            error: 'License key not found in database'
-          };
-        }
-
         await storage.updateDiscordKey(keyValue, { 
           status: 'revoked',
           revokedAt: new Date(),

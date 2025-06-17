@@ -6842,10 +6842,13 @@ export class RaptorBot {
       try {
         const result = await WhitelistAPI.dewhitelistUser(keyValue);
         
+        console.log(`[DEWHITELIST DEBUG] API Result:`, result);
+        
         if (result.success) {
+          success = true;
           const embed = new EmbedBuilder()
-            .setTitle('✅ Key Dewhitelisted Successfully')
-            .setDescription(`${result.message}`)
+            .setTitle('✅ REAL DEWHITELIST SUCCESS')
+            .setDescription(`Key has been removed from Raptor system and will no longer work for users.\n\n${result.message}`)
             .addFields(
               { name: 'Key', value: `\`${keyValue}\``, inline: true },
               { name: 'Dewhitelisted By', value: `<@${interaction.user.id}>`, inline: true },

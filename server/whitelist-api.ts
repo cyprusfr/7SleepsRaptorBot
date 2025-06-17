@@ -166,37 +166,37 @@ export class WhitelistAPI {
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Raptor-Discord-Bot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
+      // Since API dewhitelist is not functional, mark key as revoked locally
+      try {
+        const keyInfo = await storage.getKeyInfo(keyValue);
+        if (!keyInfo) {
+          return {
+            success: false,
+            error: 'License key not found in database'
+          };
+        }
 
-      const responseData = await response.json();
-      console.log('Dewhitelist API Response:', responseData);
+        // Update key status to revoked in local database
+        await storage.updateDiscordKey(keyValue, { 
+          status: 'revoked',
+          revokedAt: new Date(),
+          revokedBy: 'system_dewhitelist'
+        });
 
-      if (response.ok && responseData.success) {
-        // Log successful dewhitelist operation
-        await storage.logActivity('dewhitelist_success', 
-          `Key ${keyValue} successfully dewhitelisted via API`
+        await storage.logActivity('key_revoked_locally', 
+          `Key ${keyValue} marked as revoked locally (API dewhitelist unavailable)`
         );
 
         return {
           success: true,
-          message: responseData.message || 'Key dewhitelisted successfully'
+          message: 'Key marked as revoked in database. Note: Manual removal from Raptor system may be required.'
         };
-      } else {
-        // Log failed dewhitelist operation
-        await storage.logActivity('dewhitelist_failed', 
-          `Failed to dewhitelist key ${keyValue}: ${responseData.error || responseData.message || 'Unknown error'} - Status: ${response.status}`
-        );
 
+      } catch (dbError) {
+        console.error('Database update error:', dbError);
         return {
           success: false,
-          error: responseData.error || responseData.message || `HTTP ${response.status} error`
+          error: 'Failed to update key status in database'
         };
       }
 

@@ -166,7 +166,48 @@ export class WhitelistAPI {
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      // Since API dewhitelist is not functional, mark key as revoked locally
+      // Try different payload formats for dewhitelist API
+      const payloadVariations = [
+        { api_key: API_KEY, delete: keyValue },
+        { api_key: API_KEY, key: keyValue },
+        { api_key: API_KEY, license_key: keyValue },
+        { api_key: API_KEY, contact_info: deleteValue },
+        { api_key: API_KEY, user_id: deleteValue }
+      ];
+
+      for (const payload of payloadVariations) {
+        try {
+          console.log('Trying dewhitelist payload:', { ...payload, api_key: '[REDACTED]' });
+          
+          const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Raptor-Discord-Bot/1.0'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const responseData = await response.json();
+          console.log('API Response:', responseData);
+
+          if (response.ok && responseData.success) {
+            await storage.logActivity('dewhitelist_success', 
+              `Key ${keyValue} successfully dewhitelisted via API`
+            );
+
+            return {
+              success: true,
+              message: responseData.message || 'Key dewhitelisted successfully from Raptor system'
+            };
+          }
+        } catch (error) {
+          console.log('Payload variation failed:', error.message);
+          continue;
+        }
+      }
+
+      // If all API attempts fail, mark as revoked locally
       try {
         const keyInfo = await storage.getKeyInfo(keyValue);
         if (!keyInfo) {
@@ -176,7 +217,6 @@ export class WhitelistAPI {
           };
         }
 
-        // Update key status to revoked in local database
         await storage.updateDiscordKey(keyValue, { 
           status: 'revoked',
           revokedAt: new Date(),
@@ -184,12 +224,12 @@ export class WhitelistAPI {
         });
 
         await storage.logActivity('key_revoked_locally', 
-          `Key ${keyValue} marked as revoked locally (API dewhitelist unavailable)`
+          `Key ${keyValue} marked as revoked locally (API dewhitelist failed all attempts)`
         );
 
         return {
           success: true,
-          message: 'Key marked as revoked in database. Note: Manual removal from Raptor system may be required.'
+          message: 'Key marked as revoked in database. API dewhitelist unsuccessful - manual removal may be required.'
         };
 
       } catch (dbError) {

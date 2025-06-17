@@ -167,18 +167,23 @@ export class WhitelistAPI {
       });
 
       // Try comprehensive payload formats for dewhitelist API
+      // The API error says "Delete field must be the user's ID, hwid, email or key"
+      // So we'll focus on the "delete" field with different values
       const payloadVariations = [
-        { api_key: API_KEY, delete: keyValue },
+        // Try delete field with Discord ID (most likely to work)
         { api_key: API_KEY, delete: deleteValue },
+        // Try delete field with license key
+        { api_key: API_KEY, delete: keyValue },
+        // Try other field names but API seems to specifically want "delete"
         { api_key: API_KEY, key: keyValue },
         { api_key: API_KEY, license_key: keyValue },
         { api_key: API_KEY, contact_info: deleteValue },
         { api_key: API_KEY, user_id: deleteValue },
         { api_key: API_KEY, hwid: keyValue },
         { api_key: API_KEY, email: deleteValue },
-        // Try with different field combinations
-        { api_key: API_KEY, user_info: deleteValue, key: keyValue },
-        { api_key: API_KEY, contact: deleteValue, license: keyValue }
+        // Try different formats for the delete field
+        { api_key: API_KEY, delete: deleteValue.toString() },
+        { api_key: API_KEY, delete: parseInt(deleteValue) || deleteValue }
       ];
 
       for (const payload of payloadVariations) {
@@ -226,8 +231,8 @@ export class WhitelistAPI {
         );
 
         return {
-          success: true,
-          message: 'Key marked as revoked in database. API dewhitelist unsuccessful - manual removal may be required.'
+          success: false,
+          error: 'API dewhitelist endpoint non-functional. Key remains active in Raptor system. Contact Raptor support for manual removal.'
         };
 
       } catch (dbError) {

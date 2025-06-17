@@ -166,13 +166,19 @@ export class WhitelistAPI {
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      // Try different payload formats for dewhitelist API
+      // Try comprehensive payload formats for dewhitelist API
       const payloadVariations = [
         { api_key: API_KEY, delete: keyValue },
+        { api_key: API_KEY, delete: deleteValue },
         { api_key: API_KEY, key: keyValue },
         { api_key: API_KEY, license_key: keyValue },
         { api_key: API_KEY, contact_info: deleteValue },
-        { api_key: API_KEY, user_id: deleteValue }
+        { api_key: API_KEY, user_id: deleteValue },
+        { api_key: API_KEY, hwid: keyValue },
+        { api_key: API_KEY, email: deleteValue },
+        // Try with different field combinations
+        { api_key: API_KEY, user_info: deleteValue, key: keyValue },
+        { api_key: API_KEY, contact: deleteValue, license: keyValue }
       ];
 
       for (const payload of payloadVariations) {

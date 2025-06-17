@@ -104,7 +104,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Payments Info Command**: Implemented /payments info command displaying API status, accepted payment methods, and integration details
 - **Contact Info Format Support**: Updated API integration to support Discord IDs and email formats as specified by Nexus42's instructions
 - **Real Dewhitelist API Integration**: Implemented actual dewhitelist API calls using same endpoint with proper payload structure and response handling
-- **Enhanced Dewhitelist API Testing**: Implemented comprehensive payload format testing system that attempts 5 different API formats without database validation checks to find working Raptor dewhitelist method
+- **Comprehensive Dewhitelist API Testing**: Implemented enhanced payload testing system with 10 different API format variations (delete, key, license_key, hwid, email, contact_info, user_id, and combination fields) to systematically find working Raptor dewhitelist method without database validation requirements
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

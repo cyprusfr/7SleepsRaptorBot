@@ -3610,6 +3610,8 @@ export class RaptorBot {
       const paymentId = `${subcommand.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
       // Call real whitelist API to generate working key
+      console.log(`[DEBUG] Calling API for user: ${user.id}, payment: ${subcommand}, paymentId: ${paymentId}`);
+      
       const whitelistResult = await WhitelistAPI.whitelistUser(
         user.id, // contact_info (Discord user ID)
         `${note} - Features: ${featuresDisplay}`, // user_note
@@ -3617,7 +3619,12 @@ export class RaptorBot {
         subcommand // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
       );
       
+      console.log(`[DEBUG] API Result:`, whitelistResult);
+      console.log(`[DEBUG] API Key value:`, whitelistResult.key);
+      console.log(`[DEBUG] API Key type:`, typeof whitelistResult.key);
+      
       if (!whitelistResult.success || !whitelistResult.key) {
+        console.log(`[DEBUG] API failed - success: ${whitelistResult.success}, key: ${whitelistResult.key}`);
         const embed = new EmbedBuilder()
           .setTitle('❌ Key Generation Failed')
           .setDescription(`Failed to generate key via whitelist API: ${whitelistResult.error || 'No key returned from API'}`)
@@ -3700,6 +3707,8 @@ export class RaptorBot {
       }
       
       // Store key in local database for tracking
+      console.log(`[DEBUG] Preparing keyData with key: "${whitelistResult.key}"`);
+      
       const keyData = {
         keyValue: whitelistResult.key!,
         userId: user.id,
@@ -3709,6 +3718,10 @@ export class RaptorBot {
         createdBy: interaction.user.username,
         notes: `${paymentMethod} payment key for ${user.username} - ${note} - Features: ${featuresDisplay} - Payment ID: ${paymentId}`
       };
+      
+      console.log(`[DEBUG] keyData object:`, keyData);
+      console.log(`[DEBUG] keyData.keyValue:`, keyData.keyValue);
+      console.log(`[DEBUG] keyData.keyValue type:`, typeof keyData.keyValue);
       
       await storage.createLicenseKey(keyData);
       await this.logActivity('key_generated_api', `${interaction.user.username} generated REAL ${subcommand} key via API: ${whitelistResult.key} for ${user.username} (Payment ID: ${paymentId})`);

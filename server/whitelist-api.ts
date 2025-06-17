@@ -83,6 +83,20 @@ export class WhitelistAPI {
         // Extract the actual key from the API response structure
         const generatedKey = responseData.data?.new_key || responseData.key;
         
+        console.log('API Success - responseData.data:', responseData.data);
+        console.log('API Success - new_key value:', responseData.data?.new_key);
+        console.log('API Success - generatedKey:', generatedKey);
+        console.log('API Success - generatedKey type:', typeof generatedKey);
+        
+        // Validate key exists and is not empty
+        if (!generatedKey || generatedKey === '' || generatedKey === null || generatedKey === undefined) {
+          console.error('API returned success but no valid key:', { generatedKey, responseData });
+          return {
+            success: false,
+            error: 'API returned success but no valid license key was provided'
+          };
+        }
+        
         // Log successful whitelist operation
         await storage.logActivity('whitelist_success', 
           `User ${contactInfo} successfully whitelisted with ${paymentProvider} payment ${paymentId} - Key: ${generatedKey} - UUID: ${responseData.data?.record_uuid}`

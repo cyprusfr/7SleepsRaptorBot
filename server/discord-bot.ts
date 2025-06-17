@@ -6836,17 +6836,26 @@ export class RaptorBot {
 
       const keyValue = interaction.options.getString('key', true);
 
-      // Call real whitelist API to dewhitelist key
+      // Check if key exists in database first
       console.log(`[DEBUG] Dewhitelisting key: ${keyValue}`);
       
-      const dewhitelistResult = await WhitelistAPI.dewhitelistUser(keyValue);
-      
-      console.log(`[DEBUG] Dewhitelist Result:`, dewhitelistResult);
-
-      if (!dewhitelistResult.success) {
+      let keyInfo;
+      try {
+        keyInfo = await storage.getKeyInfo(keyValue);
+        if (!keyInfo) {
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Key Not Found')
+            .setDescription(`License key not found in database`)
+            .setColor(0xff0000)
+            .setTimestamp();
+          
+          await interaction.editReply({ embeds: [embed] });
+          return;
+        }
+      } catch (dbError) {
         const embed = new EmbedBuilder()
-          .setTitle('❌ Dewhitelist Failed')
-          .setDescription(`Failed to dewhitelist key: ${dewhitelistResult.error || 'Unknown error'}`)
+          .setTitle('❌ Database Error')
+          .setDescription(`Unable to verify key in database`)
           .setColor(0xff0000)
           .setTimestamp();
         
@@ -6854,28 +6863,41 @@ export class RaptorBot {
         return;
       }
 
-      // Update local database to revoke key
+      // Update key status to revoked in local database
       try {
-        await storage.updateDiscordKeyStatus(keyValue, 'revoked', interaction.user.id, 'Dewhitelisted via API');
-      } catch (dbError) {
-        console.log('Local database update failed (key might not exist locally):', dbError);
+        await storage.updateDiscordKey(keyValue, { 
+          status: 'revoked',
+          revokedAt: new Date(),
+          revokedBy: interaction.user.id
+        });
+
+        await this.logActivity('key_dewhitelisted_local', `${interaction.user.username} revoked key ${keyValue} locally`);
+
+        const embed = new EmbedBuilder()
+          .setTitle('✅ Key Revoked Successfully')
+          .setDescription(`License key has been marked as revoked in the database`)
+          .addFields(
+            { name: 'Key', value: `\`${keyValue}\``, inline: true },
+            { name: 'Revoked By', value: `<@${interaction.user.id}>`, inline: true },
+            { name: 'Status', value: 'Revoked in local database', inline: false },
+            { name: 'Note', value: 'Manual removal from Raptor system may be required', inline: false }
+          )
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+
+      } catch (updateError) {
+        console.error('Database update error:', updateError);
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Update Failed')
+          .setDescription(`Failed to update key status in database`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
       }
-
-      await this.logActivity('key_dewhitelisted_api', `${interaction.user.username} dewhitelisted key ${keyValue} via API`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Key Dewhitelisted Successfully')
-        .setDescription(`License key has been removed from the whitelist`)
-        .addFields(
-          { name: 'Key', value: `\`${keyValue}\``, inline: true },
-          { name: 'Dewhitelisted By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Status', value: 'Successfully removed from API whitelist', inline: false },
-          { name: 'API Response', value: dewhitelistResult.message || 'Key dewhitelisted successfully', inline: false }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
       success = true;
 
     } catch (error) {

@@ -6836,68 +6836,57 @@ export class RaptorBot {
 
       const keyValue = interaction.options.getString('key', true);
 
-      // Check if key exists in database first
       console.log(`[DEBUG] Dewhitelisting key: ${keyValue}`);
       
-      let keyInfo;
+      // Call the whitelist API to attempt dewhitelisting
       try {
-        keyInfo = await storage.getKeyInfo(keyValue);
-        if (!keyInfo) {
-          const embed = new EmbedBuilder()
-            .setTitle('❌ Key Not Found')
-            .setDescription(`License key not found in database`)
-            .setColor(0xff0000)
-            .setTimestamp();
-          
-          await interaction.editReply({ embeds: [embed] });
-          return;
-        }
-      } catch (dbError) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ Database Error')
-          .setDescription(`Unable to verify key in database`)
-          .setColor(0xff0000)
-          .setTimestamp();
+        const result = await WhitelistAPI.dewhitelistUser(keyValue);
         
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
+        if (result.success) {
+          const embed = new EmbedBuilder()
+            .setTitle('✅ Key Dewhitelisted Successfully')
+            .setDescription(`${result.message}`)
+            .addFields(
+              { name: 'Key', value: `\`${keyValue}\``, inline: true },
+              { name: 'Dewhitelisted By', value: `<@${interaction.user.id}>`, inline: true },
+              { name: 'Status', value: 'Successfully removed from Raptor system', inline: false }
+            )
+            .setColor(0x00ff00)
+            .setTimestamp();
 
-      // Update key status to revoked in local database
-      try {
-        await storage.updateDiscordKey(keyValue, { 
-          status: 'revoked',
-          revokedAt: new Date(),
-          revokedBy: interaction.user.id
-        });
+          await interaction.editReply({ embeds: [embed] });
+          success = true;
+        } else {
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Dewhitelist Operation')
+            .setDescription(`${result.error}`)
+            .addFields(
+              { name: 'Key', value: `\`${keyValue}\``, inline: true },
+              { name: 'Attempted By', value: `<@${interaction.user.id}>`, inline: true },
+              { name: 'Status', value: 'API attempts completed', inline: false }
+            )
+            .setColor(0xff9900)
+            .setTimestamp();
 
-        await this.logActivity('key_dewhitelisted_local', `${interaction.user.username} revoked key ${keyValue} locally`);
+          await interaction.editReply({ embeds: [embed] });
+        }
 
+      } catch (apiError) {
+        console.error('Error calling dewhitelist API:', apiError);
+        
         const embed = new EmbedBuilder()
-          .setTitle('✅ Key Revoked Successfully')
-          .setDescription(`License key has been marked as revoked in the database`)
+          .setTitle('❌ API Error')
+          .setDescription(`Failed to call dewhitelist API: ${apiError.message}`)
           .addFields(
             { name: 'Key', value: `\`${keyValue}\``, inline: true },
-            { name: 'Revoked By', value: `<@${interaction.user.id}>`, inline: true },
-            { name: 'Status', value: 'Revoked in local database', inline: false },
-            { name: 'Note', value: 'Manual removal from Raptor system may be required', inline: false }
+            { name: 'Error', value: apiError.message, inline: false }
           )
-          .setColor(0x00ff00)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-
-      } catch (updateError) {
-        console.error('Database update error:', updateError);
-        const embed = new EmbedBuilder()
-          .setTitle('❌ Update Failed')
-          .setDescription(`Failed to update key status in database`)
           .setColor(0xff0000)
           .setTimestamp();
-        
+
         await interaction.editReply({ embeds: [embed] });
-        return;
       }
+
       success = true;
 
     } catch (error) {

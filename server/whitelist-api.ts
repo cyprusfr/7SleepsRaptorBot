@@ -62,6 +62,8 @@ export class WhitelistAPI {
         }
       };
 
+      console.log('Making whitelist API request:', requestPayload);
+      
       const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
         method: 'POST',
         headers: {
@@ -71,28 +73,35 @@ export class WhitelistAPI {
         body: JSON.stringify(requestPayload)
       });
 
+      console.log('API Response Status:', response.status);
+      console.log('API Response Headers:', Object.fromEntries(response.headers));
+      
       const responseData = await response.json();
+      console.log('API Response Data:', responseData);
 
       if (response.ok && responseData.success) {
+        // Extract the actual key from the API response structure
+        const generatedKey = responseData.data?.new_key || responseData.key;
+        
         // Log successful whitelist operation
         await storage.logActivity('whitelist_success', 
-          `User ${contactInfo} successfully whitelisted with ${paymentProvider} payment ${paymentId}`
+          `User ${contactInfo} successfully whitelisted with ${paymentProvider} payment ${paymentId} - Key: ${generatedKey} - UUID: ${responseData.data?.record_uuid}`
         );
 
         return {
           success: true,
           message: responseData.message,
-          key: responseData.key
+          key: generatedKey
         };
       } else {
         // Log failed whitelist operation
         await storage.logActivity('whitelist_failed', 
-          `Failed to whitelist user ${contactInfo}: ${responseData.error || 'Unknown error'}`
+          `Failed to whitelist user ${contactInfo}: ${responseData.error || responseData.message || 'Unknown error'} - Status: ${response.status}`
         );
 
         return {
           success: false,
-          error: responseData.error || 'Whitelist operation failed'
+          error: responseData.error || responseData.message || `API returned status ${response.status}`
         };
       }
 

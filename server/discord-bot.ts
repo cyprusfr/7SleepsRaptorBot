@@ -3617,10 +3617,10 @@ export class RaptorBot {
         subcommand // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
       );
       
-      if (!whitelistResult.success) {
+      if (!whitelistResult.success || !whitelistResult.key) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Key Generation Failed')
-          .setDescription(`Failed to generate key via whitelist API: ${whitelistResult.error}`)
+          .setDescription(`Failed to generate key via whitelist API: ${whitelistResult.error || 'No key returned from API'}`)
           .setColor(0xff0000)
           .setTimestamp();
         

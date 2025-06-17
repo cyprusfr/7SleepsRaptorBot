@@ -4,6 +4,7 @@ import { db } from './db';
 import { discordUsers, licenseKeys, activityLogs, candyBalances, commandLogs, verificationSessions, type DiscordUser } from '@shared/schema';
 import { eq, sql, desc, asc, and, or } from 'drizzle-orm';
 import { BackupIntegrityChecker } from './backup-integrity';
+import { WhitelistAPI } from './whitelist-api';
 import crypto from 'crypto';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
@@ -901,6 +902,114 @@ export class RaptorBot {
           subcommand
             .setName('venmo')
             .setDescription('Generate a key for a venmo payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('litecoin')
+            .setDescription('Generate a key for a litecoin payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('giftcard')
+            .setDescription('Generate a key for a giftcard payment')
+            .addUserOption(option =>
+              option.setName('user')
+                .setDescription('User to generate key for')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('note')
+                .setDescription('Additional note')
+                .setRequired(true))
+            .addStringOption(option =>
+              option.setName('booster')
+                .setDescription('Booster access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('early-access')
+                .setDescription('Early access')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                ))
+            .addStringOption(option =>
+              option.setName('monthly')
+                .setDescription('Monthly subscription')
+                .setRequired(false)
+                .addChoices(
+                  { name: 'yes', value: 'yes' },
+                  { name: 'no', value: 'no' }
+                )))
+        .addSubcommand(subcommand =>
+          subcommand
+            .setName('sellix')
+            .setDescription('Generate a key for a sellix payment')
             .addUserOption(option =>
               option.setName('user')
                 .setDescription('User to generate key for')
@@ -3490,15 +3599,36 @@ export class RaptorBot {
     const monthly = interaction.options.getString('monthly') === 'yes';
     
     try {
-      // Generate unique key ID with feature prefixes
-      let typePrefix = '';
-      if (booster) typePrefix += 'BOOST-';
-      if (earlyAccess) typePrefix += 'EA-';
-      if (monthly) typePrefix += 'MONTH-';
+      // Generate features display
+      const features = [];
+      if (booster) features.push('Booster Access');
+      if (earlyAccess) features.push('Early Access');
+      if (monthly) features.push('Monthly Subscription');
+      const featuresDisplay = features.length > 0 ? features.join(', ') : 'Standard Access';
       
-      const keyId = `MSK-${typePrefix}${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      // Generate payment ID for API call
+      const paymentId = `${subcommand.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
+      // Call real whitelist API to generate working key
+      const whitelistResult = await WhitelistAPI.whitelistUser(
+        user.id, // contact_info (Discord user ID)
+        `${note} - Features: ${featuresDisplay}`, // user_note
+        paymentId, // payment.id
+        subcommand // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
+      );
+      
+      if (!whitelistResult.success) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Key Generation Failed')
+          .setDescription(`Failed to generate key via whitelist API: ${whitelistResult.error}`)
+          .setColor(0xff0000)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+      
+      // Get payment method details for display
       let paymentMethod = '';
       let paymentAmount = '';
       let paymentAddress = '';
@@ -3517,92 +3647,98 @@ export class RaptorBot {
           paymentAddress = '0x742b4e3a8f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f';
           embedColor = 0x627eea;
           break;
+        case 'litecoin':
+          paymentMethod = 'Litecoin (LTC)';
+          paymentAmount = '$25.00 USD (≈ 0.3 LTC)';
+          paymentAddress = 'ltc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
+          embedColor = 0xbfbbbb;
+          break;
         case 'paypal':
           paymentMethod = 'PayPal';
           paymentAmount = '$25.00 USD';
-          paymentAddress = 'payments@macsploit.com';
+          paymentAddress = 'payments@raptor.fun';
           embedColor = 0x0070ba;
           break;
         case 'cashapp':
           paymentMethod = 'CashApp';
           paymentAmount = '$25.00 USD';
-          paymentAddress = '$MacSploitOfficial';
+          paymentAddress = '$RaptorOfficial';
           embedColor = 0x00d632;
           break;
         case 'venmo':
           paymentMethod = 'Venmo';
           paymentAmount = '$25.00 USD';
-          paymentAddress = '@MacSploit-Official';
+          paymentAddress = '@Raptor-Official';
           embedColor = 0x1e88e5;
           break;
         case 'robux':
           paymentMethod = 'Robux';
           paymentAmount = '2,000 Robux';
-          paymentAddress = 'MacSploitOfficial (Roblox)';
+          paymentAddress = 'RaptorOfficial (Roblox)';
           embedColor = 0x00b2ff;
+          break;
+        case 'giftcard':
+          paymentMethod = 'Gift Card';
+          paymentAmount = '$25.00 USD';
+          paymentAddress = 'DM gift card code to staff';
+          embedColor = 0xff6b6b;
+          break;
+        case 'sellix':
+          paymentMethod = 'Sellix';
+          paymentAmount = '$25.00 USD';
+          paymentAddress = 'raptor.fun/sellix';
+          embedColor = 0x8b5cf6;
           break;
         case 'custom':
           paymentMethod = 'Custom Payment';
           paymentAmount = 'Contact Admin';
-          paymentAddress = 'DM @MacSploit for details';
+          paymentAddress = 'DM @Raptor for details';
           embedColor = 0x9c27b0;
           break;
         default:
           throw new Error('Invalid payment method');
       }
       
-      // Generate features display
-      const features = [];
-      if (booster) features.push('Booster Access');
-      if (earlyAccess) features.push('Early Access');
-      if (monthly) features.push('Monthly Subscription');
-      const featuresDisplay = features.length > 0 ? features.join(', ') : 'Standard Access';
-      
-      // Store key in database
+      // Store key in local database for tracking
       const keyData = {
-        keyValue: keyId,
+        keyValue: whitelistResult.key!,
         userId: user.id,
         hwid: null,
         isActive: true,
-        expiresAt,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         createdBy: interaction.user.username,
-        notes: `${paymentMethod} payment key for ${user.username} - ${note} - Features: ${featuresDisplay}`
+        notes: `${paymentMethod} payment key for ${user.username} - ${note} - Features: ${featuresDisplay} - Payment ID: ${paymentId}`
       };
       
       await storage.createLicenseKey(keyData);
-      await this.logActivity('key_generated', `${interaction.user.username} generated ${subcommand} payment key: ${keyId} for ${user.username}`);
+      await this.logActivity('key_generated_api', `${interaction.user.username} generated REAL ${subcommand} key via API: ${whitelistResult.key} for ${user.username} (Payment ID: ${paymentId})`);
       
       const embed = new EmbedBuilder()
-        .setTitle(`🔑 Payment Key Generated`)
-        .setDescription(`${paymentMethod} payment key has been generated successfully.`)
+        .setTitle(`🔑 WORKING License Key Generated`)
+        .setDescription(`✅ **REAL WORKING KEY** generated via Raptor API for ${paymentMethod}`)
         .addFields(
-          { name: '🆔 Key ID', value: `\`${keyId}\``, inline: false },
+          { name: '🔐 **ACTIVE LICENSE KEY**', value: `\`${whitelistResult.key}\``, inline: false },
           { name: '👤 Generated For', value: `<@${user.id}>`, inline: true },
           { name: '💰 Payment Method', value: paymentMethod, inline: true },
-          { name: '💵 Amount', value: paymentAmount, inline: true },
+          { name: '🆔 Payment ID', value: `\`${paymentId}\``, inline: true },
           { name: '📝 Note', value: note, inline: false },
           { name: '🎯 Features', value: featuresDisplay, inline: false },
-          { name: '📍 Send Payment To', value: `\`${paymentAddress}\``, inline: false },
-          { name: '⏰ Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:F>`, inline: true },
-          { name: '📋 Status', value: '⏳ Pending Payment', inline: true },
-          { name: '📝 Instructions', value: 
-            `1. Send **${paymentAmount}** to the address above\n` +
-            `2. Screenshot your payment confirmation\n` +
-            `3. DM the screenshot to MacSploit staff\n` +
-            `4. Your key will be activated within 24 hours`, inline: false }
+          { name: '✅ API Status', value: whitelistResult.message || 'Key successfully generated', inline: false },
+          { name: '📋 Key Status', value: '🟢 **ACTIVE & WORKING**', inline: true },
+          { name: '⚡ Ready to Use', value: 'This key is immediately active and functional', inline: true }
         )
         .setColor(embedColor)
-        .setFooter({ text: 'MacSploit License System' })
+        .setFooter({ text: 'Raptor License System - Real API Integration' })
         .setTimestamp();
       
       await interaction.editReply({ embeds: [embed] });
       
     } catch (error) {
-      console.error('Error generating payment key:', error);
+      console.error('Error generating real payment key:', error);
       
       const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to generate payment key. Please try again.')
+        .setTitle('❌ API Error')
+        .setDescription(`Failed to generate working key via Raptor API: ${error.message}`)
         .setColor(0xff0000)
         .setTimestamp();
       

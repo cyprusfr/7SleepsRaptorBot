@@ -3,6 +3,8 @@ import { storage } from "./storage";
 // Real whitelist API configuration
 const WHITELIST_API_BASE = "https://www.raptor.fun";
 const API_KEY = "85f9e513-8030-4e88-a04d-042e62e0f707";
+const ADMIN_API_KEY = process.env.RAPTOR_ADMIN_API_KEY || '';
+const DEWHITELIST_ENDPOINT = process.env.RAPTOR_DEWHITELIST_ENDPOINT || '/api/dewhitelist';
 
 // Accepted payment methods from the API
 const ACCEPTED_PAYMENT_METHODS = [
@@ -222,34 +224,112 @@ export class WhitelistAPI {
         { id: deleteValue, auth: API_KEY }
       ];
 
-      // Quick API validation attempt
-      console.log('📊 Testing dewhitelist API endpoint...');
+      // Use admin API credentials for actual dewhitelisting
+      console.log('🔐 Using admin API for dewhitelist operation...');
       
+      if (!ADMIN_API_KEY) {
+        console.log('⚠️ Admin API key not configured');
+        return {
+          success: false,
+          message: 'Admin API credentials required for dewhitelisting'
+        };
+      }
+
       try {
-        const response = await fetch(`${WHITELIST_API_BASE}/api/dewhitelist`, {
+        const adminEndpoint = DEWHITELIST_ENDPOINT.startsWith('http') 
+          ? DEWHITELIST_ENDPOINT 
+          : `${WHITELIST_API_BASE}${DEWHITELIST_ENDPOINT}`;
+
+        console.log(`🎯 Admin dewhitelist request to: ${adminEndpoint}`);
+
+        const response = await fetch(adminEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'Raptor-Discord-Bot/1.0'
+            'Authorization': `Bearer ${ADMIN_API_KEY}`,
+            'X-API-Key': ADMIN_API_KEY,
+            'User-Agent': 'Raptor-Admin-Bot/1.0'
           },
-          body: JSON.stringify({ api_key: API_KEY, delete: keyValue })
+          body: JSON.stringify({ 
+            api_key: ADMIN_API_KEY,
+            key: keyValue,
+            delete: keyValue,
+            action: 'dewhitelist'
+          })
         });
 
-        const responseData = await response.json();
-        console.log(`API Response: ${response.status}`, responseData);
+        let responseData;
+        try {
+          responseData = await response.json();
+        } catch {
+          responseData = { success: false, message: 'Invalid response format' };
+        }
+
+        console.log(`📋 Admin API Response: ${response.status}`, responseData);
 
         if (response.ok && responseData.success === true) {
-          await storage.logActivity('dewhitelist_success', 
-            `Key ${keyValue} successfully dewhitelisted via API`
+          console.log('✅ SUCCESS: Key dewhitelisted via admin API');
+          
+          await storage.logActivity('admin_dewhitelist_success', 
+            `Key ${keyValue} successfully dewhitelisted via admin API`
           );
 
           return {
             success: true,
-            message: responseData.message || 'Key dewhitelisted successfully from Raptor system'
+            message: `✅ REAL DEWHITELIST SUCCESS: Key ${keyValue} has been removed from the Raptor system and will no longer work for users.`
           };
+        } else {
+          console.log('❌ Admin API dewhitelist failed:', responseData);
+          
+          // Try alternative admin endpoint patterns
+          const alternativeEndpoints = [
+            `${WHITELIST_API_BASE}/admin/dewhitelist`,
+            `${WHITELIST_API_BASE}/api/admin/dewhitelist`,
+            `${WHITELIST_API_BASE}/v1/dewhitelist`
+          ];
+
+          for (const endpoint of alternativeEndpoints) {
+            try {
+              console.log(`🔄 Trying alternative endpoint: ${endpoint}`);
+              
+              const altResponse = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${ADMIN_API_KEY}`,
+                  'X-API-Key': ADMIN_API_KEY,
+                  'User-Agent': 'Raptor-Admin-Bot/1.0'
+                },
+                body: JSON.stringify({ 
+                  api_key: ADMIN_API_KEY,
+                  key: keyValue,
+                  delete: keyValue
+                })
+              });
+
+              const altData = await altResponse.json();
+              console.log(`📋 Alternative Response: ${altResponse.status}`, altData);
+
+              if (altResponse.ok && altData.success === true) {
+                console.log('✅ SUCCESS: Key dewhitelisted via alternative admin endpoint');
+                
+                await storage.logActivity('admin_dewhitelist_success', 
+                  `Key ${keyValue} successfully dewhitelisted via admin API (${endpoint})`
+                );
+
+                return {
+                  success: true,
+                  message: `✅ REAL DEWHITELIST SUCCESS: Key ${keyValue} has been removed from the Raptor system and will no longer work for users.`
+                };
+              }
+            } catch (error) {
+              console.log(`❌ Alternative endpoint failed: ${error.message}`);
+              continue;
+            }
+          }
         }
       } catch (error) {
-        console.log(`API request failed: ${error.message}`);
+        console.log(`❌ Admin API request failed: ${error.message}`);
       }
 
       // Document comprehensive testing results and provide accurate status

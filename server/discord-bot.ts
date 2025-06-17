@@ -6858,12 +6858,13 @@ export class RaptorBot {
           success = true;
         } else {
           const embed = new EmbedBuilder()
-            .setTitle('❌ Dewhitelist Operation')
-            .setDescription(`${result.error}`)
+            .setTitle('⚠️ Dewhitelist API Limitation')
+            .setDescription(`**Key remains ACTIVE in Raptor system**\n\n${result.error}`)
             .addFields(
               { name: 'Key', value: `\`${keyValue}\``, inline: true },
               { name: 'Attempted By', value: `<@${interaction.user.id}>`, inline: true },
-              { name: 'Status', value: 'API attempts completed', inline: false }
+              { name: 'Current Status', value: '🟢 **STILL WORKING** for users', inline: false },
+              { name: 'Required Action', value: 'Contact Raptor support for manual removal', inline: false }
             )
             .setColor(0xff9900)
             .setTimestamp();

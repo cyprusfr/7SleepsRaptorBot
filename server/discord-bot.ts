@@ -3433,7 +3433,8 @@ export class RaptorBot {
         user.id, // contact_info (Discord user ID)
         `${note} - Features: ${featuresDisplay}`, // user_note
         paymentId, // payment.id
-        subcommand // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
+        subcommand, // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
+        interaction.user.username // staff_name - Discord username of command executor
       );
       
       console.log(`[DEBUG] API Result:`, whitelistResult);

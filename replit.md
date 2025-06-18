@@ -122,6 +122,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Complete Bot Scope Solution**: Generated comprehensive Discord bot invitation URL with both bot and applications.commands scopes plus administrator permissions to permanently fix "Unknown Integration" errors - includes full server access and slash command functionality
 - **API Response Parsing Fix**: Fixed whitelist API key extraction to properly parse responseData.data.new_key field instead of responseData.key - resolves "No key returned from API" error despite successful API responses
 - **DM License Key Format**: Restored original Discord embed format for license key delivery via DM with professional appearance, date field, and "How to Install" button
+- **Staff Name Integration**: Added staff_name parameter to MacSploit API calls using Discord username of command executor for proper tracking and attribution
 - **Password-Protected Bot Installation**: Implemented secure OAuth callback system requiring password `RaptorBot2025!SecureInstall#9847` for bot invitations, preventing unauthorized installations with professional HTML password form
 - **Comprehensive Command Tutorial System**: Created complete 6-tab tutorial interface showing all 60+ commands with implementation details, code explanations, database operations, and technical architecture documentation
 - **GitHub Integration for Code Management**: Replaced local file system with complete GitHub API integration providing professional version control capabilities

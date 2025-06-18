@@ -24,6 +24,7 @@ export interface WhitelistRequest {
   api_key: string;
   contact_info: string;
   user_note: string;
+  staff_name?: string;
   payment: {
     id: string;
     provider: string;
@@ -43,7 +44,8 @@ export class WhitelistAPI {
     contactInfo: string,
     userNote: string,
     paymentId: string,
-    paymentProvider: string
+    paymentProvider: string,
+    staffName?: string
   ): Promise<WhitelistResponse> {
     try {
       console.log(`Making whitelist API request for contact: ${contactInfo}`);
@@ -52,6 +54,7 @@ export class WhitelistAPI {
         api_key: API_KEY,
         contact_info: contactInfo,
         user_note: userNote,
+        staff_name: staffName,
         payment: {
           id: paymentId,
           provider: paymentProvider

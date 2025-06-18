@@ -204,17 +204,17 @@ export class WhitelistAPI {
       console.log(`Making rewhitelist API request for: ${keyValue}`);
       
       const requestPayload = {
-        identifier: keyValue, // Can be email, key, or hwid
+        key: keyValue, // Try 'key' instead of 'identifier'
         reason_note: reasonNote,
         api_key: API_KEY
       };
 
       console.log('Rewhitelist API Request:', {
-        url: `${WHITELIST_API_BASE}/api/whitelist`,
+        url: `${WHITELIST_API_BASE}/api/rewhitelist`,
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
+      const response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

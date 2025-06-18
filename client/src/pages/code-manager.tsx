@@ -49,10 +49,13 @@ export default function CodeManager() {
       
       if (data.authenticated) {
         setAuthenticated(true);
+        setGithubIntegration(data.githubIntegration || false);
         loadFiles();
         toast({
           title: "Authentication Successful",
-          description: "Owner access granted. Loading project files...",
+          description: data.githubIntegration ? 
+            "Owner access granted. GitHub integration enabled." : 
+            "Owner access granted. Using local file system.",
         });
       } else {
         toast({
@@ -92,8 +95,10 @@ export default function CodeManager() {
       const response = await fetch(`/api/owner/file/${encodeURIComponent(filePath)}?password=${encodeURIComponent(password)}`);
       const data = await response.json();
       setFileContent(data.content || '');
+      setCurrentSha(data.sha || '');
       setSelectedFile(filePath);
       setIsEditing(false);
+      setCommitMessage(`Update ${filePath.split('/').pop()}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -115,16 +120,23 @@ export default function CodeManager() {
         },
         body: JSON.stringify({
           password,
-          content: fileContent
+          content: fileContent,
+          commitMessage: commitMessage || `Update ${selectedFile}`,
+          sha: currentSha
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         setIsEditing(false);
+        if (data.commit) {
+          setCurrentSha(data.commit.sha);
+        }
         toast({
-          title: "File Saved",
-          description: `Successfully updated ${selectedFile}`,
+          title: githubIntegration ? "File Committed" : "File Saved",
+          description: githubIntegration ? 
+            `Successfully committed ${selectedFile} to GitHub` : 
+            `Successfully updated ${selectedFile}`,
         });
       } else {
         throw new Error('Save failed');
@@ -137,6 +149,38 @@ export default function CodeManager() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncRepository = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch('/api/owner/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await loadFiles();
+        toast({
+          title: "Repository Synchronized",
+          description: `Latest commit: ${data.latestCommit.message}`,
+        });
+      } else {
+        throw new Error('Sync failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Sync Error",
+        description: "Failed to sync repository.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -206,8 +250,31 @@ export default function CodeManager() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Code Manager</h1>
-        <p className="text-muted-foreground">Owner-only access to view and edit project files</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Code Manager</h1>
+            <p className="text-muted-foreground">Owner-only access to view and edit project files</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {githubIntegration && (
+              <>
+                <Badge variant="secondary" className="flex items-center gap-2">
+                  <Github className="h-4 w-4" />
+                  GitHub Integration
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={syncRepository}
+                  disabled={syncing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Repository'}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -255,6 +322,20 @@ export default function CodeManager() {
           <CardContent>
             {selectedFile ? (
               <div className="space-y-4">
+                {githubIntegration && isEditing && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <GitCommit className="h-4 w-4" />
+                      Commit Message
+                    </label>
+                    <Input
+                      value={commitMessage}
+                      onChange={(e) => setCommitMessage(e.target.value)}
+                      placeholder="Describe your changes..."
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                )}
                 <Textarea
                   value={fileContent}
                   onChange={(e) => setFileContent(e.target.value)}
@@ -263,9 +344,16 @@ export default function CodeManager() {
                   placeholder="Select a file to view its content"
                 />
                 {!isEditing && (
-                  <p className="text-sm text-muted-foreground">
-                    Click "Edit" to modify this file
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Click "Edit" to modify this file
+                    </p>
+                    {githubIntegration && currentSha && (
+                      <Badge variant="outline" className="text-xs">
+                        SHA: {currentSha.substring(0, 7)}
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (

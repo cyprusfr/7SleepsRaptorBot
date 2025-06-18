@@ -250,6 +250,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(discordKeys.keyId, keyId));
   }
 
+  async reactivateDiscordKey(keyId: string, reactivatedBy: string): Promise<void> {
+    await db
+      .update(discordKeys)
+      .set({
+        status: "active",
+        revokedAt: null,
+        revokedBy: null,
+        updatedAt: new Date()
+      })
+      .where(eq(discordKeys.keyId, keyId));
+    
+    // Log the reactivation activity
+    await this.logActivity('key_reactivated', `Key ${keyId} reactivated by ${reactivatedBy}`);
+  }
+
   async getCandyBalance(userId: string): Promise<any | undefined> {
     const [balance] = await db.select().from(candyBalances).where(eq(candyBalances.userId, userId));
     return balance;

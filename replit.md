@@ -126,10 +126,11 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Discord OAuth2 Integration**: Added complete Discord OAuth2 authentication system with redirect URI support for user login flow alongside existing Google OAuth
 - **Password-Protected Bot Installation**: Implemented secure OAuth callback system requiring password `RaptorBot2025!SecureInstall#9847` for bot invitations, preventing unauthorized installations with professional HTML password form
 - **Enhanced Bot Installation Flow**: Created comprehensive multi-step installation process with bot key validation, owner key generation, Discord OAuth integration, and interactive tutorial system with 1-second hold skip functionality
-- **Tutorial Content Update**: Redesigned tutorial to focus specifically on explaining Discord bot command usage and functionality instead of technical architecture
-- **Command-Focused Tutorial Sections**: Updated all 5 tutorial tabs to explain practical command usage: Command Overview, License Key Commands, User Management Commands, Candy Economy Commands, and Support & Moderation Commands
-- **Go to Dashboard Button Implementation**: Added prominent blue "Go to Dashboard" button in tutorial interface allowing users to easily navigate to main dashboard after learning about commands
-- **Practical Command Examples**: Tutorial now shows actual command syntax, parameter usage, and real-world examples of how each Discord bot command works in practice
+- **Comprehensive Story Tutorial Implementation**: Created dramatic black-themed story tutorial with auto-scroll functionality, featuring cinematic quotes from Nexus40, Nexus41, and Nexus42 characters explaining the bot's creation journey
+- **Extensive Development Documentation**: Added 11 detailed sections covering bot architecture, development process, advanced features, command usage guides, and comprehensive MacSploit support system documentation
+- **Complete Command Reference Guide**: Implemented detailed explanations for all 60+ Discord commands with syntax examples, parameter descriptions, and real-world usage scenarios across license management, user administration, candy economy, and server moderation
+- **MacSploit Support System Guide**: Created comprehensive documentation for all 22+ support tags (.hwid, .crash, .install, .scripts, etc.) with automatic script detection, intelligent responses, and categorized troubleshooting guides
+- **Auto-Scroll Cinematic Experience**: Tutorial automatically progresses through story sections every 4 seconds with smooth transitions, manual navigation controls, and elegant black theme with white text and beautiful typography
 - **Authentication Flow Fixes**: Resolved "signed in as unknown" display issue by removing conflicting authentication endpoints - bot invitation now properly redirects authenticated users to tutorial without Discord verification requirement
 
 ### Current Implementation Status

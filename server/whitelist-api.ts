@@ -32,6 +32,20 @@ export interface WhitelistRequest {
   early_access?: boolean;
   server_booster?: boolean;
   monthly?: boolean;
+  // Alternative parameter names for testing
+  earlyAccess?: boolean;
+  early_access_enabled?: boolean;
+  premium?: boolean;
+  beta?: boolean;
+  vip?: boolean;
+  booster?: boolean;
+  server_boost?: boolean;
+  boosted?: boolean;
+  nitro?: boolean;
+  boost?: boolean;
+  subscription?: boolean;
+  recurring?: boolean;
+  [key: string]: any;
 }
 
 export interface WhitelistResponse {
@@ -81,6 +95,13 @@ export class WhitelistAPI {
           server_booster: requestPayload.server_booster,
           monthly: requestPayload.monthly
         });
+      }
+
+      // Additional diagnostic logging for feature request analysis
+      if (features && (features.early_access || features.booster || features.monthly)) {
+        console.log(`[API] DIAGNOSTIC: Features requested but API consistently returns early_access: false`);
+        console.log(`[API] DIAGNOSTIC: This indicates API key may lack permissions for feature flags`);
+        console.log(`[API] DIAGNOSTIC: Features sent: early_access=${features.early_access}, booster=${features.booster}, monthly=${features.monthly}`);
       }
 
       console.log(`[API] Complete request payload:`, JSON.stringify(requestPayload, null, 2));

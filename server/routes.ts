@@ -6,6 +6,58 @@ import { discordBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
 
 import { z } from "zod";
+import crypto from "crypto";
+
+// Discord permission bit values
+const DISCORD_PERMISSIONS: Record<string, number> = {
+  'VIEW_CHANNELS': 1024,
+  'SEND_MESSAGES': 2048,
+  'EMBED_LINKS': 16384,
+  'ATTACH_FILES': 32768,
+  'READ_MESSAGE_HISTORY': 65536,
+  'USE_SLASH_COMMANDS': 2147483648,
+  'MANAGE_MESSAGES': 8192,
+  'KICK_MEMBERS': 2,
+  'BAN_MEMBERS': 4,
+  'MANAGE_ROLES': 268435456,
+  'MANAGE_CHANNELS': 16,
+  'MANAGE_GUILD': 32,
+  'ADD_REACTIONS': 64,
+  'VIEW_AUDIT_LOG': 128,
+  'PRIORITY_SPEAKER': 256,
+  'STREAM': 512,
+  'CONNECT': 1048576,
+  'SPEAK': 2097152,
+  'MUTE_MEMBERS': 4194304,
+  'DEAFEN_MEMBERS': 8388608,
+  'MOVE_MEMBERS': 16777216,
+  'USE_VAD': 33554432,
+  'CHANGE_NICKNAME': 67108864,
+  'MANAGE_NICKNAMES': 134217728,
+  'USE_EXTERNAL_EMOJIS': 262144,
+  'VIEW_GUILD_INSIGHTS': 524288,
+  'SEND_TTS_MESSAGES': 4096,
+  'SEND_MESSAGES_IN_THREADS': 274877906944,
+  'CREATE_PUBLIC_THREADS': 34359738368,
+  'CREATE_PRIVATE_THREADS': 68719476736,
+  'USE_EXTERNAL_STICKERS': 137438953472
+};
+
+// Calculate permissions value from permission names
+function calculatePermissions(permissionNames: string[]): string {
+  let permissions = 0;
+  for (const permission of permissionNames) {
+    if (DISCORD_PERMISSIONS[permission]) {
+      permissions |= DISCORD_PERMISSIONS[permission];
+    }
+  }
+  return permissions.toString();
+}
+
+// Generate secure random state for OAuth
+function generateSecureState(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 // Basic auth check for Google OAuth users (used during verification flow)
 function requireGoogleAuth(req: any, res: any, next: any) {
@@ -123,6 +175,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Handle favicon requests
   app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
+  });
+
+  // Discord OAuth invite endpoint with code grant
+  app.get('/api/discord/invite', (req, res) => {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ error: 'Discord client ID not configured' });
+    }
+
+    // OAuth scopes for bot invite with code grant
+    const scopes = [
+      'bot',
+      'applications.commands',
+      'identify',
+      'guilds',
+      'guilds.join'
+    ];
+
+    // Bot permissions
+    const permissions = [
+      'VIEW_CHANNELS',
+      'SEND_MESSAGES', 
+      'EMBED_LINKS',
+      'ATTACH_FILES',
+      'READ_MESSAGE_HISTORY',
+      'USE_SLASH_COMMANDS',
+      'MANAGE_MESSAGES',
+      'KICK_MEMBERS',
+      'BAN_MEMBERS',
+      'MANAGE_ROLES',
+      'MANAGE_CHANNELS',
+      'MANAGE_GUILD',
+      'ADD_REACTIONS',
+      'VIEW_AUDIT_LOG',
+      'PRIORITY_SPEAKER',
+      'STREAM',
+      'CONNECT',
+      'SPEAK',
+      'MUTE_MEMBERS',
+      'DEAFEN_MEMBERS',
+      'MOVE_MEMBERS',
+      'USE_VAD',
+      'CHANGE_NICKNAME',
+      'MANAGE_NICKNAMES',
+      'USE_EXTERNAL_EMOJIS',
+      'VIEW_GUILD_INSIGHTS',
+      'SEND_TTS_MESSAGES',
+      'USE_SLASH_COMMANDS',
+      'SEND_MESSAGES_IN_THREADS',
+      'CREATE_PUBLIC_THREADS',
+      'CREATE_PRIVATE_THREADS',
+      'USE_EXTERNAL_STICKERS',
+      'SEND_VOICE_MESSAGES'
+    ];
+
+    // Calculate permissions value
+    const permissionsValue = calculatePermissions(permissions);
+
+    // Redirect URI for OAuth callback
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/discord/callback`;
+
+    // Build OAuth invite URL with code grant
+    const inviteUrl = new URL('https://discord.com/api/oauth2/authorize');
+    inviteUrl.searchParams.set('client_id', clientId);
+    inviteUrl.searchParams.set('permissions', permissionsValue.toString());
+    inviteUrl.searchParams.set('scope', scopes.join(' '));
+    inviteUrl.searchParams.set('response_type', 'code');
+    inviteUrl.searchParams.set('redirect_uri', redirectUri);
+    inviteUrl.searchParams.set('state', generateSecureState());
+
+    res.json({
+      inviteUrl: inviteUrl.toString(),
+      scopes,
+      permissions: permissionsValue,
+      redirectUri
+    });
+  });
+
+  // Discord OAuth callback handler
+  app.get('/api/discord/callback', async (req, res) => {
+    const { code, state, guild_id } = req.query;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code required' });
+    }
+
+    try {
+      // Exchange code for access token
+      const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.DISCORD_CLIENT_ID!,
+          client_secret: process.env.DISCORD_CLIENT_SECRET!,
+          code: code as string,
+          grant_type: 'authorization_code',
+          redirect_uri: `${req.protocol}://${req.get('host')}/api/discord/callback`,
+        }),
+      });
+
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.error) {
+        return res.status(400).json({ error: 'OAuth token exchange failed', details: tokenData });
+      }
+
+      // Get guild information if guild_id is present
+      let guildInfo = null;
+      if (guild_id && tokenData.access_token) {
+        try {
+          const guildResponse = await fetch(`https://discord.com/api/v10/guilds/${guild_id}`, {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+          });
+          
+          if (guildResponse.ok) {
+            guildInfo = await guildResponse.json();
+          }
+        } catch (error) {
+          console.log('Could not fetch guild info:', error);
+        }
+      }
+
+      // Log successful bot invitation
+      if (guild_id) {
+        await storage.logActivity('bot_invited', 
+          `Bot invited to guild ${guild_id}${guildInfo ? ` (${guildInfo.name})` : ''} via OAuth`
+        );
+      }
+
+      // Redirect to success page
+      res.redirect(`/invite-success?guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}`);
+
+    } catch (error) {
+      console.error('Discord OAuth callback error:', error);
+      res.status(500).json({ error: 'OAuth callback failed' });
+    }
   });
 
   // Test dewhitelist API endpoint for comprehensive testing

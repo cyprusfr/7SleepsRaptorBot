@@ -416,30 +416,41 @@ export class RaptorBot {
   }
 
   private async registerCommands() {
-    console.log('🔄 Clearing old commands completely...');
+    console.log('🔄 NUCLEAR CACHE CLEARING - REMOVING VERIFY SUBCOMMANDS...');
     
-    // Clear both global and guild-specific commands
-    try {
-      // Clear global commands
-      await this.client.application?.commands.set([]);
-      console.log('✅ Cleared global commands');
-
-      // Clear guild-specific commands for all guilds
+    const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
+    
+    // Step 1: Nuclear clearing - multiple rounds to eliminate cached verify subcommands
+    for (let round = 1; round <= 5; round++) {
+      console.log(`🗑️ Nuclear clear round ${round}/5...`);
+      
+      try {
+        // Clear using both REST API and client methods
+        await rest.put(Routes.applicationCommands(CLIENT_ID!), { body: [] });
+        await this.client.application?.commands.set([]);
+        console.log(`✅ Global cleared round ${round}`);
+      } catch (error) {
+        console.log(`⚠️ Global clear round ${round} failed`);
+      }
+      
+      // Clear each guild aggressively
       for (const guild of this.client.guilds.cache.values()) {
         try {
+          await rest.put(Routes.applicationGuildCommands(CLIENT_ID!, guild.id), { body: [] });
           await guild.commands.set([]);
-          console.log(`✅ Cleared commands for guild: ${guild.name}`);
+          console.log(`✅ ${guild.name} cleared round ${round}`);
         } catch (error) {
-          console.log(`⚠️ Could not clear commands for guild ${guild.name}:`, error);
+          console.log(`⚠️ ${guild.name} clear round ${round} failed`);
         }
       }
-    } catch (error) {
-      console.log('⚠️ Could not clear commands (non-critical):', error);
+      
+      // Delay between rounds
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
-
-    // Wait for Discord to process the clearing
-    console.log('⏳ Waiting for Discord to process command clearing...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Step 2: Extended wait for Discord cache invalidation
+    console.log('⏳ Extended cache invalidation wait (60 seconds)...');
+    await new Promise(resolve => setTimeout(resolve, 60000));
 
     const commands = [
       // Test command
@@ -1541,15 +1552,24 @@ export class RaptorBot {
 
     ];
 
-    const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
-
+    // Command registration - use the rest variable from earlier in the method
     try {
-      console.log('🔄 FORCE CLEARING DISCORD COMMAND CACHE...');
+      console.log('🔄 REGISTERING CLEAN COMMAND SET...');
 
-      // Step 1: Clear global commands completely
+      // Register commands for each guild
+      for (const guild of this.client.guilds.cache.values()) {
+        try {
+          await rest.put(Routes.applicationGuildCommands(CLIENT_ID!, guild.id), { body: commands });
+          console.log(`✅ Commands registered for ${guild.name}`);
+        } catch (guildError) {
+          console.error(`❌ Failed to register commands for ${guild.name}:`, guildError);
+        }
+      }
+
+      // Register globally as backup
       try {
-        console.log('🗑️ Clearing global commands...');
-        await rest.put(Routes.applicationCommands(CLIENT_ID!), { body: [] });
+        console.log('🔄 Registering global commands...');
+        await rest.put(Routes.applicationCommands(CLIENT_ID!), { body: commands });
         await new Promise(resolve => setTimeout(resolve, 3000));
         console.log('✅ Global commands cleared');
       } catch (error) {

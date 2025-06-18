@@ -81,31 +81,20 @@ export class WhitelistAPI {
         }
       };
 
-      // Try multiple parameter formats for MacSploit API compatibility
+      // Add features as single parameters
       if (features) {
         if (features.early_access) {
           requestPayload.early_access = true;
-          requestPayload.earlyAccess = true;
-          requestPayload.premium = true;
-          requestPayload.beta_access = true;
         }
         if (features.booster) {
           requestPayload.server_booster = true;
-          requestPayload.booster = true;
-          requestPayload.nitro = true;
-          requestPayload.discord_boost = true;
         }
         if (features.monthly) {
           requestPayload.monthly = true;
-          requestPayload.subscription = true;
-          requestPayload.recurring = true;
         }
-        console.log(`[API] Adding features with multiple parameter formats:`, {
+        console.log(`[API] Adding features as single parameters:`, {
           early_access: requestPayload.early_access,
-          earlyAccess: requestPayload.earlyAccess,
-          premium: requestPayload.premium,
           server_booster: requestPayload.server_booster,
-          booster: requestPayload.booster,
           monthly: requestPayload.monthly
         });
       }

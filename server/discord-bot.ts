@@ -3441,12 +3441,22 @@ export class RaptorBot {
       // Call real whitelist API to generate working key
       console.log(`[DEBUG] Calling API for user: ${user.id}, payment: ${subcommand}, paymentId: ${paymentId}`);
       
+      // Prepare features object for API
+      const apiFeatures = {
+        early_access: earlyAccess,
+        booster: booster,
+        monthly: monthly
+      };
+      
+      console.log(`[DEBUG] Sending features to API: ${JSON.stringify(apiFeatures)}`);
+      
       const whitelistResult = await WhitelistAPI.whitelistUser(
         user.id, // contact_info (Discord user ID)
         `${note} - Features: ${featuresDisplay}`, // user_note
         paymentId, // payment.id
         subcommand, // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
-        interaction.user.username // staff_name - Discord username of command executor
+        interaction.user.username, // staff_name - Discord username of command executor
+        apiFeatures // features object
       );
       
       console.log(`[DEBUG] API Result:`, whitelistResult);

@@ -133,6 +133,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Professional Git Workflow**: Code changes are automatically committed to GitHub with descriptive messages, maintaining full audit trail and enabling team collaboration
 - **Enhanced OAuth Security**: Two-tier authentication system - installation password for bot access, plus owner password for GitHub-integrated code management, ensuring complete control over system access
 - **Parameter Display Debug Implementation**: Added comprehensive debug logging to Discord bot generate key commands to troubleshoot early access, booster, and monthly parameter parsing and display issues in real-time
+- **MacSploit API Features Integration**: Updated whitelist API interface to accept and send early access, booster, and monthly parameters directly to MacSploit API endpoint - Discord bot now passes user-selected features in API requests for proper key generation with correct permissions
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

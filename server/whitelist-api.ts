@@ -29,6 +29,11 @@ export interface WhitelistRequest {
     id: string;
     provider: string;
   };
+  features?: {
+    early_access?: boolean;
+    booster?: boolean;
+    monthly?: boolean;
+  };
 }
 
 export interface WhitelistResponse {
@@ -45,7 +50,8 @@ export class WhitelistAPI {
     userNote: string,
     paymentId: string,
     paymentProvider: string,
-    staffName?: string
+    staffName?: string,
+    features?: { early_access?: boolean; booster?: boolean; monthly?: boolean }
   ): Promise<WhitelistResponse> {
     try {
       console.log(`Making whitelist API request for contact: ${contactInfo}`);
@@ -60,6 +66,12 @@ export class WhitelistAPI {
           provider: paymentProvider
         }
       };
+
+      // Add features if provided
+      if (features && (features.early_access || features.booster || features.monthly)) {
+        requestPayload.features = features;
+        console.log(`[API] Adding features to request: ${JSON.stringify(features)}`);
+      }
 
       const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
         method: 'POST',

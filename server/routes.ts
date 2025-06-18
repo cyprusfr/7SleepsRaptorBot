@@ -372,43 +372,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Get file list from the project
       const fs = await import('fs/promises');
       const path = await import('path');
       
       const getFiles = async (dir: string, relativePath = ''): Promise<any[]> => {
-        const items = await fs.readdir(dir, { withFileTypes: true });
-        const files = [];
-        
-        for (const item of items) {
-          if (item.name.startsWith('.') || item.name === 'node_modules') continue;
+        try {
+          const items = await fs.readdir(dir, { withFileTypes: true });
+          const files = [];
           
-          const fullPath = path.join(dir, item.name);
-          const relPath = path.join(relativePath, item.name);
-          
-          if (item.isDirectory()) {
-            const subFiles = await getFiles(fullPath, relPath);
-            files.push({
-              name: item.name,
-              type: 'directory',
-              path: relPath,
-              children: subFiles
-            });
-          } else {
-            files.push({
-              name: item.name,
-              type: 'file',
-              path: relPath,
-              size: (await fs.stat(fullPath)).size
-            });
+          for (const item of items) {
+            if (item.name.startsWith('.') || 
+                item.name === 'node_modules' || 
+                item.name === '.git' ||
+                item.name === 'dist' ||
+                item.name === 'build') continue;
+            
+            const fullPath = path.join(dir, item.name);
+            const relPath = relativePath ? path.join(relativePath, item.name) : item.name;
+            
+            try {
+              if (item.isDirectory()) {
+                const subFiles = await getFiles(fullPath, relPath);
+                files.push({
+                  name: item.name,
+                  type: 'directory',
+                  path: relPath,
+                  children: subFiles
+                });
+              } else {
+                const stats = await fs.stat(fullPath);
+                files.push({
+                  name: item.name,
+                  type: 'file',
+                  path: relPath,
+                  size: stats.size
+                });
+              }
+            } catch (error) {
+              // Skip files/directories that can't be accessed
+              continue;
+            }
           }
+          return files;
+        } catch (error) {
+          return [];
         }
-        return files;
       };
 
-      const files = await getFiles('.');
+      const files = await getFiles(process.cwd());
       res.json({ files });
     } catch (error) {
+      console.error('Failed to read files:', error);
       res.status(500).json({ error: 'Failed to read files' });
     }
   });
@@ -421,10 +435,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const fs = await import('fs/promises');
+      const path = await import('path');
       const filePath = req.params.path;
-      const content = await fs.readFile(filePath, 'utf-8');
+      
+      // Security check - ensure file is within project directory
+      const fullPath = path.resolve(process.cwd(), filePath);
+      if (!fullPath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const content = await fs.readFile(fullPath, 'utf-8');
       res.json({ content, path: filePath });
     } catch (error) {
+      console.error('Failed to read file:', error);
       res.status(500).json({ error: 'Failed to read file' });
     }
   });
@@ -437,12 +460,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const fs = await import('fs/promises');
+      const path = await import('path');
       const filePath = req.params.path;
       const { content } = req.body;
       
-      await fs.writeFile(filePath, content, 'utf-8');
+      // Security check - ensure file is within project directory
+      const fullPath = path.resolve(process.cwd(), filePath);
+      if (!fullPath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      await fs.writeFile(fullPath, content, 'utf-8');
       res.json({ success: true, message: 'File updated successfully' });
     } catch (error) {
+      console.error('Failed to write file:', error);
       res.status(500).json({ error: 'Failed to write file' });
     }
   });

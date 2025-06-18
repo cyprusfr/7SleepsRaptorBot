@@ -416,15 +416,30 @@ export class RaptorBot {
   }
 
   private async registerCommands() {
-    console.log('🔄 Clearing old commands...');
+    console.log('🔄 Clearing old commands completely...');
     
-    // Clear all existing commands first to remove old subcommands
+    // Clear both global and guild-specific commands
     try {
+      // Clear global commands
       await this.client.application?.commands.set([]);
-      console.log('✅ Cleared all existing commands');
+      console.log('✅ Cleared global commands');
+
+      // Clear guild-specific commands for all guilds
+      for (const guild of this.client.guilds.cache.values()) {
+        try {
+          await guild.commands.set([]);
+          console.log(`✅ Cleared commands for guild: ${guild.name}`);
+        } catch (error) {
+          console.log(`⚠️ Could not clear commands for guild ${guild.name}:`, error);
+        }
+      }
     } catch (error) {
       console.log('⚠️ Could not clear commands (non-critical):', error);
     }
+
+    // Wait for Discord to process the clearing
+    console.log('⏳ Waiting for Discord to process command clearing...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     const commands = [
       // Test command
@@ -1414,7 +1429,9 @@ export class RaptorBot {
         .addStringOption(option =>
           option.setName('code')
             .setDescription('6-character verification code from dashboard')
-            .setRequired(true)),
+            .setRequired(true)
+            .setMinLength(6)
+            .setMaxLength(6)),
 
       // View Commands
       new SlashCommandBuilder()

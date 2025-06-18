@@ -201,17 +201,18 @@ export class WhitelistAPI {
 
   static async rewhitelistUser(keyValue: string, reasonNote: string = 'Re-whitelisted via Discord bot'): Promise<WhitelistResponse> {
     try {
-      console.log(`[REWHITELIST MULTI-ATTEMPT] Starting comprehensive rewhitelist for: ${keyValue}`);
+      console.log(`[REWHITELIST] Direct API call for: ${keyValue}`);
       
-      // Attempt 1: Standard rewhitelist with identifier
-      console.log('[ATTEMPT 1] Standard /api/rewhitelist with identifier');
-      let requestPayload = {
+      // Direct approach - exact parameters as specified
+      const requestPayload = {
         identifier: keyValue,
         reason_note: reasonNote,
         api_key: API_KEY
       };
 
-      let response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
+      console.log('[REWHITELIST] Request payload:', { ...requestPayload, api_key: '[REDACTED]' });
+
+      const response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,344 +221,37 @@ export class WhitelistAPI {
         body: JSON.stringify(requestPayload)
       });
 
-      let responseText = await response.text();
-      console.log('[ATTEMPT 1] Status:', response.status, 'Body:', responseText);
+      const responseText = await response.text();
+      console.log('[REWHITELIST] Response Status:', response.status);
+      console.log('[REWHITELIST] Response Body:', responseText);
 
-      if (response.ok) {
-        let responseData = JSON.parse(responseText);
-        if (responseData.success !== false) {
-          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-          return { success: true, message: responseData.message || 'Successfully rewhitelisted' };
-        }
-      }
-
-      // Attempt 2: Using Discord user ID as identifier (API hint: "user's ID, hwid, email or key")
-      console.log('[ATTEMPT 2] Using Discord user ID as identifier');
-      requestPayload = {
-        identifier: "1131426483404026019", // Discord ID from original generation
-        reason_note: reasonNote,
-        api_key: API_KEY
-      };
-      
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 2] Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
-        let responseData = JSON.parse(responseText);
-        if (responseData.success !== false) {
-          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-          return { success: true, message: responseData.message || 'Successfully rewhitelisted' };
-        }
-      }
-
-      // Attempt 3: Adding contact_info from original generation
-      console.log('[ATTEMPT 3] Adding contact_info parameter');
-      requestPayload = {
-        identifier: keyValue,
-        contact_info: "1131426483404026019",
-        reason_note: reasonNote,
-        api_key: API_KEY
-      };
-      
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 3] Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
-        let responseData = JSON.parse(responseText);
-        if (responseData.success !== false) {
-          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-          return { success: true, message: responseData.message || 'Successfully rewhitelisted' };
-        }
-      }
-
-      // Attempt 4: PUT method instead of POST
-      console.log('[ATTEMPT 4] Using PUT method');
-      requestPayload = {
-        identifier: keyValue,
-        reason_note: reasonNote,
-        api_key: API_KEY
-      };
-      
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 4] Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
-        let responseData = JSON.parse(responseText);
-        if (responseData.success !== false) {
-          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-          return { success: true, message: responseData.message || 'Successfully rewhitelisted' };
-        }
-      }
-
-      // Attempt 5: Different endpoint variations
-      const endpoints = ['/api/reactivate', '/api/activate', '/api/whitelist/reactivate', '/api/keys/reactivate'];
-      
-      for (let i = 0; i < endpoints.length; i++) {
-        console.log(`[ATTEMPT ${5 + i}] Trying endpoint: ${endpoints[i]}`);
-        
-        response = await fetch(`${WHITELIST_API_BASE}${endpoints[i]}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'RaptorBot/1.0'
-          },
-          body: JSON.stringify({
-            identifier: keyValue,
-            reason_note: reasonNote,
-            api_key: API_KEY
-          })
-        });
-
-        responseText = await response.text();
-        console.log(`[ATTEMPT ${5 + i}] Status:`, response.status, 'Body:', responseText);
-
-        if (response.ok) {
-          try {
-            let responseData = JSON.parse(responseText);
-            if (responseData.success !== false) {
-              await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-              return { success: true, message: responseData.message || 'Successfully rewhitelisted' };
-            }
-          } catch (e) {
-            // Continue to next attempt
-          }
-        }
-      }
-
-      // Attempt 9: Try with admin API approach (similar to dewhitelist)
-      console.log('[ATTEMPT 9] Using admin API approach');
-      const adminHeaders = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'RaptorBot/1.0',
-        'Authorization': `Bearer ${API_KEY}`,
-        'X-API-Key': API_KEY,
-        'Admin-Key': API_KEY
-      };
-
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'POST',
-        headers: adminHeaders,
-        body: JSON.stringify({
-          identifier: keyValue,
-          reason_note: reasonNote,
-          api_key: API_KEY
-        })
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 9] Admin approach - Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
-        try {
-          let responseData = JSON.parse(responseText);
-          if (responseData.success !== false) {
-            await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-            return { success: true, message: responseData.message || 'Successfully rewhitelisted via admin API' };
-          }
-        } catch (e) {
-          // Continue
-        }
-      }
-
-      // Attempt 10: Try with email format 
-      console.log('[ATTEMPT 10] Using email format as identifier');
-      requestPayload = {
-        identifier: "alex@example.com", // Try email format
-        reason_note: reasonNote,
-        api_key: API_KEY
-      };
-      
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 10] Email format - Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
-        try {
-          let responseData = JSON.parse(responseText);
-          if (responseData.success !== false) {
-            await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-            return { success: true, message: responseData.message || 'Successfully rewhitelisted via email' };
-          }
-        } catch (e) {
-          // Continue
-        }
-      }
-
-      // Attempt 11: Try with HWID if we can find it in database
-      console.log('[ATTEMPT 11] Trying with HWID lookup');
+      let responseData;
       try {
-        // Look up the HWID associated with this key
-        const keyInfo = await storage.getKeyInfo(keyValue);
-        if (keyInfo && keyInfo.hwid) {
-          console.log('[ATTEMPT 11] Found HWID:', keyInfo.hwid);
-          requestPayload = {
-            identifier: keyInfo.hwid,
-            reason_note: reasonNote,
-            api_key: API_KEY
-          };
-          
-          response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'RaptorBot/1.0'
-            },
-            body: JSON.stringify(requestPayload)
-          });
-
-          responseText = await response.text();
-          console.log('[ATTEMPT 11] HWID approach - Status:', response.status, 'Body:', responseText);
-
-          if (response.ok) {
-            let responseData = JSON.parse(responseText);
-            if (responseData.success !== false) {
-              await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-              return { success: true, message: responseData.message || 'Successfully rewhitelisted via HWID' };
-            }
-          }
-        } else {
-          console.log('[ATTEMPT 11] No HWID found for this key');
-        }
-      } catch (e) {
-        console.log('[ATTEMPT 11] HWID lookup failed:', e.message);
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.log('[REWHITELIST] Failed to parse JSON response');
+        responseData = { message: responseText };
       }
 
-      // Attempt 12: Try activation endpoint first, then rewhitelist
-      console.log('[ATTEMPT 12] Trying to activate key first, then rewhitelist');
-      
-      // First try to activate the key
-      let activatePayload = {
-        identifier: keyValue,
-        api_key: API_KEY,
-        contact_info: "1131426483404026019"
-      };
-
-      response = await fetch(`${WHITELIST_API_BASE}/api/activate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(activatePayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 12A] Activate attempt - Status:', response.status, 'Body:', responseText);
-
-      // If activation worked or gave a different error, try rewhitelist again
-      if (response.status !== 405) {
-        console.log('[ATTEMPT 12B] Retrying rewhitelist after activation attempt');
-        
-        response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'RaptorBot/1.0'
-          },
-          body: JSON.stringify({
-            identifier: keyValue,
-            reason_note: reasonNote,
-            api_key: API_KEY
-          })
-        });
-
-        responseText = await response.text();
-        console.log('[ATTEMPT 12B] Post-activation rewhitelist - Status:', response.status, 'Body:', responseText);
-
-        if (response.ok) {
-          try {
-            let responseData = JSON.parse(responseText);
-            if (responseData.success !== false) {
-              await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-              return { success: true, message: responseData.message || 'Successfully rewhitelisted after activation' };
-            }
-          } catch (e) {
-            // Continue
-          }
-        }
-      }
-
-      // Attempt 13: Try with different parameter structure
-      console.log('[ATTEMPT 13] Trying different parameter structure');
-      requestPayload = {
-        api_key: API_KEY,
-        identifier: keyValue,
-        reason: reasonNote,
-        reactivate: true
-      };
-      
-      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'RaptorBot/1.0'
-        },
-        body: JSON.stringify(requestPayload)
-      });
-
-      responseText = await response.text();
-      console.log('[ATTEMPT 13] Different structure - Status:', response.status, 'Body:', responseText);
-
-      if (response.ok) {
+      if (response.ok && responseData.success !== false) {
+        // Update key status in local database
         try {
-          let responseData = JSON.parse(responseText);
-          if (responseData.success !== false) {
-            await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-            return { success: true, message: responseData.message || 'Successfully rewhitelisted with alternate structure' };
-          }
-        } catch (e) {
-          // Continue
+          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
+          console.log('[REWHITELIST] Key marked as rewhitelisted in local database');
+        } catch (dbError) {
+          console.log('[REWHITELIST] Failed to update local database:', dbError.message);
         }
-      }
 
-      // All attempts failed
-      console.log('❌ ALL REWHITELIST ATTEMPTS FAILED');
-      let finalError;
-      try {
-        finalError = JSON.parse(responseText);
-      } catch (e) {
-        finalError = { message: responseText };
+        return {
+          success: true,
+          message: responseData.message || 'Key successfully re-whitelisted in Raptor system'
+        };
+      } else {
+        return {
+          success: false,
+          error: responseData.message || responseData.error || responseText || 'Failed to rewhitelist key'
+        };
       }
-      
-      return {
-        success: false,
-        error: finalError.message || finalError.error || 'All rewhitelist attempts exhausted'
-      };
 
     } catch (error) {
       console.error('Error in comprehensive rewhitelist:', error);

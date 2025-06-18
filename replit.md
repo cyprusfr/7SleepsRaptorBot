@@ -126,21 +126,11 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Discord OAuth2 Integration**: Added complete Discord OAuth2 authentication system with redirect URI support for user login flow alongside existing Google OAuth
 - **Password-Protected Bot Installation**: Implemented secure OAuth callback system requiring password `RaptorBot2025!SecureInstall#9847` for bot invitations, preventing unauthorized installations with professional HTML password form
 - **Enhanced Bot Installation Flow**: Created comprehensive multi-step installation process with bot key validation, owner key generation, Discord OAuth integration, and interactive tutorial system with 1-second hold skip functionality
-- **Comprehensive Command Tutorial System**: Created complete 6-tab tutorial interface showing all 60+ commands with implementation details, code explanations, database operations, and technical architecture documentation
-- **GitHub Integration for Code Management**: Replaced local file system with complete GitHub API integration providing professional version control capabilities
-- **Real-Time Repository Management**: Owners can now browse, edit, and commit changes directly to GitHub repository through secure web interface with proper authentication
-- **Advanced Version Control Features**: Implemented SHA tracking, commit message support, repository synchronization, and conflict detection for seamless collaboration
-- **Professional Git Workflow**: Code changes are automatically committed to GitHub with descriptive messages, maintaining full audit trail and enabling team collaboration
-- **Enhanced OAuth Security**: Two-tier authentication system - installation password for bot access, plus owner password for GitHub-integrated code management, ensuring complete control over system access
-- **Parameter Display Debug Implementation**: Added comprehensive debug logging to Discord bot generate key commands to troubleshoot early access, booster, and monthly parameter parsing and display issues in real-time
-- **MacSploit API Features Integration**: Updated whitelist API interface to accept and send early access, booster, and monthly parameters directly to MacSploit API endpoint - Discord bot now passes user-selected features in API requests for proper key generation with correct permissions
-- **API Parameter Structure Fix**: Modified API request structure to send early_access and server_booster as top-level parameters instead of nested features object, removed features from payment note text to match MacSploit API expectations
-- **Early Access Parameter Investigation Complete**: Conducted comprehensive API testing with multiple parameter formats (boolean/string values, alternative names like premium/beta_access/nitro) revealing MacSploit API receives all parameters correctly but consistently returns early_access: false - confirmed API limitation despite user verification of sufficient permissions
-- **MacSploit API Feature Flag Analysis**: Tested 15+ parameter variations including early_access, earlyAccess, premium, beta_access, server_booster, booster, nitro, discord_boost with both boolean and string values - API generates valid license keys but feature flags remain inactive indicating server-side processing limitations
-- **Auto-Tutorial System Implementation**: Modified bot installation flow to automatically redirect to tutorial page after successful bot addition - users are now seamlessly guided through system features immediately after installation
-- **Comprehensive Settings Page Creation**: Built complete user settings interface with categorized sections for Learning & Help, Account Settings, and Application Settings - includes dedicated tutorial access option as primary feature
-- **Enhanced Visual Tutorial Experience**: Upgraded tutorial with cinematic Roblox character animations, dynamic gradient backgrounds, floating code particles, and MacSploit branding - creates immersive learning environment with professional presentation
-- **Settings Navigation Integration**: Added settings page route to main application with professional layout, quick tutorial access, and comprehensive configuration options for future extensibility
+- **Tutorial Content Update**: Redesigned tutorial to focus specifically on explaining Discord bot command usage and functionality instead of technical architecture
+- **Command-Focused Tutorial Sections**: Updated all 5 tutorial tabs to explain practical command usage: Command Overview, License Key Commands, User Management Commands, Candy Economy Commands, and Support & Moderation Commands
+- **Go to Dashboard Button Implementation**: Added prominent blue "Go to Dashboard" button in tutorial interface allowing users to easily navigate to main dashboard after learning about commands
+- **Practical Command Examples**: Tutorial now shows actual command syntax, parameter usage, and real-world examples of how each Discord bot command works in practice
+- **Authentication Flow Fixes**: Resolved "signed in as unknown" display issue by removing conflicting authentication endpoints - bot invitation now properly redirects authenticated users to tutorial without Discord verification requirement
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

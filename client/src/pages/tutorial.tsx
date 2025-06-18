@@ -820,20 +820,20 @@ SESSION_SECRET=***
               Tutorial Complete!
             </CardTitle>
             <CardDescription className="text-green-700 dark:text-green-300">
-              You've completed the full Raptor Bot tutorial. You now understand how the entire system works!
+              You've completed the Discord bot command tutorial. You now understand how all the commands work!
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-green-700 dark:text-green-300">
               <p className="mb-2">What you've learned:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Complete system architecture and technology stack</li>
-                <li>60+ Discord bot commands with database integration</li>
-                <li>PostgreSQL schema design and optimization</li>
-                <li>Multi-layer authentication with Google and Discord OAuth</li>
-                <li>MacSploit API integration for license key generation</li>
-                <li>React dashboard with real-time data and responsive design</li>
-                <li>Production deployment and monitoring</li>
+                <li>How to use all 60+ Discord bot commands</li>
+                <li>License key generation with MacSploit API integration</li>
+                <li>User management and whitelist commands</li>
+                <li>Verification system linking Discord to dashboard</li>
+                <li>Candy economy commands and banking system</li>
+                <li>MacSploit support tags for instant help</li>
+                <li>Moderation and backup commands for server management</li>
               </ul>
             </div>
           </CardContent>

@@ -180,22 +180,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
-  // Discord bot invite endpoint (simple invite without OAuth redirect)
+  // Discord OAuth invite endpoint with redirect functionality
   app.get('/api/discord/invite', (req, res) => {
     const clientId = process.env.DISCORD_CLIENT_ID;
     if (!clientId) {
       return res.status(500).json({ error: 'Discord client ID not configured' });
     }
 
-    // Simple bot invite URL with administrator permissions
-    const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=274877906944&scope=bot%20applications.commands`;
+    // OAuth scopes for bot invite with redirect
+    const scopes = ['bot', 'applications.commands', 'identify', 'guilds'];
+    
+    // Redirect URI for OAuth callback
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/discord/callback`;
+
+    // Build OAuth invite URL with redirect
+    const inviteUrl = new URL('https://discord.com/api/oauth2/authorize');
+    inviteUrl.searchParams.set('client_id', clientId);
+    inviteUrl.searchParams.set('permissions', '274877906944');
+    inviteUrl.searchParams.set('scope', scopes.join(' '));
+    inviteUrl.searchParams.set('response_type', 'code');
+    inviteUrl.searchParams.set('redirect_uri', redirectUri);
 
     res.json({
-      inviteUrl: inviteUrl,
-      message: 'Bot invite URL ready',
+      inviteUrl: inviteUrl.toString(),
+      scopes,
       permissions: '274877906944',
-      scopes: ['bot', 'applications.commands']
+      redirectUri,
+      message: 'OAuth invite URL with redirect functionality'
     });
+  });
+
+  // Discord OAuth callback handler
+  app.get('/api/discord/callback', async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code) {
+        return res.status(400).send('Authorization code missing');
+      }
+
+      console.log('Discord OAuth callback received:', { code: code ? 'present' : 'missing' });
+
+      // Redirect to success page with installation complete
+      res.redirect('/invite-success?status=complete&type=oauth');
+    } catch (error) {
+      console.error('Discord OAuth callback error:', error);
+      res.status(500).send('OAuth callback failed');
+    }
   });
 
   // Bot installation key validation

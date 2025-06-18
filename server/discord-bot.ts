@@ -416,17 +416,22 @@ export class RaptorBot {
   }
 
   private async registerCommands() {
-    console.log('🔄 Clearing old commands completely...');
+    console.log('🔄 FORCE CLEARING ALL DISCORD COMMANDS...');
     
-    // Clear both global and guild-specific commands
+    // AGGRESSIVE COMMAND CLEARING - Delete everything first
     try {
-      // Clear global commands
+      // Clear global commands completely
       await this.client.application?.commands.set([]);
       console.log('✅ Cleared global commands');
 
-      // Clear guild-specific commands for all guilds
+      // Clear ALL guild commands
       for (const guild of this.client.guilds.cache.values()) {
         try {
+          const existingCommands = await guild.commands.fetch();
+          for (const command of existingCommands.values()) {
+            await command.delete();
+            console.log(`🗑️ Deleted command: ${command.name} from guild ${guild.name}`);
+          }
           await guild.commands.set([]);
           console.log(`✅ Cleared commands for guild: ${guild.name}`);
         } catch (error) {
@@ -442,36 +447,23 @@ export class RaptorBot {
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     const commands = [
-      // Test command
+      // ONLY ESSENTIAL COMMANDS - Remove all complex subcommands temporarily
+      
+      // Verify Command - Clean single parameter
       new SlashCommandBuilder()
-        .setName('test')
-        .setDescription('Test command for debugging'),
+        .setName('verify')
+        .setDescription('Verify your Discord account with a code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('6-character verification code from dashboard')
+            .setRequired(true)
+            .setMinLength(6)
+            .setMaxLength(6)),
 
-      // Add command (exactly from screenshots)
+      // Simple ping command
       new SlashCommandBuilder()
-        .setName('add')
-        .setDescription('Add a license key to the database')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('key')
-            .setDescription('Add a new license key')
-            .addStringOption(option => option.setName('key').setDescription('License key').setRequired(true))
-            .addUserOption(option => option.setName('user').setDescription('User to assign key to').setRequired(false))
-            .addStringOption(option => option.setName('hwid').setDescription('Hardware ID').setRequired(false))
-            .addStringOption(option => option.setName('note').setDescription('Additional notes').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('logs')
-            .setDescription('Add logs to a user')
-            .addUserOption(option => option.setName('user').setDescription('Target user').setRequired(true))
-            .addIntegerOption(option => option.setName('amount').setDescription('Number of logs to add').setRequired(true))
-            .addStringOption(option => option.setName('reason').setDescription('Reason for adding logs').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('whitelist')
-            .setDescription('Add user to whitelist')
-            .addUserOption(option => option.setName('user').setDescription('User to whitelist').setRequired(true))
-            .addStringOption(option => option.setName('reason').setDescription('Reason for whitelisting').setRequired(false))),
+        .setName('ping')
+        .setDescription('Check bot response time'),
 
       // Announce Command
       new SlashCommandBuilder()

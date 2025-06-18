@@ -1573,20 +1573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth routes with user data
-  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
-    try {
-      const userId = (req.user as any)?.id;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ error: "Failed to fetch user" });
-    }
-  });
+  // Auth routes with user data removed - handled by auth.ts to avoid conflicts
 
   // Admin routes for user management
   app.get('/api/admin/users', rateLimits.admin.middleware.bind(rateLimits.admin), requireAuth, requireAdmin, async (req, res) => {

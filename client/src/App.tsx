@@ -73,8 +73,9 @@ function Router() {
     );
   }
 
-  // If not authenticated with Google, or not completed auth flow
-  if (!isAuthenticated || (!authFlowComplete && !dashboardKeyAuthenticated)) {
+  // Only show auth flow if not authenticated with Google
+  // If user is authenticated with Google, skip Discord verification and allow access
+  if (!isAuthenticated) {
     return (
       <AuthFlow 
         onComplete={() => {

@@ -8,7 +8,7 @@ export default function InviteSuccess() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLocation('/tutorial');
+      setLocation('/story-tutorial');
     }, 2000);
     return () => clearTimeout(timer);
   }, [setLocation]);

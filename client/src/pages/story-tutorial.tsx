@@ -844,7 +844,7 @@ export default function StoryTutorial() {
     }, 4000); // 4 seconds per section
 
     return () => clearInterval(interval);
-  }, [isAutoScrolling, sections.length]);
+  }, [isAutoScrolling]);
 
   useEffect(() => {
     const handleScroll = (e: WheelEvent) => {

@@ -29,11 +29,9 @@ export interface WhitelistRequest {
     id: string;
     provider: string;
   };
-  features?: {
-    early_access?: boolean;
-    booster?: boolean;
-    monthly?: boolean;
-  };
+  early_access?: boolean;
+  server_booster?: boolean;
+  monthly?: boolean;
 }
 
 export interface WhitelistResponse {
@@ -67,10 +65,22 @@ export class WhitelistAPI {
         }
       };
 
-      // Add features if provided
-      if (features && (features.early_access || features.booster || features.monthly)) {
-        requestPayload.features = features;
-        console.log(`[API] Adding features to request: ${JSON.stringify(features)}`);
+      // Add features as top-level parameters if provided
+      if (features) {
+        if (features.early_access) {
+          requestPayload.early_access = true;
+        }
+        if (features.booster) {
+          requestPayload.server_booster = true;
+        }
+        if (features.monthly) {
+          requestPayload.monthly = true;
+        }
+        console.log(`[API] Adding features as top-level parameters:`, {
+          early_access: requestPayload.early_access,
+          server_booster: requestPayload.server_booster,
+          monthly: requestPayload.monthly
+        });
       }
 
       const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {

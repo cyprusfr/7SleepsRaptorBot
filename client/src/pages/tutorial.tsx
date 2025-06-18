@@ -119,85 +119,78 @@ export default function Tutorial() {
   const cutscenes = [
     {
       id: 0,
-      title: "Project Overview",
-      icon: <Sparkles className="w-6 h-6" />,
+      title: "Command Overview",
+      icon: <Bot className="w-6 h-6" />,
       duration: 30,
-      description: "Complete overview of the Raptor Bot Dashboard system",
+      description: "How to use the Discord bot commands effectively",
       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       particles: true,
       showRoblox: false,
       content: `
-# Raptor Bot Dashboard - Complete System Architecture
+# Raptor Bot Commands - How Everything Works
 
-## What We Built
-A sophisticated Discord bot management system for MacSploit (Roblox executor) with:
-- **60+ Discord slash commands** with real database operations
-- **Google OAuth authentication** for web dashboard access
-- **Discord verification system** for bot interactions
-- **License key management** with MacSploit API integration
-- **Payment processing** for Bitcoin, Ethereum, PayPal, CashApp, Venmo, Robux
-- **HWID tracking** and hardware validation
-- **Comprehensive backup system** capturing entire Discord servers
-- **Activity logging** for complete audit trails
+## Getting Started
+The bot has **60+ slash commands** that handle MacSploit license management. All commands work through Discord's slash command system - just type "/" in any channel where the bot has permissions.
 
-## Technology Stack
-- **Frontend**: React + TypeScript + Shadcn UI + Tailwind CSS
-- **Backend**: Express.js + TypeScript + Drizzle ORM
-- **Database**: PostgreSQL with advanced schemas
-- **Bot Framework**: Discord.js v14 with slash commands
-- **Authentication**: Google OAuth + Discord OAuth
-- **APIs**: MacSploit whitelist API integration
+## Basic Command Structure
+Most commands follow this pattern:
+\`\`\`
+/command-name required-parameter optional-parameter
+\`\`\`
+
+## Key Features
+- **Real-time database updates** - All changes are instantly saved
+- **MacSploit API integration** - Commands generate actual working license keys  
+- **Permission-based access** - Different roles can use different commands
+- **Comprehensive logging** - All actions are tracked for security
+
+## Command Categories
+1. **License Key Generation** - Create keys for payments
+2. **User Management** - Whitelist and manage users
+3. **Verification System** - Link Discord to dashboard
+4. **Moderation Tools** - Server administration
+5. **Candy Economy** - Fun reward system
       `
     },
     {
       id: 1,
-      title: "Discord Bot Commands",
-      icon: <Bot className="w-6 h-6" />,
+      title: "License Key Commands",
+      icon: <Shield className="w-6 h-6" />,
       duration: 45,
-      description: "60+ production-ready Discord commands with database integration",
+      description: "How to generate and manage MacSploit license keys",
       background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
       particles: true,
       showRoblox: false,
       content: `
-# Discord Bot Commands - Complete Implementation
+# License Key Generation Commands
 
-## Command Categories (60+ Total)
+## How Key Generation Works
+The bot connects to MacSploit's API to create real working license keys. When you run a generate command, it:
+1. **Validates your permissions** - Only authorized users can generate keys
+2. **Calls MacSploit API** - Creates an actual license in their system
+3. **Saves to database** - Records the transaction for tracking
+4. **Sends to user** - DMs the key directly to the recipient
 
-### License Key Management
-\`\`\`typescript
-// Generate key commands with real MacSploit API
-/generatekey paypal user:@user note:"Payment note" early-access:yes
-/generatekey bitcoin user:@user note:"BTC payment" booster:yes
-/generatekey robux user:@user note:"Robux payment" monthly:yes
-
-// API Integration Example
-const response = await fetch('https://www.raptor.fun/api/whitelist', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer 85f9e513-8030-4e88-a04d-042e62e0f707',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    contact: interaction.user.id,
-    payment_method: paymentMethod,
-    payment_note: note,
-    staff_name: interaction.user.username,
-    early_access: earlyAccess
-  })
-});
+## Generate Key Commands
+\`\`\`
+/generatekey paypal user:@user note:"PayPal payment $20"
+/generatekey bitcoin user:@user note:"BTC payment"
+/generatekey robux user:@user note:"Robux trade"
+/generatekey cashapp user:@user note:"CashApp $15"
 \`\`\`
 
-### User Administration
-\`\`\`typescript
-/whitelist add user:@user   // Add to MacSploit whitelist
-/whitelist remove user:@user // Remove from whitelist
-/userinfo user:@user        // Complete user profile
-/hwidinfo user:@user        // Hardware ID information
+## Optional Features
+Add these to any generate command:
+- **early-access:yes** - Gives beta features access
+- **booster:yes** - For Discord server boosters
+- **monthly:yes** - Monthly subscription tier
+
+## Example Usage
+\`\`\`
+/generatekey paypal user:@JohnDoe note:"PayPal $25" early-access:yes booster:yes
 \`\`\`
 
-### Payment System Integration
-- **10 Payment Methods**: PayPal, CashApp, Robux, Bitcoin, Ethereum, Litecoin, Venmo, Giftcard, Sellix, Custom
-- **Real API Calls**: Generates working MacSploit license keys
+This creates a key with early access and booster perks for a PayPal payment.
 - **Activity Logging**: Every transaction recorded with payment IDs
 - **Staff Attribution**: Commands track which staff member generated keys
 
@@ -221,89 +214,96 @@ const response = await fetch('https://www.raptor.fun/api/whitelist', {
     },
     {
       id: 2,
-      title: "Database Architecture",
-      icon: <Database className="w-6 h-6" />,
+      title: "User Management Commands",
+      icon: <Users className="w-6 h-6" />,
       duration: 35,
-      description: "PostgreSQL schema with Drizzle ORM and comprehensive data management",
+      description: "How to manage users, whitelist, and verification",
       background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
       particles: true,
       showRoblox: false,
       content: `
-# Database Architecture - Production Schema
+# User Management Commands
 
-## Core Tables
-
-### Users & Authentication
-\`\`\`sql
--- Google OAuth users for dashboard access
-CREATE TABLE users (
-  id VARCHAR PRIMARY KEY,
-  email VARCHAR UNIQUE,
-  first_name VARCHAR,
-  last_name VARCHAR,
-  profile_image_url VARCHAR,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Discord bot users with candy system
-CREATE TABLE discord_users (
-  id SERIAL PRIMARY KEY,
-  discord_id VARCHAR UNIQUE NOT NULL,
-  username VARCHAR NOT NULL,
-  candy_balance INTEGER DEFAULT 0,
-  candy_bank INTEGER DEFAULT 0,
-  last_daily TIMESTAMP,
-  is_whitelisted BOOLEAN DEFAULT FALSE
-);
+## Whitelist Commands
+Control who can access MacSploit:
+\`\`\`
+/whitelist add user:@user     // Add user to MacSploit whitelist
+/whitelist remove user:@user  // Remove user from whitelist
+/whitelist check user:@user   // Check if user is whitelisted
 \`\`\`
 
-### License Key Management
-\`\`\`sql
-CREATE TABLE discord_keys (
-  id SERIAL PRIMARY KEY,
-  key_id VARCHAR NOT NULL,
-  user_id VARCHAR NOT NULL,
-  discord_username VARCHAR,
-  hwid VARCHAR,
-  status VARCHAR DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT NOW(),
-  revoked_at TIMESTAMP,
-  revoked_by VARCHAR
-);
+## User Information Commands
+Get detailed user data:
+\`\`\`
+/userinfo user:@user    // Shows Discord profile, join date, roles
+/hwidinfo user:@user    // Hardware ID and linked devices
+/keyinfo key:ABC123     // License key details and status
 \`\`\`
 
-### Activity Logging
-\`\`\`sql
-CREATE TABLE activity_logs (
-  id SERIAL PRIMARY KEY,
-  user_id VARCHAR,
-  action VARCHAR NOT NULL,
-  details JSONB,
-  timestamp TIMESTAMP DEFAULT NOW(),
-  ip_address VARCHAR,
-  user_agent VARCHAR
-);
+## Verification System
+Link Discord accounts to dashboard:
+\`\`\`
+/verify    // Generates 6-character code for dashboard
 \`\`\`
 
-## Advanced Features
-- **JSONB Storage**: Flexible metadata and configuration storage
-- **Indexed Queries**: Optimized for Discord user lookups
-- **Audit Trails**: Complete history of all system operations
-- **Session Management**: Secure user session storage
-- **Backup Integrity**: SHA-256 checksums for backup validation
+**How verification works:**
+1. User runs `/verify` in Discord
+2. Bot generates a unique 6-character code
+3. User enters code in dashboard login
+4. System links Discord account to web access
+
+## Admin Commands
+For server moderators:
+\`\`\`
+/dewhitelist key:ABC123    // Remove key from MacSploit system
+/transfer from:@user to:@newuser key:ABC123    // Change key ownership
+\`\`\`
       `
     },
     {
       id: 3,
-      title: "Authentication System",
-      icon: <Shield className="w-6 h-6" />,
+      title: "Candy Economy & Fun Commands",
+      icon: <Sparkles className="w-6 h-6" />,
       duration: 40,
-      description: "Dual OAuth system with Google and Discord integration",
+      description: "Complete candy economy with games and banking",
       background: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)",
       particles: true,
       showRoblox: false,
       content: `
-# Authentication System - Multi-Layer Security
+# Candy Economy Commands
+
+## Basic Candy Commands
+The bot includes a fun candy economy system:
+\`\`\`
+/daily         // Get 2,000 candies every 24 hours
+/balance       // Check your candy balance
+/leaderboard   // See top candy holders
+/pay @user 500 // Send candies to another user
+\`\`\`
+
+## Banking System
+Store candies safely with interest:
+\`\`\`
+/deposit 1000   // Put candies in the bank
+/withdraw 500   // Take candies out
+/bank          // Check bank balance
+\`\`\`
+
+## Games & Activities
+Earn candies through mini-games:
+\`\`\`
+/beg           // Random candy rewards (50-500 candies)
+/scam          // Credit card scam game (35% success rate)
+/gamble 1000   // Gambling with 47% win rate
+\`\`\`
+
+## How It Works
+- **Daily Reset**: Get 2,000 candies every 24 hours
+- **Banking Interest**: Earn extra candies over time
+- **Risk vs Reward**: Gambling and scamming have failure chances
+- **Leaderboards**: Compete with other users for top spots
+
+This system keeps users engaged while providing entertainment value.
 
 ## Google OAuth Integration
 \`\`\`typescript
@@ -461,88 +461,51 @@ async function dewhitelistKey(keyId: string) {
       `
     },
     {
-      id: 5,
-      title: "Web Dashboard",
-      icon: <Users className="w-6 h-6" />,
+      id: 4,
+      title: "Support & Moderation Commands", 
+      icon: <Settings className="w-6 h-6" />,
       duration: 30,
-      description: "React-based dashboard with real-time data and responsive design",
+      description: "MacSploit support tags and server moderation tools",
       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       particles: true,
       showRoblox: false,
       content: `
-# Web Dashboard - Professional Interface
+# Support & Moderation Commands
 
-## Dashboard Features
-\`\`\`tsx
-// Main dashboard with real-time stats
-function Dashboard() {
-  const { data: stats } = useQuery({
-    queryKey: ['/api/stats'],
-    refetchInterval: 30000 // Real-time updates
-  });
-  
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatsCard 
-        title="Total Users" 
-        value={stats?.totalUsers} 
-        icon={<Users />} 
-      />
-      <StatsCard 
-        title="Active Keys" 
-        value={stats?.activeKeys} 
-        icon={<Shield />} 
-      />
-      <StatsCard 
-        title="Daily Revenue" 
-        value={stats?.dailyRevenue} 
-        icon={<Zap />} 
-      />
-      <StatsCard 
-        title="Server Uptime" 
-        value={stats?.uptime} 
-        icon={<Settings />} 
-      />
-    </div>
-  );
-}
+## MacSploit Support Tags
+The bot responds to support messages automatically:
+\`\`\`
+.hwid          // Hardware ID troubleshooting guide
+.crash         // MacSploit crash fixes and solutions
+.install       // Installation instructions for MacSploit
+.scripts       // Script execution and debugging help
+.paypal        // PayPal payment troubleshooting
+.robux         // Robux payment issues and solutions
 \`\`\`
 
-## Pages & Navigation
-- **Dashboard**: Real-time system statistics
-- **Key Management**: License key administration
-- **User Management**: Discord user profiles
-- **Activity Logs**: Complete audit trails
-- **Backup Management**: Server backup controls
-- **Bot Settings**: Discord bot configuration
-- **Admin Panel**: Owner-only administrative tools
+## How Support Tags Work
+When users type `.hwid` or `.crash` in chat, the bot automatically responds with detailed help information. No slash commands needed - just type the tag and get instant support.
 
-## Authentication Flow
-\`\`\`tsx
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  
-  if (isLoading) return <LoadingSpinner />;
-  if (!user) return <LoginPage />;
-  
-  return <>{children}</>;
-}
+## Moderation Commands
+Server administration tools:
+\`\`\`
+/purge 10           // Delete last 10 messages
+/timeout @user 1h   // Timeout user for 1 hour
+/say Hello everyone // Bot sends a message
+/dm @user message   // Send private message to user
+/announce message   // Server-wide announcement
 \`\`\`
 
-## UI Components
-- **Shadcn UI**: Professional component library
-- **Dark/Light Theme**: System preference detection
-- **Responsive Design**: Mobile-first approach
-- **Real-time Updates**: WebSocket integration for live data
-- **Toast Notifications**: User feedback system
-- **Form Validation**: Zod schema validation
-- **Data Tables**: Sortable, filterable tables with pagination
+## Backup & System Commands
+Server management and data protection:
+\`\`\`
+/backup create name:"Full Backup"    // Complete server backup
+/backup restore id:123              // Restore from backup
+/ping                              // Check bot response time
+/stats                            // System statistics
+\`\`\`
 
-## Security Implementation
-- **Protected Routes**: Authentication required
-- **CSRF Tokens**: Request validation
-- **Input Sanitization**: XSS prevention
-- **Rate Limiting**: API abuse prevention
+These commands help maintain server order and provide technical support for MacSploit users.
       `
     },
     {
@@ -824,6 +787,29 @@ SESSION_SECRET=***
           </CardContent>
         </Card>
       </div>
+
+      {/* Go to Dashboard Button */}
+      <Card className="mt-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <CardHeader>
+          <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center gap-2">
+            <ChevronRight className="w-5 h-5" />
+            Ready to Use the Dashboard?
+          </CardTitle>
+          <CardDescription className="text-blue-700 dark:text-blue-300">
+            Access the main dashboard to manage your Discord bot, view statistics, and control all system features.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={() => window.location.href = '/'}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            size="lg"
+          >
+            <ChevronRight className="w-5 h-5 mr-2" />
+            Go to Dashboard
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Tutorial Completion */}
       {completedSections.length === cutscenes.length && (

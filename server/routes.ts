@@ -180,79 +180,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
-  // Discord OAuth invite endpoint with code grant
+  // Discord bot invite endpoint (simple invite without OAuth redirect)
   app.get('/api/discord/invite', (req, res) => {
     const clientId = process.env.DISCORD_CLIENT_ID;
     if (!clientId) {
       return res.status(500).json({ error: 'Discord client ID not configured' });
     }
 
-    // OAuth scopes for bot invite with code grant
-    const scopes = [
-      'bot',
-      'applications.commands',
-      'identify',
-      'guilds',
-      'guilds.join'
-    ];
-
-    // Bot permissions
-    const permissions = [
-      'VIEW_CHANNELS',
-      'SEND_MESSAGES', 
-      'EMBED_LINKS',
-      'ATTACH_FILES',
-      'READ_MESSAGE_HISTORY',
-      'USE_SLASH_COMMANDS',
-      'MANAGE_MESSAGES',
-      'KICK_MEMBERS',
-      'BAN_MEMBERS',
-      'MANAGE_ROLES',
-      'MANAGE_CHANNELS',
-      'MANAGE_GUILD',
-      'ADD_REACTIONS',
-      'VIEW_AUDIT_LOG',
-      'PRIORITY_SPEAKER',
-      'STREAM',
-      'CONNECT',
-      'SPEAK',
-      'MUTE_MEMBERS',
-      'DEAFEN_MEMBERS',
-      'MOVE_MEMBERS',
-      'USE_VAD',
-      'CHANGE_NICKNAME',
-      'MANAGE_NICKNAMES',
-      'USE_EXTERNAL_EMOJIS',
-      'VIEW_GUILD_INSIGHTS',
-      'SEND_TTS_MESSAGES',
-      'USE_SLASH_COMMANDS',
-      'SEND_MESSAGES_IN_THREADS',
-      'CREATE_PUBLIC_THREADS',
-      'CREATE_PRIVATE_THREADS',
-      'USE_EXTERNAL_STICKERS',
-      'SEND_VOICE_MESSAGES'
-    ];
-
-    // Calculate permissions value
-    const permissionsValue = calculatePermissions(permissions);
-
-    // Redirect URI for OAuth callback
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/discord/callback`;
-
-    // Build OAuth invite URL with code grant
-    const inviteUrl = new URL('https://discord.com/api/oauth2/authorize');
-    inviteUrl.searchParams.set('client_id', clientId);
-    inviteUrl.searchParams.set('permissions', permissionsValue.toString());
-    inviteUrl.searchParams.set('scope', scopes.join(' '));
-    inviteUrl.searchParams.set('response_type', 'code');
-    inviteUrl.searchParams.set('redirect_uri', redirectUri);
-    inviteUrl.searchParams.set('state', generateSecureState());
+    // Simple bot invite URL with administrator permissions
+    const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=274877906944&scope=bot%20applications.commands`;
 
     res.json({
-      inviteUrl: inviteUrl.toString(),
-      scopes,
-      permissions: permissionsValue,
-      redirectUri
+      inviteUrl: inviteUrl,
+      message: 'Bot invite URL ready',
+      permissions: '274877906944',
+      scopes: ['bot', 'applications.commands']
     });
   });
 

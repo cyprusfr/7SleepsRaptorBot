@@ -17,8 +17,91 @@ import {
   Settings,
   BookOpen,
   ChevronRight,
-  CheckCircle
+  CheckCircle,
+  Sparkles,
+  Terminal,
+  Server,
+  Cpu
 } from "lucide-react";
+// Use the Roblox character image URL directly
+const robloxCharacterImage = "/attached_assets/Screenshot 2025-06-18 at 12.03.30 PM_1750273413097.png";
+
+// Animated background component
+const AnimatedBackground = ({ background, particles, showRoblox }: { 
+  background: string; 
+  particles?: boolean; 
+  showRoblox?: boolean; 
+}) => {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div 
+        className="absolute inset-0 opacity-20"
+        style={{ background }}
+      />
+      
+      {/* Matrix rain effect for coding sections */}
+      {particles && (
+        <div className="absolute inset-0">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 3}s`
+              }}
+            >
+              <div className="w-1 h-1 bg-green-400 rounded-full opacity-60" />
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Floating code elements */}
+      <div className="absolute inset-0 opacity-10">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute text-xs font-mono text-white animate-bounce"
+            style={{
+              left: `${Math.random() * 90}%`,
+              top: `${Math.random() * 90}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${3 + Math.random() * 2}s`
+            }}
+          >
+            {['const', 'function', 'async', 'await', 'return', '{}', '[]', '=>'][i]}
+          </div>
+        ))}
+      </div>
+      
+      {/* Roblox character for MacSploit sections */}
+      {showRoblox && (
+        <div className="absolute bottom-4 right-4 opacity-30">
+          <img 
+            src={robloxCharacterImage} 
+            alt="Roblox Character" 
+            className="w-32 h-32 object-contain animate-pulse"
+          />
+        </div>
+      )}
+      
+      {/* Geometric patterns */}
+      <div className="absolute inset-0 opacity-5">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <defs>
+            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="100" height="100" fill="url(#grid)" />
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 export default function Tutorial() {
   const [currentCutscene, setCurrentCutscene] = useState(0);
@@ -30,9 +113,12 @@ export default function Tutorial() {
     {
       id: 0,
       title: "Project Overview",
-      icon: <BookOpen className="w-6 h-6" />,
+      icon: <Sparkles className="w-6 h-6" />,
       duration: 30,
       description: "Complete overview of the Raptor Bot Dashboard system",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Raptor Bot Dashboard - Complete System Architecture
 
@@ -62,6 +148,9 @@ A sophisticated Discord bot management system for MacSploit (Roblox executor) wi
       icon: <Bot className="w-6 h-6" />,
       duration: 45,
       description: "60+ production-ready Discord commands with database integration",
+      background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Discord Bot Commands - Complete Implementation
 
@@ -129,6 +218,9 @@ const response = await fetch('https://www.raptor.fun/api/whitelist', {
       icon: <Database className="w-6 h-6" />,
       duration: 35,
       description: "PostgreSQL schema with Drizzle ORM and comprehensive data management",
+      background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Database Architecture - Production Schema
 
@@ -200,6 +292,9 @@ CREATE TABLE activity_logs (
       icon: <Shield className="w-6 h-6" />,
       duration: 40,
       description: "Dual OAuth system with Google and Discord integration",
+      background: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Authentication System - Multi-Layer Security
 
@@ -269,6 +364,9 @@ function generateVerificationCode(): string {
       icon: <Zap className="w-6 h-6" />,
       duration: 35,
       description: "Real-time license key generation with MacSploit whitelist API",
+      background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+      particles: true,
+      showRoblox: true,
       content: `
 # MacSploit API Integration - Production Implementation
 

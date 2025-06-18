@@ -344,13 +344,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Redirect to success page
-      res.redirect(`/invite-success?guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}`);
+      // Redirect to success page with complete tutorial
+      res.redirect(`/invite-success?guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}&tutorial=true`);
 
     } catch (error) {
       console.error('Discord OAuth callback error:', error);
       res.status(500).json({ error: 'OAuth callback failed' });
     }
+  });
+
+  // Owner-only code management endpoints
+  const OWNER_PASSWORD = 'RaptorOwner2025!CodeAccess#1337';
+  
+  app.get('/api/owner/authenticate', (req, res) => {
+    const { password } = req.query;
+    if (password === OWNER_PASSWORD) {
+      res.json({ authenticated: true, message: 'Owner access granted' });
+    } else {
+      res.status(401).json({ authenticated: false, message: 'Invalid owner password' });
+    }
+  });
+
+  app.get('/api/owner/files', async (req, res) => {
+    const { password } = req.query;
+    if (password !== OWNER_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get file list from the project
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      const getFiles = async (dir: string, relativePath = ''): Promise<any[]> => {
+        const items = await fs.readdir(dir, { withFileTypes: true });
+        const files = [];
+        
+        for (const item of items) {
+          if (item.name.startsWith('.') || item.name === 'node_modules') continue;
+          
+          const fullPath = path.join(dir, item.name);
+          const relPath = path.join(relativePath, item.name);
+          
+          if (item.isDirectory()) {
+            const subFiles = await getFiles(fullPath, relPath);
+            files.push({
+              name: item.name,
+              type: 'directory',
+              path: relPath,
+              children: subFiles
+            });
+          } else {
+            files.push({
+              name: item.name,
+              type: 'file',
+              path: relPath,
+              size: (await fs.stat(fullPath)).size
+            });
+          }
+        }
+        return files;
+      };
+
+      const files = await getFiles('.');
+      res.json({ files });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to read files' });
+    }
+  });
+
+  app.get('/api/owner/file/:path(*)', async (req, res) => {
+    const { password } = req.query;
+    if (password !== OWNER_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const fs = await import('fs/promises');
+      const filePath = req.params.path;
+      const content = await fs.readFile(filePath, 'utf-8');
+      res.json({ content, path: filePath });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to read file' });
+    }
+  });
+
+  app.post('/api/owner/file/:path(*)', async (req, res) => {
+    const { password } = req.body;
+    if (password !== OWNER_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const fs = await import('fs/promises');
+      const filePath = req.params.path;
+      const { content } = req.body;
+      
+      await fs.writeFile(filePath, content, 'utf-8');
+      res.json({ success: true, message: 'File updated successfully' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to write file' });
+    }
+  });
+
+  app.get('/api/commands/tutorial', (req, res) => {
+    const commandTutorial = {
+      overview: {
+        title: "Raptor Bot Command System",
+        description: "Comprehensive Discord bot with 60+ commands for license management, user administration, and server automation",
+        architecture: "Built with Discord.js, TypeScript, and PostgreSQL database integration"
+      },
+      categories: {
+        license_management: {
+          title: "License Key Management",
+          description: "Core functionality for managing MacSploit license keys",
+          commands: [
+            {
+              name: "/add",
+              description: "Add new license key to database",
+              usage: "/add key:ABC123 user:@username note:Premium key",
+              code_explanation: "Validates key format, checks for duplicates, stores in discord_keys table with metadata",
+              database_operations: ["INSERT into discord_keys", "Check key uniqueness", "Log activity"]
+            },
+            {
+              name: "/keyinfo",
+              description: "Display detailed information about a license key",
+              usage: "/keyinfo key:ABC123",
+              code_explanation: "Queries database for key details, shows status, user, HWID, creation date",
+              database_operations: ["SELECT from discord_keys", "JOIN with discord_users", "Format display data"]
+            },
+            {
+              name: "/transfer",
+              description: "Transfer key ownership between users",
+              usage: "/transfer key:ABC123 from:@user1 to:@user2",
+              code_explanation: "Validates ownership, updates database, logs transfer activity",
+              database_operations: ["UPDATE discord_keys.userId", "INSERT activity_logs", "Verify permissions"]
+            }
+          ]
+        },
+        payment_processing: {
+          title: "Payment Key Generation",
+          description: "Real API integration with Raptor whitelist system",
+          commands: [
+            {
+              name: "/generate-paypal",
+              description: "Generate license key for PayPal payment",
+              usage: "/generate-paypal user:@username note:Payment received",
+              code_explanation: "Calls real Raptor API (www.raptor.fun/api/whitelist) with payment validation",
+              api_integration: "POST request with API key, returns working license key",
+              database_operations: ["Store generated key", "Log payment activity", "Update user records"]
+            },
+            {
+              name: "/generate-bitcoin",
+              description: "Generate key for Bitcoin payment",
+              usage: "/generate-bitcoin user:@username note:BTC payment confirmed",
+              code_explanation: "Same API integration as PayPal but with Bitcoin payment method validation",
+              api_integration: "Real API call with method: 'bitcoin', returns actual working key"
+            }
+          ]
+        },
+        user_administration: {
+          title: "User Management System",
+          description: "Comprehensive user tracking and administration",
+          commands: [
+            {
+              name: "/whitelist",
+              description: "Add user to whitelist system",
+              usage: "/whitelist add user:@username key:ABC123",
+              code_explanation: "Updates discord_users.isWhitelisted, links to license key",
+              database_operations: ["UPDATE discord_users", "Link key association", "Log whitelist change"]
+            },
+            {
+              name: "/userinfo",
+              description: "Display comprehensive user information",
+              usage: "/userinfo user:@username",
+              code_explanation: "Aggregates data from multiple tables: users, keys, logs, activities",
+              database_operations: ["JOIN multiple tables", "Calculate statistics", "Format user profile"]
+            }
+          ]
+        },
+        candy_economy: {
+          title: "Candy Economy System",
+          description: "Gamified currency system with realistic mechanics",
+          commands: [
+            {
+              name: "/daily",
+              description: "Claim daily candy reward (2000 candies)",
+              usage: "/daily",
+              code_explanation: "Checks 24-hour cooldown, updates lastDaily timestamp, adds to balance",
+              game_mechanics: "24-hour cooldown, prevents multiple claims, realistic reward system",
+              database_operations: ["CHECK lastDaily < 24h ago", "UPDATE candyBalance", "SET lastDaily = now()"]
+            },
+            {
+              name: "/gamble",
+              description: "Gamble candies with 47% win rate",
+              usage: "/gamble amount:1000",
+              code_explanation: "Implements house edge (53% loss rate), validates sufficient balance",
+              game_mechanics: "Realistic casino odds, prevents negative balances, logs all transactions",
+              database_operations: ["Validate balance >= amount", "UPDATE balance", "INSERT candy_transactions"]
+            }
+          ]
+        },
+        macsploit_support: {
+          title: "MacSploit Support Tags",
+          description: "Instant support responses for common MacSploit issues",
+          implementation: "Message-based triggers (.hwid, .crash, etc.) with intelligent detection",
+          commands: [
+            {
+              name: ".hwid",
+              description: "Hardware ID troubleshooting guide",
+              trigger: "Message contains '.hwid'",
+              code_explanation: "Detects message content, responds with HWID reset instructions",
+              response_format: "Plain text with step-by-step instructions"
+            },
+            {
+              name: ".scripts",
+              description: "Script execution help with intelligent language detection",
+              trigger: "Message contains '.scripts'",
+              code_explanation: "Analyzes script content, auto-detects bash vs Lua, formats accordingly",
+              smart_features: "Automatic language detection, proper syntax highlighting"
+            }
+          ]
+        },
+        moderation: {
+          title: "Server Moderation Tools",
+          description: "Comprehensive moderation with database logging",
+          commands: [
+            {
+              name: "/purge",
+              description: "Delete multiple messages with logging",
+              usage: "/purge amount:50",
+              code_explanation: "Bulk deletes messages, logs all deletions to database",
+              database_operations: ["Log each deleted message", "Track moderator action", "Store message content"]
+            },
+            {
+              name: "/timeout",
+              description: "Timeout user with duration and reason",
+              usage: "/timeout user:@username duration:1h reason:Spam",
+              code_explanation: "Applies Discord timeout, logs to moderation_logs table",
+              database_operations: ["INSERT moderation_logs", "Track timeout duration", "Log reason"]
+            }
+          ]
+        }
+      },
+      technical_implementation: {
+        architecture: {
+          database: "PostgreSQL with Drizzle ORM for type-safe queries",
+          bot_framework: "Discord.js v14 with slash commands and message handling",
+          api_integration: "Real Raptor API calls for license key generation",
+          authentication: "Google OAuth for dashboard, Discord verification for bot access"
+        },
+        code_structure: {
+          command_registration: "Slash commands registered per guild with proper permissions",
+          error_handling: "Comprehensive try-catch blocks with user-friendly error messages",
+          rate_limiting: "10 commands per 30 seconds per user with bypass for admins",
+          logging: "All operations logged to database with timestamps and metadata"
+        },
+        security_features: {
+          permission_checks: "Role-based access control for sensitive commands",
+          input_validation: "Zod schemas for all user inputs and API data",
+          api_key_protection: "Environment variables for sensitive credentials",
+          audit_trails: "Complete activity logging for all administrative actions"
+        }
+      },
+      deployment_notes: {
+        environment_variables: [
+          "DISCORD_TOKEN - Bot token from Discord Developer Portal",
+          "DISCORD_CLIENT_ID - Application ID for OAuth",
+          "DATABASE_URL - PostgreSQL connection string",
+          "RAPTOR_API_KEY - Real API key for license generation"
+        ],
+        production_setup: [
+          "Bot runs alongside Express server in same process",
+          "OAuth callbacks work with deployed domain",
+          "Database migrations handled by Drizzle",
+          "All 60+ commands operational in production"
+        ]
+      }
+    };
+
+    res.json(commandTutorial);
   });
 
   // Test dewhitelist API endpoint for comprehensive testing

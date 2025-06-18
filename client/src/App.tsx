@@ -17,6 +17,7 @@ import BackupsPage from "@/pages/backups";
 import AdminPanel from "@/pages/admin";
 import InviteBot from "@/pages/invite-bot";
 import InviteSuccess from "@/pages/invite-success";
+import CodeManager from "@/pages/code-manager";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -96,6 +97,7 @@ function Router() {
       <Route path="/invite-bot" component={InviteBot} />
       <Route path="/invite-success" component={InviteSuccess} />
       <Route path="/admin" component={AdminPanel} />
+      <Route path="/code-manager" component={CodeManager} />
       <Route component={NotFound} />
     </Switch>
   );

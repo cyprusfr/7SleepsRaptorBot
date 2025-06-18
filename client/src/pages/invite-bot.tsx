@@ -37,7 +37,7 @@ export default function InviteBot() {
   };
 
   const initiateDiscordAuth = () => {
-    const discordBotUrl = `https://discord.com/api/oauth2/authorize?client_id=1382224347892027412&permissions=274877906944&scope=bot%20applications.commands&redirect_uri=${encodeURIComponent(window.location.origin + '/invite-success')}`;
+    const discordBotUrl = `https://discord.com/api/oauth2/authorize?client_id=1382224347892027412&permissions=274877906944&scope=bot%20applications.commands&redirect_uri=${encodeURIComponent(window.location.origin + '/api/discord/callback')}`;
     window.location.href = discordBotUrl;
   };
 

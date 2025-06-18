@@ -136,6 +136,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Bot Add Key Requirement Implementation**: Added mandatory bot add key entry step before Discord bot installation, requiring password `RaptorBot2025!SecureInstall#9847` for secure access control
 - **Tutorial Auto-Scroll Fix**: Resolved tutorial glitch by fixing useEffect dependencies causing auto-scroll interruption - story tutorial now properly advances through all 11 sections with smooth 4-second intervals
 - **Complete Bot Installation Flow**: Implemented full user-requested flow: bot key entry → clean invitation page → Discord authorization → tutorial redirect with proper theme preservation for story tutorial's dramatic black design
+- **Discord Callback Redirect Fix**: Removed ugly callback page by making Discord OAuth redirect directly to story tutorial, eliminating unwanted intermediate page that was frustrating users
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

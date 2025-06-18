@@ -204,7 +204,7 @@ export class WhitelistAPI {
       console.log(`Making rewhitelist API request for: ${keyValue}`);
       
       const requestPayload = {
-        key: keyValue, // Try 'key' instead of 'identifier'
+        identifier: keyValue,
         reason_note: reasonNote,
         api_key: API_KEY
       };

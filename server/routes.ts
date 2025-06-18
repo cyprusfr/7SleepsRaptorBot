@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Discord OAuth callback handler
+  // Discord bot installation callback handler
   app.get('/api/discord/callback', async (req, res) => {
     const { code, state, guild_id, password } = req.query;
 

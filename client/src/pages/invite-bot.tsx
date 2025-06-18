@@ -43,8 +43,8 @@ export default function InviteBot() {
   });
 
   const initiateDiscordAuth = () => {
-    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=1382224347892027412&permissions=8&redirect_uri=https%3A%2F%2Fraptor-bot.replit.app%2Fapi%2Fcallback&scope=identify%20email&response_type=code`;
-    window.location.href = discordAuthUrl;
+    const discordBotUrl = `https://discord.com/oauth2/authorize?client_id=1382224347892027412&permissions=274877906944&scope=bot%20applications.commands&redirect_uri=https%3A%2F%2Fraptor-bot.replit.app%2Fapi%2Fdiscord%2Fcallback&password=RaptorBot2025!SecureInstall%239847`;
+    window.location.href = discordBotUrl;
   };
 
   const handleBotKeySubmit = () => {

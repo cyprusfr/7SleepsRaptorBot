@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { discordBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
+import { WhitelistAPI } from "./whitelist-api";
 
 import { z } from "zod";
 import crypto from "crypto";
@@ -153,6 +154,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('❌ Error setting up authentication:', error);
     throw error;
   }
+
+  // Test API endpoint for debugging early access parameter
+  app.post('/api/test-generate-key', async (req, res) => {
+    try {
+      const { user, note, payment_method, early_access, booster, monthly } = req.body;
+      
+      console.log('[TEST] Received request:', req.body);
+      
+      const features = {
+        early_access: early_access === true,
+        booster: booster === true,
+        monthly: monthly === true
+      };
+      
+      const paymentId = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const result = await WhitelistAPI.whitelistUser(
+        user,
+        note,
+        paymentId,
+        payment_method,
+        'TestStaff',
+        features
+      );
+      
+      console.log('[TEST] API Result:', result);
+      
+      res.json({
+        success: true,
+        result: result,
+        request_features: features,
+        payment_id: paymentId
+      });
+    } catch (error) {
+      console.error('[TEST] Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Health check endpoint for deployment infrastructure
   app.get('/api/health', (req, res) => {

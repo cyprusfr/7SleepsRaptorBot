@@ -83,6 +83,8 @@ export class WhitelistAPI {
         });
       }
 
+      console.log(`[API] Complete request payload:`, JSON.stringify(requestPayload, null, 2));
+      
       const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
         method: 'POST',
         headers: {
@@ -95,6 +97,8 @@ export class WhitelistAPI {
       const responseData = await response.json();
       
       console.log(`Whitelist API Response: ${response.status}`, responseData);
+      console.log(`[API] Response early_access field:`, responseData.data?.early_access);
+      console.log(`[API] Response server_booster field:`, responseData.data?.server_booster);
 
       // Extract key from the actual API response structure
       const generatedKey = responseData.data?.new_key || responseData.key || responseData.data?.key;

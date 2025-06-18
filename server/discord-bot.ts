@@ -595,14 +595,6 @@ export class RaptorBot {
 
 // Export instance
 export const raptorBot = new RaptorBot();
-          subcommand
-            .setName('list')
-            .setDescription('List all available backups'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('integrity')
-            .setDescription('Check backup integrity')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to check').setRequired(false)))
         .addSubcommand(subcommand =>
           subcommand
             .setName('schedule')

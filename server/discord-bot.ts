@@ -416,42 +416,14 @@ export class RaptorBot {
   }
 
   private async registerCommands() {
-    console.log('🔄 FIXING DISCORD INTEGRATION - RESOLVING UNKNOWN INTEGRATION ERROR...');
+    console.log('🔄 Registering Discord commands...');
     
-    // Validate Discord configuration
     if (!DISCORD_TOKEN || !CLIENT_ID) {
-      console.error('❌ Missing Discord credentials - DISCORD_TOKEN or CLIENT_ID not set');
+      console.error('❌ Missing Discord credentials');
       return;
     }
     
-    console.log(`🔍 Using Discord Application ID: ${CLIENT_ID}`);
-    console.log(`🔍 Bot Token configured: ${DISCORD_TOKEN ? 'Yes' : 'No'}`);
-    
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
-    
-    // Step 1: Clear all commands first
-    console.log('🗑️ Clearing all existing commands...');
-    try {
-      // Clear global commands
-      await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] });
-      console.log('✅ Global commands cleared');
-      
-      // Clear guild commands
-      for (const guild of this.client.guilds.cache.values()) {
-        try {
-          await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guild.id), { body: [] });
-          console.log(`✅ Cleared commands for ${guild.name}`);
-        } catch (error) {
-          console.log(`⚠️ Failed to clear ${guild.name}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Failed to clear commands:', error);
-    }
-    
-    // Step 2: Wait for cache invalidation
-    console.log('⏳ Waiting for Discord cache invalidation (10 seconds)...');
-    await new Promise(resolve => setTimeout(resolve, 10000));
 
     const commands = [
       // Test command
@@ -1553,39 +1525,17 @@ export class RaptorBot {
 
     ];
 
-    // Step 3: Register clean command set
-    console.log('🔄 Registering clean Discord commands...');
-    
     try {
-      // First try guild registration (more reliable)
-      let registrationSuccess = false;
+      console.log('🔄 Registering commands...');
       
-      for (const guild of this.client.guilds.cache.values()) {
-        try {
-          console.log(`🔄 Registering commands for ${guild.name}...`);
-          await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guild.id), { body: commands });
-          console.log(`✅ Commands registered successfully for ${guild.name}`);
-          registrationSuccess = true;
-        } catch (guildError) {
-          console.error(`❌ Guild registration failed for ${guild.name}:`, guildError);
-        }
-      }
-
-      // Also register globally for broader access
-      try {
-        console.log('🔄 Registering global commands...');
-        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-        console.log('✅ Global commands registered successfully');
-        registrationSuccess = true;
-      } catch (globalError) {
-        console.error('❌ Global registration failed:', globalError);
-      }
+      // Register commands globally
+      await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+      console.log('✅ Commands registered successfully');
       
-      if (registrationSuccess) {
-        console.log('✅ Discord integration fixed - commands registered successfully');
-      } else {
-        console.error('❌ All command registration attempts failed');
-      }
+      // Generate bot invite link with proper permissions
+      const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
+      console.log('🔗 Bot invite URL (use if commands still show "Unknown Integration"):');
+      console.log(inviteUrl);
 
       // Step 2: Clear all guild commands with extended wait
       const guilds = Array.from(this.client.guilds.cache.values());

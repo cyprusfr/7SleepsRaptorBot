@@ -416,6 +416,16 @@ export class RaptorBot {
   }
 
   private async registerCommands() {
+    console.log('🔄 Clearing old commands...');
+    
+    // Clear all existing commands first to remove old subcommands
+    try {
+      await this.client.application?.commands.set([]);
+      console.log('✅ Cleared all existing commands');
+    } catch (error) {
+      console.log('⚠️ Could not clear commands (non-critical):', error);
+    }
+
     const commands = [
       // Test command
       new SlashCommandBuilder()

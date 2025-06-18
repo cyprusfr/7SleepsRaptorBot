@@ -1397,33 +1397,14 @@ export class RaptorBot {
         .setDescription('Get detailed information about a user')
         .addUserOption(option => option.setName('user').setDescription('User to get info about').setRequired(false)),
 
-      // Verify Command - Complete implementation
+      // Verify Command - Simple code verification
       new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Verification system commands')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('start')
-            .setDescription('Start verification process')
-            .addUserOption(option => option.setName('user').setDescription('User to verify').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('check')
-            .setDescription('Check verification status')
-            .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('reset')
-            .setDescription('Reset verification for a user')
-            .addUserOption(option => option.setName('user').setDescription('User to reset').setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List pending verifications'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('expire')
-            .setDescription('Expire old verification codes')),
+        .setDescription('Verify your Discord account with a code')
+        .addStringOption(option =>
+          option.setName('code')
+            .setDescription('6-character verification code from dashboard')
+            .setRequired(true)),
 
       // View Commands
       new SlashCommandBuilder()
@@ -1964,30 +1945,95 @@ export class RaptorBot {
     await interaction.reply({ embeds: [embed] });
   }
 
-  // VERIFY COMMAND - Complete implementation matching your screenshots
+  // VERIFY COMMAND - Simple code verification matching dashboard
   private async handleVerifyCommand(interaction: ChatInputCommandInteraction) {
-    const subcommand = interaction.options.getSubcommand();
+    await interaction.deferReply({ ephemeral: true });
 
-    switch (subcommand) {
-      case 'start':
-        await this.handleVerifyStart(interaction);
-        break;
-      case 'check':
-        await this.handleVerifyCheck(interaction);
-        break;
-      case 'reset':
-        await this.handleVerifyReset(interaction);
-        break;
-      case 'list':
-        await this.handleVerifyList(interaction);
-        break;
-      case 'expire':
-        await this.handleVerifyExpire(interaction);
-        break;
+    const code = interaction.options.getString('code', true);
+
+    try {
+      // Look up verification session by code
+      const sessions = await db.select()
+        .from(verificationSessions)
+        .where(eq(verificationSessions.dashboardCode, code));
+
+      if (sessions.length === 0) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Invalid Code')
+          .setDescription('The verification code you entered is not valid or has expired.')
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const session = sessions[0];
+
+      // Check if code has expired
+      if (session.expiresAt < new Date()) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ Code Expired')
+          .setDescription('This verification code has expired. Please request a new one from the dashboard.')
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Check if already completed
+      if (session.completedAt) {
+        const embed = new EmbedBuilder()
+          .setTitle('✅ Already Verified')
+          .setDescription('This verification code has already been used.')
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Complete verification
+      await db.update(verificationSessions)
+        .set({
+          completedAt: new Date(),
+          status: 'completed',
+          discordUserId: interaction.user.id
+        })
+        .where(eq(verificationSessions.sessionId, session.sessionId));
+
+      await this.logActivity('verification_completed', 
+        `Discord verification completed for ${interaction.user.username} (${interaction.user.id})`
+      );
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Verification Complete')
+        .setDescription('Your Discord account has been successfully verified! You can now access the dashboard.')
+        .addFields(
+          { name: 'Discord User', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Verified At', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+      console.error('Error in verification:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Verification Error')
+        .setDescription('An error occurred during verification. Please try again.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
     }
   }
 
-  private async handleVerifyStart(interaction: ChatInputCommandInteraction) {
+  // BACKUP COMMAND - Complete implementation matching your screenshots
+  private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
 
     const targetUser = interaction.options.getUser('user') || interaction.user;

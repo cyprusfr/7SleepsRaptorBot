@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, ActivityType, AttachmentBuilder, ChannelType } from 'discord.js';
+import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, ActivityType, AttachmentBuilder, ChannelType, ButtonInteraction, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { storage } from './storage';
 import { db } from './db';
 import { discordUsers, licenseKeys, activityLogs, candyBalances, commandLogs, verificationSessions, type DiscordUser } from '@shared/schema';
@@ -1634,6 +1634,23 @@ export class RaptorBot {
         };
         
         await this.handleTotalLogsLeaderboard(mockInteraction as any);
+      } else if (interaction.customId === 'how_to_install') {
+        const installEmbed = new EmbedBuilder()
+          .setTitle('MacSploit Installation Guide')
+          .setDescription('Follow these steps to install and use MacSploit:')
+          .addFields(
+            { name: '1. Download MacSploit', value: 'Visit https://macsploit.com and download the latest version', inline: false },
+            { name: '2. Install the Application', value: 'Open the downloaded .dmg file and drag MacSploit to Applications', inline: false },
+            { name: '3. Launch MacSploit', value: 'Open MacSploit from Applications (you may need to allow it in Security settings)', inline: false },
+            { name: '4. Enter Your License Key', value: 'Paste your license key from the previous message into MacSploit', inline: false },
+            { name: '5. Join Roblox Game', value: 'Start any Roblox game you want to use MacSploit with', inline: false },
+            { name: '6. Inject & Execute', value: 'Click "Inject" in MacSploit, then load your scripts and enjoy!', inline: false }
+          )
+          .setColor(0x5865F2)
+          .setFooter({ text: 'MacSploit Installation Support' })
+          .setTimestamp();
+
+        await interaction.reply({ embeds: [installEmbed], ephemeral: true });
       }
     } catch (error) {
       console.error('Error handling button interaction:', error);
@@ -3759,25 +3776,48 @@ export class RaptorBot {
       await storage.createLicenseKey(keyData);
       await this.logActivity('key_generated_api', `${interaction.user.username} generated REAL ${subcommand} key via API: ${whitelistResult.key} for ${user.username} (Payment ID: ${paymentId})`);
       
-      const embed = new EmbedBuilder()
-        .setTitle(`🔑 WORKING License Key Generated`)
-        .setDescription(`✅ **REAL WORKING KEY** generated via Raptor API for ${paymentMethod}`)
-        .addFields(
-          { name: '🔐 **ACTIVE LICENSE KEY**', value: `\`${whitelistResult.key}\``, inline: false },
-          { name: '👤 Generated For', value: `<@${user.id}>`, inline: true },
-          { name: '💰 Payment Method', value: paymentMethod, inline: true },
-          { name: '🆔 Payment ID', value: `\`${paymentId}\``, inline: true },
-          { name: '📝 Note', value: note, inline: false },
-          { name: '🎯 Features', value: featuresDisplay, inline: false },
-          { name: '✅ API Status', value: whitelistResult.message || 'Key successfully generated', inline: false },
-          { name: '📋 Key Status', value: '🟢 **ACTIVE & WORKING**', inline: true },
-          { name: '⚡ Ready to Use', value: 'This key is immediately active and functional', inline: true }
-        )
-        .setColor(embedColor)
-        .setFooter({ text: 'Raptor License System - Real API Integration' })
-        .setTimestamp();
+      // Show simple success message in channel
+      await interaction.editReply({ content: '✅ Successful' });
       
-      await interaction.editReply({ embeds: [embed] });
+      // Send detailed key info to user via DM
+      try {
+        const currentDate = new Date();
+        const formattedDate = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}, ${currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+        
+        const dmEmbed = new EmbedBuilder()
+          .setTitle('Key Generated')
+          .setDescription(`Your MacSploit license key: ${whitelistResult.key}`)
+          .addFields(
+            { name: formattedDate, value: '\u200B', inline: false }
+          )
+          .setColor(0x5865F2);
+        
+        const button = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setLabel('How to Install')
+              .setStyle(ButtonStyle.Primary)
+              .setCustomId('how_to_install')
+          );
+        
+        await user.send({ embeds: [dmEmbed], components: [button] });
+        
+      } catch (dmError) {
+        console.error('Failed to send DM to user:', dmError);
+        // If DM fails, update the channel message to include the key
+        const fallbackEmbed = new EmbedBuilder()
+          .setTitle('✅ Key Generated (DM Failed)')
+          .setDescription(`Key generated successfully but couldn't send DM to <@${user.id}>`)
+          .addFields(
+            { name: 'License Key', value: `\`${whitelistResult.key}\``, inline: false },
+            { name: 'Payment Method', value: paymentMethod, inline: true },
+            { name: 'Features', value: featuresDisplay, inline: true }
+          )
+          .setColor(0xff9900)
+          .setTimestamp();
+        
+        await interaction.editReply({ embeds: [fallbackEmbed] });
+      }
       
     } catch (error) {
       console.error('Error generating real payment key:', error);

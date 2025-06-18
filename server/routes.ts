@@ -362,12 +362,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Redirect to bot key validation page first
-      res.redirect(`/invite-bot?added=true&guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}`);
+      // Simple success page
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Bot Added Successfully</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 100px auto; padding: 20px; text-align: center; }
+            .container { background: #f0f8ff; padding: 40px; border-radius: 10px; border: 2px solid #4CAF50; }
+            h1 { color: #4CAF50; margin-bottom: 20px; }
+            p { font-size: 18px; line-height: 1.6; color: #333; }
+            .guild-info { background: white; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 24px; background: #5865F2; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+            .button:hover { background: #4752C4; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>✅ Raptor Bot Added Successfully!</h1>
+            <p>The bot has been successfully added to your Discord server.</p>
+            ${guildInfo ? `
+              <div class="guild-info">
+                <strong>Server:</strong> ${guildInfo.name}
+              </div>
+            ` : ''}
+            <p>You can now use all bot commands in your Discord server.</p>
+            <a href="/" class="button">Return to Dashboard</a>
+          </div>
+        </body>
+        </html>
+      `);
 
     } catch (error) {
       console.error('Discord OAuth callback error:', error);
-      res.status(500).json({ error: 'OAuth callback failed' });
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Bot Installation Error</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 100px auto; padding: 20px; text-align: center; }
+            .container { background: #ffe6e6; padding: 40px; border-radius: 10px; border: 2px solid #ff4444; }
+            h1 { color: #ff4444; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>❌ Bot Installation Failed</h1>
+            <p>There was an error adding the bot to your server. Please try again.</p>
+            <a href="/" style="display: inline-block; padding: 12px 24px; background: #5865F2; color: white; text-decoration: none; border-radius: 5px;">Return to Dashboard</a>
+          </div>
+        </body>
+        </html>
+      `);
     }
   });
 

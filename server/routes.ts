@@ -253,6 +253,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Bot installation key validation
+  app.post('/api/bot/validate-key', async (req, res) => {
+    try {
+      const { key } = req.body;
+      const VALID_BOT_KEY = 'RaptorBot2025!SecureInstall#9847';
+      
+      if (!key) {
+        return res.status(400).json({ error: 'Installation key required' });
+      }
+      
+      if (key !== VALID_BOT_KEY) {
+        return res.status(401).json({ error: 'Invalid installation key' });
+      }
+      
+      res.json({ success: true, message: 'Valid installation key' });
+    } catch (error) {
+      console.error('Bot key validation error:', error);
+      res.status(500).json({ error: 'Validation failed' });
+    }
+  });
+
+  // Generate owner key
+  app.post('/api/owner/generate-key', async (req, res) => {
+    try {
+      // Generate secure random key
+      const ownerKey = `OWNER-${Date.now()}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+      
+      // Store in session or database for later verification
+      (req.session as any).ownerKey = ownerKey;
+      (req.session as any).ownerKeyGenerated = Date.now();
+      
+      res.json({ 
+        success: true, 
+        key: ownerKey,
+        message: 'Owner key generated successfully'
+      });
+    } catch (error) {
+      console.error('Owner key generation error:', error);
+      res.status(500).json({ error: 'Failed to generate owner key' });
+    }
+  });
+
   // Discord OAuth callback handler
   app.get('/api/discord/callback', async (req, res) => {
     const { code, state, guild_id, password } = req.query;

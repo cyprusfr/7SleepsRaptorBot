@@ -20,11 +20,11 @@ export default function InviteSuccess() {
   useEffect(() => {
     if (showTutorial) {
       const timer = setTimeout(() => {
-        setCurrentStep('tutorial');
+        setLocation('/tutorial');
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showTutorial]);
+  }, [showTutorial, setLocation]);
 
   const tutorialSteps = [
     {
@@ -146,14 +146,12 @@ export default function InviteSuccess() {
                 </p>
               )}
               <div className="flex justify-center gap-4">
-                <Button onClick={() => setLocation('/')}>
+                <Button onClick={() => setLocation('/tutorial')}>
+                  Start Tutorial
+                </Button>
+                <Button variant="outline" onClick={() => setLocation('/')}>
                   Go to Dashboard
                 </Button>
-                {showTutorial && (
-                  <Button variant="outline" onClick={() => setCurrentStep('tutorial')}>
-                    Start Tutorial Now
-                  </Button>
-                )}
               </div>
             </div>
           </CardContent>

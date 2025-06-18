@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function InviteBot() {
+  const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState('bot-key'); // bot-key, bot-installing, owner-key, tutorial, dashboard
   const [botKey, setBotKey] = useState('');
   const [ownerKey, setOwnerKey] = useState('');
@@ -181,7 +183,7 @@ export default function InviteBot() {
                     </span>
                   </AlertDescription>
                 </Alert>
-                <Button onClick={() => setCurrentStep('tutorial')} className="w-full">
+                <Button onClick={() => setLocation('/tutorial')} className="w-full">
                   Continue to Tutorial
                 </Button>
               </div>

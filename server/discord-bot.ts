@@ -463,37 +463,138 @@ export class RaptorBot {
       // Simple ping command
       new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Check bot response time'),
+        .setDescription('Check bot response time')
 
-      // Announce Command
-      new SlashCommandBuilder()
-        .setName('announce')
-        .setDescription('Send an announcement')
-        .addStringOption(option => option.setName('message').setDescription('Announcement message').setRequired(true))
-        .addChannelOption(option => option.setName('channel').setDescription('Channel to announce in').setRequired(false))
-        .addBooleanOption(option => option.setName('everyone').setDescription('Ping everyone').setRequired(false)),
+    ];
 
-      // Avatar Command
-      new SlashCommandBuilder()
-        .setName('avatar')
-        .setDescription('Display user avatar')
-        .addUserOption(option => option.setName('user').setDescription('User to get avatar of').setRequired(false)),
+    const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
 
-      // Backup Command - Comprehensive with all operations
-      new SlashCommandBuilder()
-        .setName('backup')
-        .setDescription('Database backup operations')
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('create')
-            .setDescription('Create a database backup')
-            .addStringOption(option => option.setName('name').setDescription('Backup name').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('restore')
-            .setDescription('Restore from a backup')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to restore').setRequired(true)))
-        .addSubcommand(subcommand =>
+    try {
+      console.log('🔄 Started refreshing application (/) commands.');
+
+      // Clear and register commands for each guild
+      const guilds = Array.from(this.client.guilds.cache.values());
+      for (const guild of guilds) {
+        try {
+          // Clear existing commands
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: [] },
+          );
+          
+          // Wait a moment then register new commands
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: commands },
+          );
+          console.log(`✅ Commands refreshed for guild: ${guild.name}`);
+        } catch (guildError) {
+          console.error(`❌ Failed to register commands for guild ${guild.name}:`, guildError);
+        }
+      }
+
+      console.log('✅ Successfully reloaded minimal command set.');
+    } catch (error) {
+      console.error('❌ Error refreshing commands:', error);
+    }
+  }
+
+  private async handleVerifyCommand(interaction: ChatInputCommandInteraction) {
+    const code = interaction.options.getString('code', true);
+    const userId = interaction.user.id;
+
+    try {
+      // Get verification by code
+      const verification = await storage.getVerificationByCode(code);
+      
+      if (!verification) {
+        await interaction.reply({
+          content: '❌ Invalid verification code. Please check your dashboard for the correct code.',
+          ephemeral: true
+        });
+        return;
+      }
+
+      if (verification.expiresAt && verification.expiresAt < new Date()) {
+        await interaction.reply({
+          content: '❌ Verification code has expired. Please generate a new one from the dashboard.',
+          ephemeral: true
+        });
+        return;
+      }
+
+      if (verification.completedAt) {
+        await interaction.reply({
+          content: '❌ This verification code has already been used.',
+          ephemeral: true
+        });
+        return;
+      }
+
+      // Complete verification
+      await storage.completeVerification(code, userId);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Verification Successful')
+        .setDescription('Your Discord account has been successfully verified!')
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+      // Log the activity
+      await storage.logActivity('discord_verification', `User ${interaction.user.username} completed Discord verification`);
+
+    } catch (error) {
+      console.error('Verification error:', error);
+      await interaction.reply({
+        content: '❌ An error occurred during verification. Please try again or contact support.',
+        ephemeral: true
+      });
+    }
+  }
+
+  private async handlePingCommand(interaction: ChatInputCommandInteraction) {
+    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true });
+    const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
+
+    const embed = new EmbedBuilder()
+      .setTitle('🏓 Pong!')
+      .addFields(
+        { name: 'Roundtrip Latency', value: `${roundtrip}ms`, inline: true },
+        { name: 'WebSocket Heartbeat', value: `${this.client.ws.ping}ms`, inline: true }
+      )
+      .setColor(0x0099ff)
+      .setTimestamp();
+
+    await interaction.editReply({ content: '', embeds: [embed] });
+  }
+
+  public async start() {
+    try {
+      await this.client.login(DISCORD_TOKEN);
+      console.log('✅ Discord bot started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start Discord bot:', error);
+      throw error;
+    }
+  }
+
+  public async updateSettings(settings: any) {
+    // Settings update functionality
+    console.log('Settings updated:', settings);
+  }
+
+  public async refreshSettings() {
+    // Refresh settings functionality
+    console.log('Settings refreshed');
+  }
+}
+
+// Export instance
+export const raptorBot = new RaptorBot();
           subcommand
             .setName('list')
             .setDescription('List all available backups'))

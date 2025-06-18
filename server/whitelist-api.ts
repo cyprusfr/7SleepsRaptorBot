@@ -231,10 +231,10 @@ export class WhitelistAPI {
         }
       }
 
-      // Attempt 2: Using 'key' parameter instead of 'identifier'
-      console.log('[ATTEMPT 2] Using "key" parameter');
+      // Attempt 2: Using Discord user ID as identifier (API hint: "user's ID, hwid, email or key")
+      console.log('[ATTEMPT 2] Using Discord user ID as identifier');
       requestPayload = {
-        key: keyValue,
+        identifier: "1131426483404026019", // Discord ID from original generation
         reason_note: reasonNote,
         api_key: API_KEY
       };
@@ -386,6 +386,77 @@ export class WhitelistAPI {
         }
       }
 
+      // Attempt 10: Try with email format 
+      console.log('[ATTEMPT 10] Using email format as identifier');
+      requestPayload = {
+        identifier: "alex@example.com", // Try email format
+        reason_note: reasonNote,
+        api_key: API_KEY
+      };
+      
+      response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'RaptorBot/1.0'
+        },
+        body: JSON.stringify(requestPayload)
+      });
+
+      responseText = await response.text();
+      console.log('[ATTEMPT 10] Email format - Status:', response.status, 'Body:', responseText);
+
+      if (response.ok) {
+        try {
+          let responseData = JSON.parse(responseText);
+          if (responseData.success !== false) {
+            await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
+            return { success: true, message: responseData.message || 'Successfully rewhitelisted via email' };
+          }
+        } catch (e) {
+          // Continue
+        }
+      }
+
+      // Attempt 11: Try with HWID if we can find it in database
+      console.log('[ATTEMPT 11] Trying with HWID lookup');
+      try {
+        // Look up the HWID associated with this key
+        const keyInfo = await storage.getKeyInfo(keyValue);
+        if (keyInfo && keyInfo.hwid) {
+          console.log('[ATTEMPT 11] Found HWID:', keyInfo.hwid);
+          requestPayload = {
+            identifier: keyInfo.hwid,
+            reason_note: reasonNote,
+            api_key: API_KEY
+          };
+          
+          response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'RaptorBot/1.0'
+            },
+            body: JSON.stringify(requestPayload)
+          });
+
+          responseText = await response.text();
+          console.log('[ATTEMPT 11] HWID approach - Status:', response.status, 'Body:', responseText);
+
+          if (response.ok) {
+            let responseData = JSON.parse(responseText);
+            if (responseData.success !== false) {
+              await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
+              return { success: true, message: responseData.message || 'Successfully rewhitelisted via HWID' };
+            }
+          }
+        } else {
+          console.log('[ATTEMPT 11] No HWID found for this key');
+        }
+      } catch (e) {
+        console.log('[ATTEMPT 11] HWID lookup failed:', e.message);
+      }
+
       // Final attempt: Try regenerating the key instead of rewhitelisting
       console.log('[FINAL ATTEMPT] Trying to regenerate key with same contact info');
       const regeneratePayload = {
@@ -395,7 +466,7 @@ export class WhitelistAPI {
         staff_name: 'RaptorBot',
         payment: {
           id: `REWHITELIST-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          provider: 'regenerate'
+          provider: 'custom'  // Fixed: use 'custom' instead of 'regenerate'
         }
       };
 

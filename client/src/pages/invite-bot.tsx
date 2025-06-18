@@ -11,12 +11,12 @@ export default function InviteBot() {
   const [, setLocation] = useLocation();
   const [botKey, setBotKey] = useState('');
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'key' | 'invite'>('key');
+  const [showInvite, setShowInvite] = useState(false);
 
   const handleBotKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (botKey.trim() === 'RaptorBot2025!SecureInstall#9847') {
-      setStep('invite');
+      setShowInvite(true);
       setError('');
     } else {
       setError('Invalid bot key. Please contact an administrator.');
@@ -28,7 +28,8 @@ export default function InviteBot() {
     window.location.href = discordBotUrl;
   };
 
-  if (step === 'invite') {
+  // Show the invitation page after bot key is validated
+  if (showInvite) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="w-full max-w-lg text-center space-y-8">
@@ -56,6 +57,7 @@ export default function InviteBot() {
     );
   }
 
+  // Show the bot key entry page first
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg text-center space-y-8">

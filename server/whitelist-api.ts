@@ -210,11 +210,11 @@ export class WhitelistAPI {
       };
 
       console.log('Rewhitelist API Request:', {
-        url: `${WHITELIST_API_BASE}/api/rewhitelist`,
+        url: `${WHITELIST_API_BASE}/api/whitelist`,
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
 
-      const response = await fetch(`${WHITELIST_API_BASE}/api/rewhitelist`, {
+      const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

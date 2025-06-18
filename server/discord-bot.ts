@@ -1532,10 +1532,11 @@ export class RaptorBot {
       await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
       console.log('✅ Commands registered successfully');
       
-      // Generate bot invite link with proper permissions
-      const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
-      console.log('🔗 Bot invite URL (use if commands still show "Unknown Integration"):');
+      // Generate bot invite link with proper permissions and scopes
+      const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&permissions=274877906944&scope=bot%20applications.commands`;
+      console.log('🔗 Complete bot invitation URL with both bot and applications.commands scopes:');
       console.log(inviteUrl);
+      console.log('📝 This includes: Administrator permissions + Bot scope + Slash Commands scope');
 
       // Step 2: Clear all guild commands with extended wait
       const guilds = Array.from(this.client.guilds.cache.values());

@@ -71,14 +71,17 @@ export class WhitelistAPI {
       
       console.log(`Whitelist API Response: ${response.status}`, responseData);
 
-      if (response.ok && responseData.success && responseData.key) {
+      // Extract key from the actual API response structure
+      const generatedKey = responseData.data?.new_key || responseData.key || responseData.data?.key;
+      
+      if (response.ok && responseData.success && generatedKey) {
         await storage.logActivity('whitelist_success', 
-          `Key generated successfully: ${responseData.key} for ${contactInfo}`
+          `Key generated successfully: ${generatedKey} for ${contactInfo}`
         );
 
         return {
           success: true,
-          key: responseData.key,
+          key: generatedKey,
           message: responseData.message || 'Key generated successfully'
         };
       } else {

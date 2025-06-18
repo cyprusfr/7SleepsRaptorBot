@@ -110,11 +110,9 @@ export class WhitelistAPI {
         });
       }
 
-      // Additional diagnostic logging for feature request analysis
+      // Feature flag status analysis
       if (features && (features.early_access || features.booster || features.monthly)) {
-        console.log(`[API] DIAGNOSTIC: Features requested but API consistently returns early_access: false`);
-        console.log(`[API] DIAGNOSTIC: This indicates API key may lack permissions for feature flags`);
-        console.log(`[API] DIAGNOSTIC: Features sent: early_access=${features.early_access}, booster=${features.booster}, monthly=${features.monthly}`);
+        console.log(`[API] Features requested in API call with multiple parameter formats`);
       }
 
       console.log(`[API] Complete request payload:`, JSON.stringify(requestPayload, null, 2));

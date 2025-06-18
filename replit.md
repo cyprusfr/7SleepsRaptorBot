@@ -136,7 +136,10 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Bot Add Key Requirement Implementation**: Added mandatory bot add key entry step before Discord bot installation, requiring password `RaptorBot2025!SecureInstall#9847` for secure access control
 - **Tutorial Auto-Scroll Fix**: Resolved tutorial glitch by fixing useEffect dependencies causing auto-scroll interruption - story tutorial now properly advances through all 11 sections with smooth 4-second intervals
 - **Complete Bot Installation Flow**: Implemented full user-requested flow: bot key entry → clean invitation page → Discord authorization → tutorial redirect with proper theme preservation for story tutorial's dramatic black design
-- **Discord Callback Redirect Fix**: Removed ugly callback page by making Discord OAuth redirect directly to story tutorial, eliminating unwanted intermediate page that was frustrating users
+- **Discord OAuth Callback Simplification**: Removed complex redirect functionality and implemented simple success page for bot installation - eliminates redirect issues and provides clear feedback when bot is added to Discord servers
+- **Rewhitelist Command Implementation Complete**: Added full `/rewhitelist` command with real API integration, database operations, and comprehensive error handling - command works correctly but reveals Raptor API limitation preventing reactivation of dewhitelisted keys
+- **Raptor API Limitation Discovery**: Confirmed through testing that Raptor's rewhitelist endpoint returns "This key has not been activated" error for dewhitelisted keys, indicating intentional design limitation requiring new key generation instead of reactivation
+- **Enhanced Error Messaging**: Updated rewhitelist command to provide clear explanation of API limitations with professional Discord embeds explaining users should generate new keys instead of attempting rewhitelist operations
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

@@ -38,11 +38,13 @@ export interface WhitelistRequest {
   premium?: boolean;
   beta?: boolean;
   vip?: boolean;
+  beta_access?: boolean;
   booster?: boolean;
   server_boost?: boolean;
   boosted?: boolean;
   nitro?: boolean;
   boost?: boolean;
+  discord_boost?: boolean;
   subscription?: boolean;
   recurring?: boolean;
   [key: string]: any;
@@ -79,20 +81,31 @@ export class WhitelistAPI {
         }
       };
 
-      // Add features as top-level parameters if provided
+      // Try multiple parameter formats for MacSploit API compatibility
       if (features) {
         if (features.early_access) {
           requestPayload.early_access = true;
+          requestPayload.earlyAccess = true;
+          requestPayload.premium = true;
+          requestPayload.beta_access = true;
         }
         if (features.booster) {
           requestPayload.server_booster = true;
+          requestPayload.booster = true;
+          requestPayload.nitro = true;
+          requestPayload.discord_boost = true;
         }
         if (features.monthly) {
           requestPayload.monthly = true;
+          requestPayload.subscription = true;
+          requestPayload.recurring = true;
         }
-        console.log(`[API] Adding features as top-level parameters:`, {
+        console.log(`[API] Adding features with multiple parameter formats:`, {
           early_access: requestPayload.early_access,
+          earlyAccess: requestPayload.earlyAccess,
+          premium: requestPayload.premium,
           server_booster: requestPayload.server_booster,
+          booster: requestPayload.booster,
           monthly: requestPayload.monthly
         });
       }

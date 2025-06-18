@@ -3411,9 +3411,18 @@ export class RaptorBot {
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user')!;
     const note = interaction.options.getString('note')!;
-    const booster = interaction.options.getString('booster') === 'yes';
-    const earlyAccess = interaction.options.getString('early-access') === 'yes';
-    const monthly = interaction.options.getString('monthly') === 'yes';
+    // Get raw parameter values first
+    const boosterRaw = interaction.options.getString('booster');
+    const earlyAccessRaw = interaction.options.getString('early-access');
+    const monthlyRaw = interaction.options.getString('monthly');
+    
+    console.log(`[DEBUG] Raw parameters - booster: "${boosterRaw}", early-access: "${earlyAccessRaw}", monthly: "${monthlyRaw}"`);
+    
+    const booster = boosterRaw === 'yes';
+    const earlyAccess = earlyAccessRaw === 'yes';
+    const monthly = monthlyRaw === 'yes';
+    
+    console.log(`[DEBUG] Parsed parameters - booster: ${booster}, earlyAccess: ${earlyAccess}, monthly: ${monthly}`);
     
     try {
       // Generate features display
@@ -3422,6 +3431,9 @@ export class RaptorBot {
       if (earlyAccess) features.push('Early Access');
       if (monthly) features.push('Monthly Subscription');
       const featuresDisplay = features.length > 0 ? features.join(', ') : 'Standard Access';
+      
+      console.log(`[DEBUG] Features array: ${JSON.stringify(features)}`);
+      console.log(`[DEBUG] Features display: ${featuresDisplay}`);
       
       // Generate payment ID for API call
       const paymentId = `${subcommand.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;

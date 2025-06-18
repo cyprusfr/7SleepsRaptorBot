@@ -15,6 +15,8 @@ import Settings from "@/pages/settings";
 import BotSettings from "@/pages/bot-settings";
 import BackupsPage from "@/pages/backups";
 import AdminPanel from "@/pages/admin";
+import InviteBot from "@/pages/invite-bot";
+import InviteSuccess from "@/pages/invite-success";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -91,6 +93,8 @@ function Router() {
       <Route path="/activity" component={ActivityLogs} />
       <Route path="/settings" component={Settings} />
       <Route path="/bot-settings" component={BotSettings} />
+      <Route path="/invite-bot" component={InviteBot} />
+      <Route path="/invite-success" component={InviteSuccess} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

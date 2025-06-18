@@ -353,13 +353,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Owner-only code management endpoints
+  // Owner-only code management endpoints with GitHub integration
   const OWNER_PASSWORD = 'RaptorOwner2025!CodeAccess#1337';
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER;
+  const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME;
   
   app.get('/api/owner/authenticate', (req, res) => {
     const { password } = req.query;
     if (password === OWNER_PASSWORD) {
-      res.json({ authenticated: true, message: 'Owner access granted' });
+      res.json({ 
+        authenticated: true, 
+        message: 'Owner access granted',
+        githubIntegration: !!(GITHUB_TOKEN && GITHUB_REPO_OWNER && GITHUB_REPO_NAME)
+      });
     } else {
       res.status(401).json({ authenticated: false, message: 'Invalid owner password' });
     }
@@ -372,58 +379,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME) {
+        return res.status(500).json({ error: 'GitHub credentials not configured' });
+      }
+
+      // Fetch repository tree from GitHub
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/git/trees/main?recursive=1`,
+        {
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'Raptor-Bot-Dashboard'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      const getFiles = async (dir: string, relativePath = ''): Promise<any[]> => {
-        try {
-          const items = await fs.readdir(dir, { withFileTypes: true });
-          const files = [];
+      // Build file tree structure
+      const buildTree = (items: any[]) => {
+        const tree: any = {};
+        
+        items.forEach(item => {
+          if (item.path.includes('node_modules') || 
+              item.path.includes('.git') ||
+              item.path.startsWith('.')) return;
           
-          for (const item of items) {
-            if (item.name.startsWith('.') || 
-                item.name === 'node_modules' || 
-                item.name === '.git' ||
-                item.name === 'dist' ||
-                item.name === 'build') continue;
-            
-            const fullPath = path.join(dir, item.name);
-            const relPath = relativePath ? path.join(relativePath, item.name) : item.name;
-            
-            try {
-              if (item.isDirectory()) {
-                const subFiles = await getFiles(fullPath, relPath);
-                files.push({
-                  name: item.name,
-                  type: 'directory',
-                  path: relPath,
-                  children: subFiles
-                });
-              } else {
-                const stats = await fs.stat(fullPath);
-                files.push({
-                  name: item.name,
+          const parts = item.path.split('/');
+          let current = tree;
+          
+          parts.forEach((part, index) => {
+            if (!current[part]) {
+              if (index === parts.length - 1) {
+                // It's a file
+                current[part] = {
+                  name: part,
                   type: 'file',
-                  path: relPath,
-                  size: stats.size
-                });
+                  path: item.path,
+                  size: item.size,
+                  sha: item.sha
+                };
+              } else {
+                // It's a directory
+                current[part] = {
+                  name: part,
+                  type: 'directory',
+                  path: parts.slice(0, index + 1).join('/'),
+                  children: {}
+                };
               }
-            } catch (error) {
-              // Skip files/directories that can't be accessed
-              continue;
+            }
+            
+            if (current[part].type === 'directory') {
+              current = current[part].children;
+            }
+          });
+        });
+        
+        const flattenTree = (node: any): any[] => {
+          const result = [];
+          for (const key in node) {
+            const item = node[key];
+            if (item.type === 'directory') {
+              result.push({
+                ...item,
+                children: flattenTree(item.children)
+              });
+            } else {
+              result.push(item);
             }
           }
-          return files;
-        } catch (error) {
-          return [];
-        }
+          return result;
+        };
+        
+        return flattenTree(tree);
       };
 
-      const files = await getFiles(process.cwd());
-      res.json({ files });
+      const files = buildTree(data.tree);
+      res.json({ files, source: 'github' });
     } catch (error) {
-      console.error('Failed to read files:', error);
-      res.status(500).json({ error: 'Failed to read files' });
+      console.error('Failed to fetch GitHub files:', error);
+      res.status(500).json({ error: 'Failed to fetch repository files' });
     }
   });
 
@@ -434,21 +475,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME) {
+        return res.status(500).json({ error: 'GitHub credentials not configured' });
+      }
+
       const filePath = req.params.path;
       
-      // Security check - ensure file is within project directory
-      const fullPath = path.resolve(process.cwd(), filePath);
-      if (!fullPath.startsWith(process.cwd())) {
-        return res.status(403).json({ error: 'Access denied' });
+      // Fetch file content from GitHub
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/contents/${filePath}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'Raptor-Bot-Dashboard'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
       }
+
+      const data = await response.json();
       
-      const content = await fs.readFile(fullPath, 'utf-8');
-      res.json({ content, path: filePath });
+      // Decode base64 content
+      const content = Buffer.from(data.content, 'base64').toString('utf-8');
+      
+      res.json({ 
+        content, 
+        path: filePath, 
+        sha: data.sha,
+        source: 'github',
+        lastModified: data.commit?.committer?.date
+      });
     } catch (error) {
-      console.error('Failed to read file:', error);
-      res.status(500).json({ error: 'Failed to read file' });
+      console.error('Failed to fetch GitHub file:', error);
+      res.status(500).json({ error: 'Failed to fetch file from repository' });
     }
   });
 
@@ -459,22 +522,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const filePath = req.params.path;
-      const { content } = req.body;
-      
-      // Security check - ensure file is within project directory
-      const fullPath = path.resolve(process.cwd(), filePath);
-      if (!fullPath.startsWith(process.cwd())) {
-        return res.status(403).json({ error: 'Access denied' });
+      if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME) {
+        return res.status(500).json({ error: 'GitHub credentials not configured' });
       }
+
+      const filePath = req.params.path;
+      const { content, commitMessage, sha } = req.body;
       
-      await fs.writeFile(fullPath, content, 'utf-8');
-      res.json({ success: true, message: 'File updated successfully' });
+      // Encode content as base64 for GitHub API
+      const encodedContent = Buffer.from(content, 'utf-8').toString('base64');
+      
+      // Create commit to GitHub
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/contents/${filePath}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'Raptor-Bot-Dashboard'
+          },
+          body: JSON.stringify({
+            message: commitMessage || `Update ${filePath} via Raptor Dashboard`,
+            content: encodedContent,
+            sha: sha, // Required for updating existing files
+            branch: 'main'
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      res.json({ 
+        success: true, 
+        message: 'File committed to GitHub successfully',
+        commit: {
+          sha: data.commit.sha,
+          url: data.commit.html_url,
+          message: data.commit.message
+        }
+      });
     } catch (error) {
-      console.error('Failed to write file:', error);
-      res.status(500).json({ error: 'Failed to write file' });
+      console.error('Failed to commit to GitHub:', error);
+      res.status(500).json({ error: 'Failed to commit file to repository' });
+    }
+  });
+
+  // Add endpoint to sync/pull latest changes from GitHub
+  app.post('/api/owner/sync', async (req, res) => {
+    const { password } = req.body;
+    if (password !== OWNER_PASSWORD) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME) {
+        return res.status(500).json({ error: 'GitHub credentials not configured' });
+      }
+
+      // Get latest commit info
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/commits/main`,
+        {
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'Raptor-Bot-Dashboard'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json({ 
+        success: true, 
+        message: 'Repository synchronized',
+        latestCommit: {
+          sha: data.sha,
+          message: data.commit.message,
+          author: data.commit.author.name,
+          date: data.commit.author.date,
+          url: data.html_url
+        }
+      });
+    } catch (error) {
+      console.error('Failed to sync repository:', error);
+      res.status(500).json({ error: 'Failed to sync with repository' });
     }
   });
 

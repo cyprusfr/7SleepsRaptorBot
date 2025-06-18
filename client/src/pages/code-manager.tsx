@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Lock, File, Folder, Save, Eye, Edit3, Code, Shield } from "lucide-react";
+import { Lock, File, Folder, Save, Eye, Edit3, Code, Shield, Github, GitCommit, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileNode {
@@ -15,17 +15,30 @@ interface FileNode {
   type: 'file' | 'directory';
   path: string;
   size?: number;
+  sha?: string;
   children?: FileNode[];
+}
+
+interface FileData {
+  content: string;
+  path: string;
+  sha?: string;
+  source?: string;
+  lastModified?: string;
 }
 
 export default function CodeManager() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
+  const [githubIntegration, setGithubIntegration] = useState(false);
   const [files, setFiles] = useState<FileNode[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>('');
   const [fileContent, setFileContent] = useState<string>('');
+  const [currentSha, setCurrentSha] = useState<string>('');
+  const [commitMessage, setCommitMessage] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
 
   const authenticate = async () => {

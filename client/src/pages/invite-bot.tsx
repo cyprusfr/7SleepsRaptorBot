@@ -1,22 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 
 export default function InviteBot() {
   const [, setLocation] = useLocation();
   const [botKey, setBotKey] = useState('');
   const [error, setError] = useState('');
   const [showInvite, setShowInvite] = useState(false);
+  const [botAdded, setBotAdded] = useState(false);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('added') === 'true') {
+      setBotAdded(true);
+    }
+  }, []);
 
   const handleBotKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (botKey.trim() === 'RaptorBot2025!SecureInstall#9847') {
-      setShowInvite(true);
+      if (botAdded) {
+        // Bot was already added, redirect to tutorial
+        setLocation('/story-tutorial');
+      } else {
+        setShowInvite(true);
+      }
       setError('');
     } else {
       setError('Invalid bot key. Please contact an administrator.');
@@ -69,14 +82,23 @@ export default function InviteBot() {
             MacSploit license management and Discord bot control panel
           </p>
         </div>
+
+        {botAdded && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              Bot successfully added to your Discord server! Enter your bot key below to continue to the tutorial.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Card className="bg-white shadow-lg border-0 text-left">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-semibold text-gray-900">
-              Bot Installation Access
+              {botAdded ? 'Tutorial Access' : 'Bot Installation Access'}
             </CardTitle>
             <CardDescription className="text-gray-600">
-              Enter your bot add key to continue
+              {botAdded ? 'Enter your bot add key to access the tutorial' : 'Enter your bot add key to continue'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -97,7 +119,7 @@ export default function InviteBot() {
                 type="submit" 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg font-medium"
               >
-                Continue to Bot Installation
+                {botAdded ? 'Continue to Tutorial' : 'Continue to Bot Installation'}
               </Button>
             </form>
 

@@ -362,8 +362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Redirect to success page with complete tutorial
-      res.redirect(`/invite-success?guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}&tutorial=true`);
+      // Redirect to bot key validation page first
+      res.redirect(`/invite-bot?added=true&guild=${encodeURIComponent(guildInfo?.name || guild_id || 'Unknown')}`);
 
     } catch (error) {
       console.error('Discord OAuth callback error:', error);

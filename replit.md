@@ -132,6 +132,10 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **MacSploit Support System Guide**: Created comprehensive documentation for all 22+ support tags (.hwid, .crash, .install, .scripts, etc.) with automatic script detection, intelligent responses, and categorized troubleshooting guides
 - **Auto-Scroll Cinematic Experience**: Tutorial automatically progresses through story sections every 4 seconds with smooth transitions, manual navigation controls, and elegant black theme with white text and beautiful typography
 - **Authentication Flow Fixes**: Resolved "signed in as unknown" display issue by removing conflicting authentication endpoints - bot invitation now properly redirects authenticated users to tutorial without Discord verification requirement
+- **Bot Invitation System Redesign**: Completely rebuilt bot invitation page to match user's exact screenshot specification with clean white background, professional typography, and blue "Sign in with Google" button styling
+- **Bot Add Key Requirement Implementation**: Added mandatory bot add key entry step before Discord bot installation, requiring password `RaptorBot2025!SecureInstall#9847` for secure access control
+- **Tutorial Auto-Scroll Fix**: Resolved tutorial glitch by fixing useEffect dependencies causing auto-scroll interruption - story tutorial now properly advances through all 11 sections with smooth 4-second intervals
+- **Complete Bot Installation Flow**: Implemented full user-requested flow: bot key entry → clean invitation page → Discord authorization → tutorial redirect with proper theme preservation for story tutorial's dramatic black design
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

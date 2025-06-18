@@ -45,7 +45,7 @@ export default function InviteBot() {
   });
 
   const initiateDiscordAuth = () => {
-    const discordBotUrl = `https://discord.com/oauth2/authorize?client_id=1382224347892027412&permissions=274877906944&scope=bot%20applications.commands&redirect_uri=https%3A%2F%2Fraptor-bot.replit.app%2Fapi%2Fdiscord%2Fcallback&password=RaptorBot2025!SecureInstall%239847`;
+    const discordBotUrl = `https://discord.com/api/oauth2/authorize?client_id=1382224347892027412&permissions=274877906944&scope=bot%20applications.commands&redirect_uri=${encodeURIComponent(window.location.origin + '/invite-success')}`;
     window.location.href = discordBotUrl;
   };
 
@@ -110,41 +110,59 @@ export default function InviteBot() {
 
   if (currentStep === 'bot-key') {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-md">
-        <Card>
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-900 border-blue-500">
           <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              <Lock className="h-6 w-6" />
-              Enter Bot Installation Key
+            <div className="flex justify-center mb-4">
+              <Bot className="h-12 w-12 text-blue-400" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-white">
+              Add Raptor Bot to Discord
             </CardTitle>
-            <CardDescription>
-              Enter your bot installation key to proceed with setup
+            <CardDescription className="text-gray-300">
+              Click the button below to add the bot to your Discord server
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="bot-key">Bot Installation Key</Label>
-              <Input
-                id="bot-key"
-                type="password"
-                placeholder="Enter your installation key..."
-                value={botKey}
-                onChange={(e) => setBotKey(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleBotKeySubmit()}
-              />
+          <CardContent className="space-y-6">
+            <div className="bg-gray-800 p-4 rounded-lg border border-blue-500">
+              <h3 className="text-lg font-bold text-white mb-3">Bot Features:</h3>
+              <ul className="space-y-2 text-sm text-gray-300">
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  60+ Discord slash commands
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  Real MacSploit API integration
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  License key management
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  Candy economy system
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  Server backup & moderation
+                </li>
+              </ul>
             </div>
+            
             <Button 
-              onClick={handleBotKeySubmit} 
-              disabled={validateBotKey.isPending}
-              className="w-full"
+              onClick={initiateDiscordAuth}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {validateBotKey.isPending ? "Validating..." : "Continue"}
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Add Bot to Discord Server
             </Button>
+            
+            <div className="text-center">
+              <p className="text-xs text-gray-400">
+                Requires Administrator permissions for full functionality
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

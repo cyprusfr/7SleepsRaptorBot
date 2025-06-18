@@ -14,13 +14,13 @@ export default function InviteSuccess() {
   }, [setLocation]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-black/20 backdrop-blur-lg border-gray-700">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-gray-900 border-blue-500">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="relative">
-              <Bot className="h-16 w-16 text-green-400" />
-              <CheckCircle className="h-6 w-6 text-green-400 absolute -top-1 -right-1 bg-gray-900 rounded-full" />
+              <Bot className="h-16 w-16 text-blue-400" />
+              <CheckCircle className="h-6 w-6 text-blue-400 absolute -top-1 -right-1 bg-black rounded-full" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-white">
@@ -35,7 +35,7 @@ export default function InviteSuccess() {
             Redirecting to tutorial in 2 seconds...
           </p>
           <div className="w-full bg-gray-700 rounded-full h-2">
-            <div className="bg-green-400 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+            <div className="bg-blue-400 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
           </div>
         </CardContent>
       </Card>

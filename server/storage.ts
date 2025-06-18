@@ -51,6 +51,7 @@ export interface IStorage {
   getDiscordKeysByUserId(userId: string): Promise<DiscordKey[]>;
   updateDiscordKey(keyId: string, updates: Partial<DiscordKey>): Promise<void>;
   revokeDiscordKey(keyId: string, revokedBy: string): Promise<void>;
+  reactivateDiscordKey(keyId: string, reactivatedBy: string): Promise<void>;
   getUserKeys(userId: string): Promise<DiscordKey[]>;
   getKeyInfo(keyId: string): Promise<DiscordKey | undefined>;
   getKeyUsageStats(keyId: string): Promise<{ lastUsed?: Date; usageCount?: number } | undefined>;

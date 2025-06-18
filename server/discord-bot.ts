@@ -1513,6 +1513,21 @@ export class RaptorBot {
             .setRequired(true)
         ),
 
+      // Rewhitelist Command
+      new SlashCommandBuilder()
+        .setName('rewhitelist')
+        .setDescription('Re-add a key to the whitelist using the real API')
+        .addStringOption(option => 
+          option.setName('identifier')
+            .setDescription('Key, email, or HWID to rewhitelist')
+            .setRequired(true)
+        )
+        .addStringOption(option => 
+          option.setName('reason_note')
+            .setDescription('Reason for re-whitelisting')
+            .setRequired(false)
+        ),
+
       // Payments Command
       new SlashCommandBuilder()
         .setName('payments')
@@ -1820,6 +1835,9 @@ export class RaptorBot {
           break;
         case 'dewhitelist':
           await this.handleDewhitelistCommand(interaction);
+          break;
+        case 'rewhitelist':
+          await this.handleRewhitelistCommand(interaction);
           break;
         case 'payments':
           await this.handlePaymentsCommand(interaction);
@@ -6729,6 +6747,94 @@ export class RaptorBot {
       const embed = new EmbedBuilder()
         .setTitle('❌ Error')
         .setDescription('Failed to dewhitelist key.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success);
+    }
+  }
+
+  // REWHITELIST COMMAND - Re-add key to whitelist using real API
+  private async handleRewhitelistCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const identifier = interaction.options.getString('identifier', true);
+      const reasonNote = interaction.options.getString('reason_note') || 'Re-whitelisted via Discord bot';
+
+      console.log(`[DEBUG] Rewhitelisting identifier: ${identifier}`);
+      
+      // Call the whitelist API to attempt rewhitelisting
+      try {
+        const result = await WhitelistAPI.rewhitelistUser(identifier, reasonNote);
+        
+        console.log(`[REWHITELIST DEBUG] API Result:`, result);
+        
+        if (result.success) {
+          success = true;
+          const embed = new EmbedBuilder()
+            .setTitle('✅ REAL REWHITELIST SUCCESS')
+            .setDescription(`Key has been re-added to Raptor system and is now working for users.\n\n${result.message}`)
+            .addFields(
+              { name: 'Identifier', value: `\`${identifier}\``, inline: true },
+              { name: 'Re-whitelisted By', value: `<@${interaction.user.id}>`, inline: true },
+              { name: 'Reason', value: reasonNote, inline: false },
+              { name: 'Status', value: 'Successfully re-added to Raptor system', inline: false }
+            )
+            .setColor(0x00ff00)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+          success = true;
+        } else {
+          const embed = new EmbedBuilder()
+            .setTitle('⚠️ Rewhitelist API Error')
+            .setDescription(`**Failed to re-whitelist identifier**\n\n${result.error}`)
+            .addFields(
+              { name: 'Identifier', value: `\`${identifier}\``, inline: true },
+              { name: 'Attempted By', value: `<@${interaction.user.id}>`, inline: true },
+              { name: 'Error Details', value: result.error, inline: false }
+            )
+            .setColor(0xff9900)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+        }
+
+      } catch (apiError) {
+        console.error('Error calling rewhitelist API:', apiError);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('❌ API Error')
+          .setDescription(`Failed to call rewhitelist API: ${apiError.message}`)
+          .addFields(
+            { name: 'Identifier', value: `\`${identifier}\``, inline: true },
+            { name: 'Error', value: apiError.message, inline: false }
+          )
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      }
+
+      success = true;
+
+    } catch (error) {
+      console.error('Error in rewhitelist command:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Error')
+        .setDescription('Failed to rewhitelist identifier.')
         .setColor(0xff0000)
         .setTimestamp();
       

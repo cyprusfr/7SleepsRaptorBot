@@ -6798,12 +6798,13 @@ export class RaptorBot {
           success = true;
         } else {
           const embed = new EmbedBuilder()
-            .setTitle('⚠️ Rewhitelist API Error')
-            .setDescription(`**Failed to re-whitelist identifier**\n\n${result.error}`)
+            .setTitle('⚠️ Rewhitelist API Limitation')
+            .setDescription(`**Cannot re-whitelist this identifier**\n\n${result.error}`)
             .addFields(
               { name: 'Identifier', value: `\`${identifier}\``, inline: true },
               { name: 'Attempted By', value: `<@${interaction.user.id}>`, inline: true },
-              { name: 'Error Details', value: result.error, inline: false }
+              { name: 'API Response', value: result.error, inline: false },
+              { name: 'Note', value: 'The Raptor API does not support rewhitelisting deactivated keys. Generate a new key instead.', inline: false }
             )
             .setColor(0xff9900)
             .setTimestamp();

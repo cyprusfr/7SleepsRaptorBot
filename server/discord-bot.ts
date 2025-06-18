@@ -2032,328 +2032,13 @@ export class RaptorBot {
     }
   }
 
+
+
   // BACKUP COMMAND - Complete implementation matching your screenshots
+
   private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
 
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-
-    try {
-      // Check if user already has pending verification
-      const existingSession = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (existingSession && existingSession.expiresAt > new Date()) {
-        const embed = new EmbedBuilder()
-          .setTitle('⚠️ Verification Already Active')
-          .setDescription(`${targetUser.username} already has an active verification session.`)
-          .addFields(
-            { name: 'Session ID', value: existingSession.sessionId, inline: true },
-            { name: 'Code', value: existingSession.botResponseCode || 'Pending', inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(existingSession.expiresAt.getTime() / 1000)}:R>`, inline: true }
-          )
-          .setColor(0xff9900)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      // Generate verification code
-      const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const sessionId = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-      // Create verification session
-      await storage.createVerificationSession({
-        sessionId,
-        discordUserId: targetUser.id,
-        dashboardCode: verificationCode,
-        expiresAt
-      });
-
-      await this.logActivity('verification_started', `Verification session started for ${targetUser.username} by ${interaction.user.username}`);
-
-      // Send DM to user with verification code
-      try {
-        const dmEmbed = new EmbedBuilder()
-          .setTitle('🔐 Discord Verification Required')
-          .setDescription('Please enter this verification code in the channel where you started verification:')
-          .addFields(
-            { name: 'Verification Code', value: `\`${verificationCode}\``, inline: false },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Instructions', value: 'Simply type this code in the Discord channel to complete verification.', inline: false }
-          )
-          .setColor(0x0099ff)
-          .setFooter({ text: 'MacSploit Verification System' })
-          .setTimestamp();
-
-        await targetUser.send({ embeds: [dmEmbed] });
-
-        const embed = new EmbedBuilder()
-          .setTitle('✅ Verification Session Created')
-          .setDescription(`Verification session created for ${targetUser.username}`)
-          .addFields(
-            { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-            { name: 'Session ID', value: sessionId, inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Next Steps', value: `A verification code has been sent to ${targetUser.username}'s DMs. They should enter the code in this channel to complete verification.`, inline: false }
-          )
-          .setColor(0x00ff00)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-
-      } catch (dmError) {
-        const embed = new EmbedBuilder()
-          .setTitle('⚠️ Verification Session Created (DM Failed)')
-          .setDescription(`Verification session created for ${targetUser.username}, but couldn't send DM.`)
-          .addFields(
-            { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-            { name: 'Verification Code', value: `\`${verificationCode}\``, inline: true },
-            { name: 'Expires', value: `<t:${Math.floor(expiresAt.getTime() / 1000)}:R>`, inline: true },
-            { name: 'Instructions', value: `Please share this code with ${targetUser.username} and have them enter it in this channel.`, inline: false }
-          )
-          .setColor(0xff9900)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-      }
-
-    } catch (error) {
-      console.error('Error starting verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Verification Error')
-        .setDescription('Failed to start verification session.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyCheck(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-
-    try {
-      const session = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (!session) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ No Verification Session')
-          .setDescription(`${targetUser.username} has no verification session on record.`)
-          .setColor(0xff0000)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      const statusColor = session.completedAt ? 0x00ff00 : session.expiresAt < new Date() ? 0xff0000 : 0xff9900;
-      const statusText = session.completedAt ? '✅ Completed' : session.expiresAt < new Date() ? '❌ Expired' : '⏳ Pending';
-
-      const embed = new EmbedBuilder()
-        .setTitle('🔐 Verification Status')
-        .setDescription(`Verification status for ${targetUser.username}`)
-        .addFields(
-          { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-          { name: 'Status', value: statusText, inline: true },
-          { name: 'Session ID', value: session.sessionId, inline: true },
-          { name: 'Created', value: `<t:${Math.floor(session.createdAt.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Expires', value: `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Completed', value: session.completedAt ? `<t:${Math.floor(session.completedAt.getTime() / 1000)}:R>` : 'Not completed', inline: true }
-        )
-        .setColor(statusColor)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error checking verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to check verification status.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyReset(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const targetUser = interaction.options.getUser('user', true);
-
-    try {
-      const session = await storage.getVerificationSessionByDiscordUserId(targetUser.id);
-      
-      if (!session) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ No Verification Session')
-          .setDescription(`${targetUser.username} has no verification session to reset.`)
-          .setColor(0xff0000)
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-        return;
-      }
-
-      // Reset verification by updating expiry to past
-      await storage.updateVerificationSession(session.sessionId, {
-        expiresAt: new Date(Date.now() - 1000),
-        completedAt: null
-      });
-
-      await this.logActivity('verification_reset', `Verification reset for ${targetUser.username} by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Verification Reset')
-        .setDescription(`Verification session reset for ${targetUser.username}`)
-        .addFields(
-          { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-          { name: 'Reset By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Previous Session', value: session.sessionId, inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-
-    } catch (error) {
-      console.error('Error resetting verification:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to reset verification.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      await interaction.editReply({ embeds: [embed] });
-    }
-  }
-
-  private async handleVerifyList(interaction: ChatInputCommandInteraction) {
-    const startTime = Date.now();
-    let success = false;
-
-    try {
-      if (!await this.hasPermission(interaction)) {
-        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
-        return;
-      }
-
-      await interaction.deferReply({ ephemeral: true });
-
-      // Get verification sessions from database
-      const allSessions = await db.select().from(verificationSessions).orderBy(desc(verificationSessions.createdAt)).limit(20);
-      const activeSessions = allSessions.filter(s => s.status === 'pending' || s.status === 'bot_verified');
-      const expiredSessions = allSessions.filter(s => new Date() > s.expiresAt);
-      
-      const sessionsList = allSessions.slice(0, 10).map((session, index) => {
-        const status = new Date() > session.expiresAt ? 'Expired' : session.status;
-        const timeLeft = session.expiresAt.getTime() - Date.now();
-        const timeDisplay = timeLeft > 0 ? `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>` : 'Expired';
-        
-        return `${index + 1}. User: <@${session.discordUserId}>\n   Status: ${status}\n   Expires: ${timeDisplay}`;
-      }).join('\n\n');
-
-      const embed = new EmbedBuilder()
-        .setTitle('🔐 Verification Sessions')
-        .setDescription(sessionsList || 'No verification sessions found.')
-        .addFields(
-          { name: 'Total Sessions', value: allSessions.length.toString(), inline: true },
-          { name: 'Active Sessions', value: activeSessions.length.toString(), inline: true },
-          { name: 'Expired Sessions', value: expiredSessions.length.toString(), inline: true }
-        )
-        .setColor(0x0099ff)
-        .setTimestamp();
-
-      await storage.logActivity('verify_list', `Verification sessions listed by ${interaction.user.id}`);
-      await interaction.editReply({ embeds: [embed] });
-      success = true;
-
-    } catch (error) {
-      console.error('Error listing verifications:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to list verifications.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      if (interaction.deferred) {
-        await interaction.editReply({ embeds: [embed] });
-      } else {
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-      }
-    } finally {
-      await this.logCommandUsage(interaction, startTime, success, null);
-    }
-  }
-
-  private async handleVerifyExpire(interaction: ChatInputCommandInteraction) {
-    const startTime = Date.now();
-    let success = false;
-
-    try {
-      if (!await this.hasPermission(interaction)) {
-        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
-        return;
-      }
-
-      await interaction.deferReply({ ephemeral: true });
-
-      // Delete expired verification sessions
-      const expiredSessions = await db.delete(verificationSessions)
-        .where(or(
-          eq(verificationSessions.status, 'expired'),
-          sql`${verificationSessions.expiresAt} < NOW()`
-        ))
-        .returning();
-
-      const expiredCount = expiredSessions.length;
-
-      await storage.logActivity('verification_cleanup', `Expired ${expiredCount} old verification codes by ${interaction.user.username}`);
-
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Verification Cleanup Complete')
-        .setDescription(`Successfully cleaned up expired verification sessions.`)
-        .addFields(
-          { name: 'Expired Sessions', value: expiredCount.toString(), inline: true },
-          { name: 'Cleaned By', value: `<@${interaction.user.id}>`, inline: true },
-          { name: 'Cleanup Time', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
-        )
-        .setColor(0x00ff00)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-      success = true;
-
-    } catch (error) {
-      console.error('Error expiring verifications:', error);
-      
-      const embed = new EmbedBuilder()
-        .setTitle('❌ Error')
-        .setDescription('Failed to expire old verifications.')
-        .setColor(0xff0000)
-        .setTimestamp();
-      
-      if (interaction.deferred) {
-        await interaction.editReply({ embeds: [embed] });
-      } else {
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-      }
-    } finally {
-      await this.logCommandUsage(interaction, startTime, success, null);
-    }
-  }
-
-  // BACKUP COMMAND - Complete implementation
-  private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
@@ -2379,6 +2064,71 @@ export class RaptorBot {
   }
 
   private async handleBackupCreate(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const name = interaction.options.getString('name') || `backup-${Date.now()}`;
+      const description = interaction.options.getString('description') || 'Manual backup';
+
+      // Perform comprehensive server backup
+      const backupData = await this.createCompleteServerBackup(interaction.guild!);
+      
+      // Store backup in database
+      await storage.createBackup({
+        name,
+        description,
+        guildId: interaction.guild!.id,
+        data: backupData,
+        size: JSON.stringify(backupData).length,
+        createdBy: interaction.user.id
+      });
+
+      await this.logActivity('backup_created', `Server backup created: ${name} by ${interaction.user.username}`);
+
+      const embed = new EmbedBuilder()
+        .setTitle('✅ Backup Created Successfully')
+        .setDescription(`Server backup has been created and stored.`)
+        .addFields(
+          { name: 'Backup Name', value: name, inline: true },
+          { name: 'Description', value: description, inline: true },
+          { name: 'Size', value: `${Math.round(JSON.stringify(backupData).length / 1024)} KB`, inline: true },
+          { name: 'Created By', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Timestamp', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+        )
+        .setColor(0x00ff00)
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      
+      const embed = new EmbedBuilder()
+        .setTitle('❌ Backup Failed')
+        .setDescription('Failed to create server backup.')
+        .setColor(0xff0000)
+        .setTimestamp();
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
+  }
+
+  private async handleBackupRestore(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
     let success = false;
 

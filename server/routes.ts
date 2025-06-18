@@ -255,10 +255,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Discord OAuth callback handler
   app.get('/api/discord/callback', async (req, res) => {
-    const { code, state, guild_id } = req.query;
+    const { code, state, guild_id, password } = req.query;
 
     if (!code) {
       return res.status(400).json({ error: 'Authorization code required' });
+    }
+
+    // Check for bot installation password
+    const REQUIRED_PASSWORD = 'RaptorBot2025!SecureInstall#9847';
+    if (!password || password !== REQUIRED_PASSWORD) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Bot Installation - Password Required</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 500px; margin: 100px auto; padding: 20px; text-align: center; }
+            .container { background: #f5f5f5; padding: 30px; border-radius: 10px; }
+            input { padding: 10px; margin: 10px; border: 1px solid #ddd; border-radius: 5px; width: 200px; }
+            button { padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; cursor: pointer; }
+            button:hover { background: #4752C4; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>🔒 Bot Installation Password Required</h2>
+            <p>This bot requires a password for installation to prevent unauthorized access.</p>
+            <form method="GET">
+              <input type="hidden" name="code" value="${code}">
+              <input type="hidden" name="state" value="${state || ''}">
+              ${guild_id ? `<input type="hidden" name="guild_id" value="${guild_id}">` : ''}
+              <br>
+              <input type="password" name="password" placeholder="Enter installation password" required>
+              <br>
+              <button type="submit">Install Bot</button>
+            </form>
+            <p><small>Contact the bot administrator for the installation password.</small></p>
+          </div>
+        </body>
+        </html>
+      `);
     }
 
     try {

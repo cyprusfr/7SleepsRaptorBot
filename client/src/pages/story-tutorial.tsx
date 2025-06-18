@@ -296,26 +296,61 @@ export default function StoryTutorial() {
                 </CardContent>
               </Card>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-8">
                 <Card className="bg-gradient-to-br from-green-900 to-emerald-900 border-green-700">
                   <CardContent className="p-6">
-                    <h4 className="text-2xl font-bold text-green-300 mb-4">License Key Commands</h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-green-400">/generatekey [payment] [user] [note]</code>
-                        <p className="text-gray-300 mt-1">Generate MacSploit license keys for various payment methods</p>
+                    <h4 className="text-2xl font-bold text-green-300 mb-4">License Key Management Commands</h4>
+                    <div className="space-y-4 text-sm">
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-green-400 text-lg">/generatekey</code>
+                          <span className="text-xs text-gray-500">Admin Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Generate working MacSploit license keys using real API integration</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Required Parameters:</strong></p>
+                          <p className="text-xs text-gray-400">• <span className="text-blue-400">payment:</span> Payment method (paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)</p>
+                          <p className="text-xs text-gray-400">• <span className="text-blue-400">user:</span> Discord user who paid for the key</p>
+                          <p className="text-xs text-gray-400">• <span className="text-blue-400">note:</span> Payment description or transaction details</p>
+                          <p className="text-xs text-gray-400"><strong>Optional:</strong> booster (yes/no), early-access (yes/no), monthly (yes/no)</p>
+                          <p className="text-xs text-green-400 mt-2"><strong>Result:</strong> Creates real working license key via MacSploit API, stores in database, sends key to user via DM</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-green-400">/keyinfo [key_id]</code>
-                        <p className="text-gray-300 mt-1">Get detailed information about a specific license key</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-green-400 text-lg">/keyinfo</code>
+                          <span className="text-xs text-gray-500">Staff Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Display comprehensive information about any license key</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Parameter:</strong> key_id (the license key to lookup)</p>
+                          <p className="text-xs text-green-400"><strong>Shows:</strong> Key status, owner, HWID, creation date, payment method, usage history, validity</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-green-400">/transfer [key_id] [new_user]</code>
-                        <p className="text-gray-300 mt-1">Transfer key ownership to another user</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-green-400 text-lg">/transfer</code>
+                          <span className="text-xs text-gray-500">Admin Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Transfer license key ownership between users with full validation</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Parameters:</strong> key_id (key to transfer), new_user (recipient)</p>
+                          <p className="text-xs text-green-400"><strong>Process:</strong> Validates key exists, updates database ownership, logs transfer activity, notifies both users</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-green-400">/dewhitelist [key_id]</code>
-                        <p className="text-gray-300 mt-1">Remove a key from the MacSploit whitelist (Admin only)</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-green-400 text-lg">/dewhitelist</code>
+                          <span className="text-xs text-gray-500">Admin Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Remove license keys from MacSploit whitelist using admin API</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Parameter:</strong> key_id (key to remove from whitelist)</p>
+                          <p className="text-xs text-green-400"><strong>Function:</strong> Calls real MacSploit admin API to dewhitelist key, updates database status, logs action</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -323,78 +358,279 @@ export default function StoryTutorial() {
                 
                 <Card className="bg-gradient-to-br from-blue-900 to-cyan-900 border-blue-700">
                   <CardContent className="p-6">
-                    <h4 className="text-2xl font-bold text-blue-300 mb-4">User Management</h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-blue-400">/whitelist [user] [action]</code>
-                        <p className="text-gray-300 mt-1">Add or remove users from the whitelist system</p>
+                    <h4 className="text-2xl font-bold text-blue-300 mb-4">User Management Commands</h4>
+                    <div className="space-y-4 text-sm">
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-blue-400 text-lg">/whitelist</code>
+                          <span className="text-xs text-gray-500">Admin Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Manage user whitelist status for bot access permissions</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Parameters:</strong> user (Discord user), action (add/remove)</p>
+                          <p className="text-xs text-blue-400"><strong>Function:</strong> Updates database whitelist status, affects command access permissions, logs all changes</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-blue-400">/userinfo [user]</code>
-                        <p className="text-gray-300 mt-1">View comprehensive user information and statistics</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-blue-400 text-lg">/userinfo</code>
+                          <span className="text-xs text-gray-500">Staff Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Display comprehensive user profile and activity statistics</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Parameter:</strong> user (optional, defaults to command executor)</p>
+                          <p className="text-xs text-blue-400"><strong>Shows:</strong> Join date, roles, candy balance, owned keys, activity logs, whitelist status, last seen</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-blue-400">/hwid [action] [user]</code>
-                        <p className="text-gray-300 mt-1">View, set, or reset user hardware IDs</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-blue-400 text-lg">/hwid</code>
+                          <span className="text-xs text-gray-500">Staff Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Hardware ID management with view, set, and reset capabilities</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Subcommands:</strong></p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">view [user]:</span> Display current HWID for user</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">set [user] [hwid]:</span> Assign specific HWID to user</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">reset [user]:</span> Clear user's HWID assignment</p>
+                        </div>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-blue-400">/log [action] [user] [amount]</code>
-                        <p className="text-gray-300 mt-1">Manage user activity logs and engagement tracking</p>
+                      
+                      <div className="bg-gray-800 p-4 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <code className="text-blue-400 text-lg">/log</code>
+                          <span className="text-xs text-gray-500">Staff Only</span>
+                        </div>
+                        <p className="text-gray-300 mb-3">Comprehensive user engagement tracking and leaderboard system</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-400"><strong>Subcommands:</strong></p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">add [user] [amount]:</span> Add engagement logs to user</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">remove [user] [amount]:</span> Remove logs from user</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">view [user]:</span> Show user's log count</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">lb [page]:</span> Display ranked leaderboard</p>
+                          <p className="text-xs text-gray-400">• <span className="text-cyan-400">clear [user]:</span> Reset user's log count</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-gradient-to-br from-yellow-900 to-orange-900 border-yellow-700">
-                  <CardContent className="p-6">
-                    <h4 className="text-2xl font-bold text-yellow-300 mb-4">Candy Economy</h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-yellow-400">/daily</code>
-                        <p className="text-gray-300 mt-1">Claim 2,000 candies every 24 hours</p>
+              <Card className="bg-gradient-to-br from-yellow-900 to-orange-900 border-yellow-700">
+                <CardContent className="p-6">
+                  <h4 className="text-2xl font-bold text-yellow-300 mb-4">Candy Economy Commands</h4>
+                  <div className="space-y-4 text-sm">
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/daily</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-yellow-400">/balance [user]</code>
-                        <p className="text-gray-300 mt-1">Check candy balance and bank account</p>
-                      </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-yellow-400">/gamble [amount]</code>
-                        <p className="text-gray-300 mt-1">Gamble candies with 47% win rate</p>
-                      </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-yellow-400">/deposit [amount]</code>
-                        <p className="text-gray-300 mt-1">Safely store candies in the bank</p>
+                      <p className="text-gray-300 mb-3">Claim daily candy reward with 24-hour cooldown system</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-yellow-400"><strong>Reward:</strong> 2,000 candies every 24 hours</p>
+                        <p className="text-xs text-gray-400"><strong>Cooldown:</strong> Prevents multiple claims, tracks last claim timestamp</p>
+                        <p className="text-xs text-gray-400"><strong>Database:</strong> Updates lastDaily field, adds to candy balance</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-gradient-to-br from-red-900 to-pink-900 border-red-700">
-                  <CardContent className="p-6">
-                    <h4 className="text-2xl font-bold text-red-300 mb-4">Server Administration</h4>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-red-400">/backup create [name]</code>
-                        <p className="text-gray-300 mt-1">Create complete server backup with all data</p>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/balance</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
                       </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-red-400">/purge [amount] [user]</code>
-                        <p className="text-gray-300 mt-1">Delete messages with optional user filter</p>
-                      </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-red-400">/timeout [user] [duration]</code>
-                        <p className="text-gray-300 mt-1">Temporarily restrict user privileges</p>
-                      </div>
-                      <div className="bg-gray-800 p-3 rounded">
-                        <code className="text-red-400">/announce [message]</code>
-                        <p className="text-gray-300 mt-1">Send announcements to designated channels</p>
+                      <p className="text-gray-300 mb-3">Display comprehensive candy account information</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameter:</strong> user (optional, defaults to self)</p>
+                        <p className="text-xs text-yellow-400"><strong>Shows:</strong> Wallet balance, bank balance, total candies, last activity</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/gamble</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Risk candies for potential rewards with realistic house edge</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameter:</strong> amount (candies to gamble)</p>
+                        <p className="text-xs text-yellow-400"><strong>Odds:</strong> 47% win rate (house edge 6%)</p>
+                        <p className="text-xs text-gray-400"><strong>Validation:</strong> Checks sufficient balance, prevents negative amounts</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/deposit</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Safely store candies in protected bank account</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameter:</strong> amount (candies to deposit)</p>
+                        <p className="text-xs text-yellow-400"><strong>Function:</strong> Moves candies from wallet to bank, prevents theft</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/withdraw</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Retrieve candies from bank to wallet for spending</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameter:</strong> amount (candies to withdraw)</p>
+                        <p className="text-xs text-yellow-400"><strong>Function:</strong> Moves candies from bank to wallet</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/pay</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Transfer candies between users with validation</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> user (recipient), amount (candies to send)</p>
+                        <p className="text-xs text-yellow-400"><strong>Validation:</strong> Checks balance, prevents self-payments, logs transfers</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/beg</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Request random candy amounts with cooldown</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-yellow-400"><strong>Rewards:</strong> 50-500 candies (random)</p>
+                        <p className="text-xs text-gray-400"><strong>Cooldown:</strong> 5-minute wait between begs</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/scam</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Credit card scam mini-game with risk/reward mechanics</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-yellow-400"><strong>Success Rate:</strong> 35% chance (high risk, high reward)</p>
+                        <p className="text-xs text-gray-400"><strong>Rewards:</strong> 1,000-5,000 candies on success</p>
+                        <p className="text-xs text-gray-400"><strong>Cooldown:</strong> 10-minute wait between attempts</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-yellow-400 text-lg">/candylb</code>
+                        <span className="text-xs text-gray-500">Everyone</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Display ranked candy leaderboard with pagination</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameter:</strong> page (optional, defaults to 1)</p>
+                        <p className="text-xs text-yellow-400"><strong>Shows:</strong> Top users by total candy wealth (wallet + bank)</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-red-900 to-pink-900 border-red-700">
+                <CardContent className="p-6">
+                  <h4 className="text-2xl font-bold text-red-300 mb-4">Server Administration Commands</h4>
+                  <div className="space-y-4 text-sm">
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/backup</code>
+                        <span className="text-xs text-gray-500">Admin Only</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Comprehensive Discord server backup and restoration system</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Subcommands:</strong></p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">create [name]:</span> Full server backup (messages, users, roles, channels, settings)</p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">restore [backup_id]:</span> Restore server from backup</p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">list:</span> View all available backups</p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">integrity [backup_id]:</span> Verify backup completeness</p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">schedule [frequency]:</span> Automatic backup scheduling</p>
+                        <p className="text-xs text-gray-400">• <span className="text-pink-400">export [backup_id]:</span> Download backup as file</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/purge</code>
+                        <span className="text-xs text-gray-500">Moderator+</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Bulk message deletion with advanced filtering options</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> amount (1-100 messages), user (optional filter)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Deletes recent messages, logs action, respects Discord limits</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/timeout</code>
+                        <span className="text-xs text-gray-500">Moderator+</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Temporarily restrict user permissions with automatic expiration</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> user (target), duration (1m-28d), reason (optional)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Applies Discord timeout, logs moderation action</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/announce</code>
+                        <span className="text-xs text-gray-500">Admin Only</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Send formatted announcements to designated channels</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> message (announcement text), channel (optional target)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Creates professional embed, mentions @everyone, logs announcement</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/dm</code>
+                        <span className="text-xs text-gray-500">Admin Only</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Send direct messages to users through the bot</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> user (recipient), message (DM content)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Sends private message, logs admin action, handles failures</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/nickname</code>
+                        <span className="text-xs text-gray-500">Moderator+</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Change user nicknames with permission validation</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> user (target), nickname (new name or reset)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Updates Discord nickname, respects role hierarchy, logs changes</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-800 p-4 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-red-400 text-lg">/say</code>
+                        <span className="text-xs text-gray-500">Admin Only</span>
+                      </div>
+                      <p className="text-gray-300 mb-3">Make the bot speak in any channel</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-400"><strong>Parameters:</strong> message (bot response), channel (optional target)</p>
+                        <p className="text-xs text-red-400"><strong>Function:</strong> Sends message as bot, deletes command, logs admin usage</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

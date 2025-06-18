@@ -79,12 +79,19 @@ const AnimatedBackground = ({ background, particles, showRoblox }: {
       
       {/* Roblox character for MacSploit sections */}
       {showRoblox && (
-        <div className="absolute bottom-4 right-4 opacity-30">
-          <img 
-            src={robloxCharacterImage} 
-            alt="Roblox Character" 
-            className="w-32 h-32 object-contain animate-pulse"
-          />
+        <div className="absolute top-20 right-20 z-10 animate-bounce">
+          <div className="relative">
+            <img 
+              src={robloxCharacterImage} 
+              alt="Roblox Character" 
+              className="w-40 h-40 object-cover rounded-xl border-4 border-yellow-400/50 shadow-2xl transform hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+            <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-blue-400 rounded-full animate-pulse"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white font-bold text-xs bg-black/50 px-2 py-1 rounded">
+              MacSploit
+            </div>
+          </div>
         </div>
       )}
       
@@ -459,6 +466,9 @@ async function dewhitelistKey(keyId: string) {
       icon: <Users className="w-6 h-6" />,
       duration: 30,
       description: "React-based dashboard with real-time data and responsive design",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Web Dashboard - Professional Interface
 
@@ -541,6 +551,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       icon: <Settings className="w-6 h-6" />,
       duration: 25,
       description: "Complete deployment guide and system monitoring",
+      background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      particles: true,
+      showRoblox: false,
       content: `
 # Production Deployment - Live System
 

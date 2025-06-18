@@ -468,56 +468,49 @@ export class RaptorBot {
     ];
 
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN!);
-          subcommand
-            .setName('create')
-            .setDescription('Create a database backup')
-            .addStringOption(option => option.setName('name').setDescription('Backup name').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('restore')
-            .setDescription('Restore from a backup')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to restore').setRequired(true)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('list')
-            .setDescription('List all available backups'))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('integrity')
-            .setDescription('Check backup integrity')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to check').setRequired(false)))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('schedule')
-            .setDescription('Schedule automatic backups')
-            .addStringOption(option => 
-              option.setName('frequency')
-                .setDescription('Backup frequency')
-                .setRequired(true)
-                .addChoices(
-                  { name: 'hourly', value: 'hourly' },
-                  { name: 'daily', value: 'daily' },
-                  { name: 'weekly', value: 'weekly' },
-                  { name: 'disabled', value: 'disabled' }
-                )))
-        .addSubcommand(subcommand =>
-          subcommand
-            .setName('export')
-            .setDescription('Export backup data')
-            .addStringOption(option => option.setName('backup_id').setDescription('Backup ID to export').setRequired(true))
-            .addStringOption(option => 
-              option.setName('format')
-                .setDescription('Export format')
-                .setRequired(false)
-                .addChoices(
-                  { name: 'sql', value: 'sql' },
-                  { name: 'json', value: 'json' },
-                  { name: 'csv', value: 'csv' }
-                ))),
 
-      // Bug Report Command
-      new SlashCommandBuilder()
-        .setName('bugreport')
+    try {
+      console.log('🔄 Started refreshing application (/) commands.');
+
+      // First clear all existing commands to force refresh
+      const guilds = Array.from(this.client.guilds.cache.values());
+      for (const guild of guilds) {
+        try {
+          // Clear existing commands
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: [] },
+          );
+          
+          // Wait a moment then register new commands
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID!, guild.id),
+            { body: commands },
+          );
+          console.log(`✅ Commands refreshed for guild: ${guild.name}`);
+        } catch (guildError) {
+          console.error(`❌ Failed to register commands for guild ${guild.name}:`, guildError);
+        }
+      }
+
+      // Also register globally to ensure availability
+      try {
+        await rest.put(
+          Routes.applicationCommands(CLIENT_ID!),
+          { body: [] },
+        );
+        console.log('⚠️ Global command registration failed (non-critical)');
+      } catch (globalError) {
+        console.log('⚠️ Global command registration failed (non-critical)');
+      }
+
+      console.log('✅ Successfully reloaded application (/) commands for all guilds.');
+    } catch (error) {
+      console.error('❌ Error refreshing commands:', error);
+    }
+  }
         .setDescription('Report a bug')
         .addStringOption(option => option.setName('title').setDescription('Bug title').setRequired(true))
         .addStringOption(option => option.setName('description').setDescription('Bug description').setRequired(true))

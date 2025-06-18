@@ -1,5 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as DiscordStrategy } from 'passport-discord';
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import type { Express } from 'express';
@@ -7,6 +8,8 @@ import { storage } from './storage';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'raptor-bot-secret-key';
 
 export function setupAuth(app: Express) {
@@ -51,9 +54,33 @@ export function setupAuth(app: Express) {
         // Upsert user in database
         const user = await storage.upsertUser({
           id: profile.id,
-          email: profile.emails?.[0]?.value,
           name: profile.displayName,
           picture: profile.photos?.[0]?.value,
+          isApproved: false,
+          role: "pending",
+          permissions: {},
+        });
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    }));
+  }
+
+  // Discord OAuth strategy
+  if (DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET) {
+    passport.use(new DiscordStrategy({
+      clientID: DISCORD_CLIENT_ID,
+      clientSecret: DISCORD_CLIENT_SECRET,
+      callbackURL: 'https://raptor-bot.replit.app/api/callback',
+      scope: ['identify', 'email']
+    }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+      try {
+        // Upsert user in database
+        const user = await storage.upsertUser({
+          id: profile.id,
+          name: profile.username,
+          picture: profile.avatar ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png` : null,
           isApproved: false,
           role: "pending",
           permissions: {},
@@ -85,6 +112,18 @@ export function setupAuth(app: Express) {
 
   app.get('/api/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res) => {
+      res.redirect('/');
+    }
+  );
+
+  // Discord OAuth routes
+  app.get('/api/auth/discord',
+    passport.authenticate('discord', { scope: ['identify', 'email'] })
+  );
+
+  app.get('/api/callback',
+    passport.authenticate('discord', { failureRedirect: '/login' }),
     (req, res) => {
       res.redirect('/');
     }

@@ -4,7 +4,7 @@ import { db } from './db';
 import { discordUsers, licenseKeys, activityLogs, candyBalances, commandLogs, verificationSessions, type DiscordUser } from '@shared/schema';
 import { eq, sql, desc, asc, and, or } from 'drizzle-orm';
 import { BackupIntegrityChecker } from './backup-integrity';
-import { WhitelistAPI } from './whitelist-api';
+import { WhitelistAPI, getPaymentInfo } from './whitelist-api';
 import crypto from 'crypto';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;

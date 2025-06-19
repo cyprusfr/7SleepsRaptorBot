@@ -3,7 +3,7 @@ import { secureUtils } from "./security-hardening";
 
 // SECURITY HARDENED: Real whitelist API configuration with environment protection
 const WHITELIST_API_BASE = "https://www.raptor.fun";
-const API_KEY = secureUtils.getSecureEnvVar('RAPTOR_API_KEY', '85f9e513-8030-4e88-a04d-042e62e0f707');
+const API_KEY = secureUtils.getSecureEnvVar('RAPTOR_API_KEY', '7aaada74-7998-4932-813a-f8e007571838');
 
 // Accepted payment methods from the API
 const ACCEPTED_PAYMENT_METHODS = [
@@ -277,5 +277,96 @@ export class WhitelistAPI {
 
   static isValidPaymentMethod(method: string): boolean {
     return ACCEPTED_PAYMENT_METHODS.includes(method.toLowerCase());
+  }
+}
+
+// NEW API: Payment info endpoint with multiple query types
+export async function getPaymentInfo(
+  infoType: string,
+  parameter: string
+): Promise<{ success: boolean; data?: any; message: string }> {
+  
+  // SECURITY: Input validation
+  infoType = secureUtils.sanitizeInput(infoType);
+  parameter = secureUtils.sanitizeInput(parameter);
+  
+  // Validate info type
+  const validInfoTypes = ['trialInfo', 'hwidInfo', 'keyInfo', 'paymentHistory'];
+  if (!validInfoTypes.includes(infoType)) {
+    return { success: false, message: 'Invalid info type' };
+  }
+  
+  try {
+    let endpoint = '';
+    let params = new URLSearchParams();
+    
+    // Build endpoint based on info type
+    switch (infoType) {
+      case 'trialInfo':
+        endpoint = '/api/payments/info';
+        params.append('info', 'trialInfo');
+        params.append('hwid', parameter);
+        break;
+        
+      case 'hwidInfo':
+        endpoint = '/api/payments/info';
+        params.append('info', 'hwidInfo');
+        params.append('hwid', parameter);
+        break;
+        
+      case 'keyInfo':
+        endpoint = '/api/payments/info';
+        params.append('info', 'keyInfo');
+        params.append('key', parameter);
+        break;
+        
+      case 'paymentHistory':
+        endpoint = '/api/payments/info';
+        params.append('info', 'paymentHistory');
+        // Check if parameter looks like email or discord ID
+        if (parameter.includes('@') || parameter.includes('#')) {
+          params.append('contactInfo', parameter);
+        } else {
+          params.append('id', parameter);
+        }
+        break;
+    }
+    
+    const url = `${WHITELIST_API_BASE}${endpoint}?${params.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+        'X-API-Key': API_KEY,
+        'User-Agent': 'RaptorBot/1.0'
+      }
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        message: responseData.message || `API Error: ${response.status}`
+      };
+    }
+    
+    // Log successful API call
+    await storage.logActivity('api_call', `Payment info query: ${infoType} for ${parameter}`);
+    
+    return {
+      success: true,
+      data: responseData,
+      message: 'Information retrieved successfully'
+    };
+    
+  } catch (error) {
+    console.error('Payment info API error:', error);
+    return {
+      success: false,
+      message: 'Failed to retrieve payment information'
+    };
   }
 }

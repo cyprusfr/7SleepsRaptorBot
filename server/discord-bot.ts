@@ -50,9 +50,9 @@ export class RaptorBot {
   public client: Client;
   private commands: Collection<string, any>;
   private rest: REST;
-  private readonly ADMIN_USER_ID = '1234567890123456789';
+  private readonly ADMIN_USER_ID = '1131426483404026019';
 
-  private async sendErrorDM(error: any, context: string) {
+  async sendErrorDM(error: any, context: string) {
     try {
       const user = await this.client.users.fetch(this.ADMIN_USER_ID);
       const errorMessage = `🚨 **Error Alert** 🚨\n\n**Context:** ${context}\n**Error:** \`\`\`${error.message || error}\`\`\`\n**Time:** ${new Date().toISOString()}\n**Stack:** \`\`\`${error.stack || 'No stack trace'}\`\`\``;

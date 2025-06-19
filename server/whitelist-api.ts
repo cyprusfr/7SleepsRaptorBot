@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { secureUtils } from "./security-hardening";
+import { raptorBot } from "./discord-bot";
 
 const WHITELIST_API_BASE = "https://www.raptor.fun/api";
 const API_KEY = '85f9e513-8030-4e88-a04d-042e62e0f707';
@@ -130,6 +131,11 @@ export class WhitelistAPI {
 
     } catch (error) {
       console.error('Error calling whitelist API:', error);
+      try {
+        await raptorBot.sendErrorDM(error, `Whitelist API Error - Contact: ${contactInfo} | Payment: ${paymentProvider}:${paymentId}`);
+      } catch (dmError) {
+        console.error('Failed to send error DM:', dmError);
+      }
       return {
         success: false,
         error: `API request failed: ${error.message}`

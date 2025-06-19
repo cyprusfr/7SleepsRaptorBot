@@ -1406,6 +1406,12 @@ export class RaptorBot {
         .setDescription('Get detailed information about a user')
         .addUserOption(option => option.setName('user').setDescription('User to get info about').setRequired(false)),
 
+      // HWID Info Command - Real API lookup
+      new SlashCommandBuilder()
+        .setName('hwidinfo')
+        .setDescription('Get HWID information from Raptor API')
+        .addStringOption(option => option.setName('hwid').setDescription('Hardware ID to lookup').setRequired(true)),
+
       // Verify Command - Generate verification code for dashboard
       new SlashCommandBuilder()
         .setName('verify')
@@ -1764,6 +1770,9 @@ export class RaptorBot {
           break;
         case 'hwid':
           await this.handleHwidCommand(interaction);
+          break;
+        case 'hwidinfo':
+          await this.handleHwidInfoCommand(interaction);
           break;
         case 'keyinfo':
           await this.handleKeyInfoCommand(interaction);
@@ -4697,13 +4706,13 @@ export class RaptorBot {
 
       const keyId = interaction.options.getString('key', true);
       
-      // Get key information
-      const keyInfo = await storage.getKeyInfo(keyId);
+      // Call real Raptor API for key information
+      const apiResult = await getPaymentInfo('keyInfo', keyId);
       
-      if (!keyInfo) {
+      if (!apiResult.success) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Key Not Found')
-          .setDescription(`No key found with ID: \`${keyId}\``)
+          .setDescription(`${apiResult.message}\nKey: \`${keyId}\``)
           .setColor(0xff0000)
           .setTimestamp();
 
@@ -4711,39 +4720,46 @@ export class RaptorBot {
         return;
       }
 
-      // Get associated user information
-      const discordUser = await storage.getDiscordUser(keyInfo.userId);
+      const keyData = apiResult.data;
       
       const embed = new EmbedBuilder()
         .setTitle('🔑 Key Information')
-        .setColor(keyInfo.status === 'active' ? 0x00ff00 : keyInfo.status === 'expired' ? 0xff9900 : 0xff0000)
+        .setColor(keyData.status === 'active' ? 0x00ff00 : keyData.status === 'expired' ? 0xff9900 : 0xff0000)
         .addFields(
-          { name: 'Key ID', value: `\`${keyInfo.keyId}\``, inline: true },
-          { name: 'Status', value: keyInfo.status.toUpperCase(), inline: true },
-          { name: 'User', value: `<@${keyInfo.userId}>`, inline: true },
-          { name: 'Username', value: discordUser?.username || 'Unknown', inline: true },
-          { name: 'HWID', value: keyInfo.hwid || 'Not set', inline: true },
-          { name: 'Created', value: `<t:${Math.floor(keyInfo.createdAt.getTime() / 1000)}:F>`, inline: true },
-          { name: 'Last Updated', value: `<t:${Math.floor(keyInfo.updatedAt.getTime() / 1000)}:R>`, inline: true }
+          { name: 'Key ID', value: `\`${keyId}\``, inline: true },
+          { name: 'Status', value: keyData.status?.toUpperCase() || 'UNKNOWN', inline: true },
+          { name: 'Type', value: keyData.type || 'Standard', inline: true }
         )
         .setTimestamp()
         .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
-      if (keyInfo.revokedAt && keyInfo.revokedBy) {
-        embed.addFields(
-          { name: 'Revoked At', value: `<t:${Math.floor(keyInfo.revokedAt.getTime() / 1000)}:F>`, inline: true },
-          { name: 'Revoked By', value: `<@${keyInfo.revokedBy}>`, inline: true }
-        );
+      // Add optional fields if available
+      if (keyData.user_id) {
+        embed.addFields({ name: 'User ID', value: keyData.user_id, inline: true });
+      }
+      
+      if (keyData.hwid) {
+        embed.addFields({ name: 'HWID', value: keyData.hwid, inline: true });
+      }
+      
+      if (keyData.created_at) {
+        embed.addFields({ name: 'Created', value: keyData.created_at, inline: true });
+      }
+      
+      if (keyData.expires_at) {
+        embed.addFields({ name: 'Expires', value: keyData.expires_at, inline: true });
+      }
+      
+      if (keyData.last_used) {
+        embed.addFields({ name: 'Last Used', value: keyData.last_used, inline: true });
+      }
+      
+      if (keyData.usage_count !== undefined) {
+        embed.addFields({ name: 'Usage Count', value: keyData.usage_count.toString(), inline: true });
       }
 
-      // Get usage statistics
-      const stats = await storage.getKeyUsageStats(keyId);
-      if (stats && stats.lastUsed) {
-        embed.addFields(
-          { name: 'Last Used', value: `<t:${Math.floor(stats.lastUsed.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Usage Count', value: stats.usageCount?.toString() || '0', inline: true }
-        );
-      }
+      // Log successful API call
+      await storage.logActivity('keyinfo_lookup', `Key info retrieved for ${keyId} by ${interaction.user.username}`);
 
       await interaction.editReply({ embeds: [embed] });
       success = true;
@@ -4762,7 +4778,91 @@ export class RaptorBot {
     }
   }
 
+  private async handleHwidInfoCommand(interaction: ChatInputCommandInteraction) {
+    const startTime = Date.now();
+    let success = false;
 
+    try {
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      await interaction.deferReply();
+
+      const hwid = interaction.options.getString('hwid', true);
+      
+      // Call real Raptor API for HWID information
+      const apiResult = await getPaymentInfo('hwidInfo', hwid);
+      
+      if (!apiResult.success) {
+        const embed = new EmbedBuilder()
+          .setTitle('❌ HWID Not Found')
+          .setDescription(`${apiResult.message}\nHWID: \`${hwid}\``)
+          .setColor(0xff0000)
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      const hwidData = apiResult.data;
+      
+      const embed = new EmbedBuilder()
+        .setTitle('🖥️ HWID Information')
+        .setColor(0x00ff00)
+        .addFields(
+          { name: 'Hardware ID', value: `\`${hwid}\``, inline: false },
+          { name: 'Status', value: hwidData.status?.toUpperCase() || 'UNKNOWN', inline: true }
+        )
+        .setTimestamp()
+        .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+      // Add optional fields if available
+      if (hwidData.linked_keys !== undefined) {
+        embed.addFields({ name: 'Linked Keys', value: hwidData.linked_keys.toString(), inline: true });
+      }
+      
+      if (hwidData.user_id) {
+        embed.addFields({ name: 'Associated User', value: hwidData.user_id, inline: true });
+      }
+      
+      if (hwidData.first_seen) {
+        embed.addFields({ name: 'First Seen', value: hwidData.first_seen, inline: true });
+      }
+      
+      if (hwidData.last_seen) {
+        embed.addFields({ name: 'Last Seen', value: hwidData.last_seen, inline: true });
+      }
+      
+      if (hwidData.total_activations !== undefined) {
+        embed.addFields({ name: 'Total Activations', value: hwidData.total_activations.toString(), inline: true });
+      }
+
+      if (hwidData.keys && Array.isArray(hwidData.keys) && hwidData.keys.length > 0) {
+        const keyList = hwidData.keys.slice(0, 5).map((key: any) => `\`${key.key_id || key}\``).join('\n');
+        embed.addFields({ name: 'Recent Keys', value: keyList, inline: false });
+      }
+
+      // Log successful API call
+      await storage.logActivity('hwidinfo_lookup', `HWID info retrieved for ${hwid} by ${interaction.user.username}`);
+
+      await interaction.editReply({ embeds: [embed] });
+      success = true;
+
+    } catch (error) {
+      console.error('Error in handleHwidInfoCommand:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
+    } finally {
+      await this.logCommandUsage(interaction, startTime, success, null);
+    }
+  }
 
   private async handleListCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
@@ -5765,42 +5865,120 @@ export class RaptorBot {
     let success = false;
 
     try {
-      const user = interaction.options.getUser('user', true);
-      const discordUser = await storage.getDiscordUserByDiscordId(user.id);
-
-      if (!discordUser) {
-        await interaction.reply({ content: '❌ User not found in database.', ephemeral: true });
+      if (!await this.hasPermission(interaction)) {
+        await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
         return;
       }
 
-      const userKeys = await storage.getUserKeys(user.id);
-      const candyBalance = await storage.getCandyBalance(user.id);
+      await interaction.deferReply();
+
+      const user = interaction.options.getUser('user') || interaction.user;
+      const userId = user.id;
+
+      // Get local database information
+      const discordUser = await storage.getDiscordUser(userId);
+      const userKeys = await storage.getUserKeys(userId);
+      const candyBalance = await storage.getCandyBalance(userId);
+
+      // Get payment history from real Raptor API
+      let paymentHistory: any = null;
+      try {
+        const apiResult = await getPaymentInfo('paymentHistory', userId);
+        if (apiResult.success) {
+          paymentHistory = apiResult.data;
+        }
+      } catch (apiError) {
+        console.log('Payment history API call failed (non-critical):', apiError);
+      }
 
       const embed = new EmbedBuilder()
         .setTitle(`👤 User Information: ${user.username}`)
         .setThumbnail(user.displayAvatarURL())
-        .addFields(
-          { name: 'Discord ID', value: user.id, inline: true },
-          { name: 'Username', value: discordUser.username, inline: true },
-          { name: 'Whitelisted', value: discordUser.isWhitelisted ? 'Yes' : 'No', inline: true },
-          { name: 'Joined Server', value: `<t:${Math.floor(discordUser.joinedAt.getTime() / 1000)}:F>`, inline: true },
-          { name: 'Last Seen', value: `<t:${Math.floor(discordUser.lastSeen.getTime() / 1000)}:R>`, inline: true },
-          { name: 'Total Keys', value: userKeys.length.toString(), inline: true },
-          { name: 'Active Keys', value: userKeys.filter(k => k.status === 'active').length.toString(), inline: true },
-          { name: 'Candy Balance', value: candyBalance?.balance?.toString() || '0', inline: true },
-          { name: 'Bank Balance', value: candyBalance?.bankBalance?.toString() || '0', inline: true }
-        )
         .setColor(0x0099ff)
-        .setTimestamp();
+        .setTimestamp()
+        .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
-      await storage.logActivity('user_info', `User info viewed for ${user.id} by ${interaction.user.id}`);
-      await interaction.reply({ embeds: [embed] });
+      // Basic Discord information
+      embed.addFields(
+        { name: 'Discord ID', value: userId, inline: true },
+        { name: 'Username', value: user.username, inline: true },
+        { name: 'Account Created', value: `<t:${Math.floor(user.createdAt.getTime() / 1000)}:R>`, inline: true }
+      );
+
+      // Database information if available
+      if (discordUser) {
+        embed.addFields(
+          { name: 'Whitelisted', value: discordUser.isWhitelisted ? '✅ Yes' : '❌ No', inline: true },
+          { name: 'Last Seen', value: discordUser.lastSeen ? `<t:${Math.floor(discordUser.lastSeen.getTime() / 1000)}:R>` : 'Never', inline: true }
+        );
+
+        if (discordUser.hwid) {
+          embed.addFields({ name: 'HWID', value: `\`${discordUser.hwid}\``, inline: false });
+        }
+      }
+
+      // Key information
+      if (userKeys && userKeys.length > 0) {
+        embed.addFields(
+          { name: 'Total Keys', value: userKeys.length.toString(), inline: true },
+          { name: 'Active Keys', value: userKeys.filter(k => k.status === 'active').length.toString(), inline: true }
+        );
+
+        const recentKeys = userKeys.slice(0, 3).map(key => 
+          `\`${key.keyId}\` - ${key.status === 'active' ? '🟢' : '🔴'} ${key.status}`
+        ).join('\n');
+        
+        if (recentKeys) {
+          embed.addFields({ name: 'Recent Keys', value: recentKeys, inline: false });
+        }
+      }
+
+      // Candy system information
+      if (candyBalance) {
+        embed.addFields(
+          { name: 'Candy Balance', value: `🍬 ${candyBalance.balance?.toLocaleString() || '0'}`, inline: true },
+          { name: 'Bank Balance', value: `🏦 ${candyBalance.bankBalance?.toLocaleString() || '0'}`, inline: true }
+        );
+      }
+
+      // Payment history from API
+      if (paymentHistory) {
+        if (paymentHistory.total_payments !== undefined) {
+          embed.addFields({ name: 'Total Payments', value: paymentHistory.total_payments.toString(), inline: true });
+        }
+        
+        if (paymentHistory.total_spent !== undefined) {
+          embed.addFields({ name: 'Total Spent', value: `$${paymentHistory.total_spent}`, inline: true });
+        }
+
+        if (paymentHistory.last_payment) {
+          embed.addFields({ name: 'Last Payment', value: paymentHistory.last_payment, inline: true });
+        }
+
+        if (paymentHistory.recent_payments && Array.isArray(paymentHistory.recent_payments) && paymentHistory.recent_payments.length > 0) {
+          const recentPayments = paymentHistory.recent_payments.slice(0, 3).map((payment: any) => 
+            `${payment.method || 'Unknown'} - $${payment.amount || '0'} (${payment.date || 'Unknown date'})`
+          ).join('\n');
+          
+          embed.addFields({ name: 'Recent Payments', value: recentPayments, inline: false });
+        }
+      }
+
+      // Log successful lookup
+      await storage.logActivity('user_info_lookup', `User info retrieved for ${userId} by ${interaction.user.username}`);
+
+      await interaction.editReply({ embeds: [embed] });
       success = true;
 
     } catch (error) {
       console.error('Error in handleUserInfoCommand:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      
+      if (interaction.deferred) {
+        await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+      } else {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      }
     } finally {
       await this.logCommandUsage(interaction, startTime, success, null);
     }

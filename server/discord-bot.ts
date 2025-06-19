@@ -4706,21 +4706,53 @@ export class RaptorBot {
 
       const keyId = interaction.options.getString('key', true);
       
-      // Call real Raptor API for key information
-      const apiResult = await getPaymentInfo('keyInfo', keyId);
+      // Try to get key information from local database first
+      const localKey = await storage.getKeyInfo(keyId);
       
-      if (!apiResult.success) {
-        const embed = new EmbedBuilder()
-          .setTitle('❌ Key Not Found')
-          .setDescription(`${apiResult.message}\nKey: \`${keyId}\``)
-          .setColor(0xff0000)
-          .setTimestamp();
+      let keyData: any = {};
+      let dataSource = 'Local Database';
+      
+      if (localKey) {
+        // Use local database information
+        keyData = {
+          status: localKey.isActive ? 'active' : 'inactive',
+          type: 'MacSploit License',
+          user_id: localKey.userId,
+          hwid: localKey.hwid,
+          created_at: localKey.createdAt ? new Date(localKey.createdAt).toLocaleDateString() : 'Unknown',
+          expires_at: localKey.expiresAt ? new Date(localKey.expiresAt).toLocaleDateString() : 'Never',
+          usage_count: 0,
+          notes: localKey.notes
+        };
+        dataSource = 'Local Database';
+      } else {
+        // Fallback: Try Raptor API
+        try {
+          const apiResult = await getPaymentInfo('keyInfo', keyId);
+          if (apiResult.success) {
+            keyData = apiResult.data;
+            dataSource = 'Raptor API';
+          } else {
+            const embed = new EmbedBuilder()
+              .setTitle('❌ Key Not Found')
+              .setDescription(`Key not found in local database or Raptor API.\nKey: \`${keyId}\``)
+              .setColor(0xff0000)
+              .setTimestamp();
 
-        await interaction.editReply({ embeds: [embed] });
-        return;
+            await interaction.editReply({ embeds: [embed] });
+            return;
+          }
+        } catch (error) {
+          const embed = new EmbedBuilder()
+            .setTitle('❌ Key Not Found')
+            .setDescription(`Key not found in local database and API unavailable.\nKey: \`${keyId}\``)
+            .setColor(0xff0000)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+          return;
+        }
       }
-
-      const keyData = apiResult.data;
       
       const embed = new EmbedBuilder()
         .setTitle('🔑 Key Information')
@@ -4731,7 +4763,10 @@ export class RaptorBot {
           { name: 'Type', value: keyData.type || 'Standard', inline: true }
         )
         .setTimestamp()
-        .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+        .setFooter({ 
+          text: `${dataSource} • Requested by ${interaction.user.username}`, 
+          iconURL: interaction.user.displayAvatarURL() 
+        });
 
       // Add optional fields if available
       if (keyData.user_id) {

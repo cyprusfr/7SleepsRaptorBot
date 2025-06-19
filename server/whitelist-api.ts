@@ -351,7 +351,20 @@ export async function getPaymentInfo(
       }
     });
     
-    const responseData = await response.json();
+    const responseText = await response.text();
+    console.log(`[getPaymentInfo] Response Status: ${response.status}`);
+    console.log(`[getPaymentInfo] Response Body: ${responseText}`);
+    
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[getPaymentInfo] Failed to parse JSON response:', responseText);
+      return {
+        success: false,
+        message: 'Invalid JSON response from API'
+      };
+    }
     
     if (!response.ok) {
       return {

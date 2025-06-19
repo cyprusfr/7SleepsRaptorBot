@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      discordBot: raptorBot.isOnline() ? 'online' : 'starting'
+      discordBot: raptorBot.client?.isReady() ? 'online' : 'starting'
     });
   });
 
@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      discordBot: raptorBot.isOnline() ? 'online' : 'starting'
+      discordBot: raptorBot.client?.isReady() ? 'online' : 'starting'
     });
   });
 
@@ -1667,7 +1667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         ...stats,
-        botStatus: raptorBot.isOnline() ? 'online' : 'offline',
+        botStatus: raptorBot.client?.isReady() ? 'online' : 'offline',
         botUptime: botStats.uptime,
         guilds: botStats.guilds,
         lastSync: new Date().toISOString(),

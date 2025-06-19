@@ -150,34 +150,33 @@ export class RaptorBot {
     });
 
     this.client.on('interactionCreate', async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
+      if (interaction.isChatInputCommand()) {
+        const command = this.commands.get(interaction.commandName);
+        if (!command) return;
 
-      const command = this.commands.get(interaction.commandName);
-      if (!command) return;
+        try {
+          const startTime = Date.now();
+          
+          if (!await this.checkPermissions(interaction)) {
+            await interaction.reply({
+              content: 'You do not have permission to use this command.',
+              ephemeral: true
+            });
+            return;
+          }
 
-      try {
-        const startTime = Date.now();
-        
-        if (!await this.checkPermissions(interaction)) {
-          await interaction.reply({
-            content: 'You do not have permission to use this command.',
-            ephemeral: true
-          });
-          return;
-        }
-
-        await command.execute(interaction);
-        
-        const executionTime = Date.now() - startTime;
-        
-        await storage.logCommand(
-          interaction.user.id,
-          interaction.commandName,
-          executionTime,
-          true
-        );
-        
-      } catch (error) {
+          await command.execute(interaction);
+          
+          const executionTime = Date.now() - startTime;
+          
+          await storage.logCommand(
+            interaction.user.id,
+            interaction.commandName,
+            executionTime,
+            true
+          );
+          
+        } catch (error) {
         console.error('Command execution error:', error);
         await this.sendErrorDM(error, `Command: ${interaction.commandName} | User: ${interaction.user.tag} (${interaction.user.id})`);
         
@@ -198,6 +197,11 @@ export class RaptorBot {
           await interaction.followUp(reply);
         } else {
           await interaction.reply(reply);
+        }
+        }
+      } else if (interaction.isButton()) {
+        if (interaction.customId === 'how_to_install') {
+          await this.handleInstallButton(interaction);
         }
       }
     });
@@ -415,7 +419,15 @@ export class RaptorBot {
             .setColor(0x0099ff)
             .setTimestamp();
 
-          await user.send({ embeds: [dmEmbed] });
+          const installButton = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('how_to_install')
+                .setLabel('How to Install')
+                .setStyle(ButtonStyle.Primary)
+            );
+
+          await user.send({ embeds: [dmEmbed], components: [installButton] });
         } catch (dmError) {
           console.log('Could not send DM to user');
         }

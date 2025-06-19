@@ -3,7 +3,7 @@ import { secureUtils } from "./security-hardening";
 
 // SECURITY HARDENED: Real whitelist API configuration with environment protection
 const WHITELIST_API_BASE = "https://www.raptor.fun";
-const API_KEY = secureUtils.getSecureEnvVar('RAPTOR_API_KEY', '85f9e513-8030-4e88-a04d-042e62e0f707');
+const API_KEY = process.env.RAPTOR_API_KEY || '85f9e513-8030-4e88-a04d-042e62e0f707';
 
 // Accepted payment methods from the API
 const ACCEPTED_PAYMENT_METHODS = [
@@ -87,6 +87,9 @@ export class WhitelistAPI {
         url: `${WHITELIST_API_BASE}/api/whitelist`,
         payload: { ...requestPayload, api_key: '[REDACTED]' }
       });
+      
+      console.log(`[DEBUG] API Key value: ${API_KEY}`);
+      console.log(`[DEBUG] API Key type: ${typeof API_KEY}`);
 
       const response = await fetch(`${WHITELIST_API_BASE}/api/whitelist`, {
         method: 'POST',

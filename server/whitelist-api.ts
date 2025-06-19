@@ -181,7 +181,7 @@ export class WhitelistAPI {
 
         return {
           success: true,
-          message: 'Key successfully dewhitelisted'
+          message: 'Key successfully dewhitelisted ✓'
         };
       } else {
         return {
@@ -244,7 +244,7 @@ export class WhitelistAPI {
 
         return {
           success: true,
-          message: 'Key successfully rewhitelisted'
+          message: 'Key successfully rewhitelisted ✓'
         };
       } else {
         return {

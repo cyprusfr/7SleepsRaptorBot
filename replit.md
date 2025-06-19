@@ -141,6 +141,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Raptor API Limitation Discovery**: Confirmed through testing that Raptor's rewhitelist endpoint returns "This key has not been activated" error for dewhitelisted keys, indicating intentional design limitation requiring new key generation instead of reactivation
 - **Enhanced Error Messaging**: Updated rewhitelist command to provide clear explanation of API limitations with professional Discord embeds explaining users should generate new keys instead of attempting rewhitelist operations
 - **Rewhitelist API Endpoint Fix**: Corrected rewhitelist implementation to use proper /api/rewhitelist endpoint with exact parameter specification (identifier, reason_note, api_key) - confirmed working correctly with real API calls and proper error handling for dewhitelisted keys
+- **Rewhitelist Functionality Understanding**: Confirmed that /rewhitelist command resets HWID for dewhitelisted keys, updated success messages to remove experimental API warnings and display clean "Key successfully dewhitelisted ✓" and "Key successfully rewhitelisted ✓" responses
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

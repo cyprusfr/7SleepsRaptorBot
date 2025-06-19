@@ -181,7 +181,7 @@ export class WhitelistAPI {
 
         return {
           success: true,
-          message: responseData.message || 'Key successfully dewhitelisted from Raptor system'
+          message: 'Key successfully dewhitelisted ✓'
         };
       } else {
         return {
@@ -244,7 +244,7 @@ export class WhitelistAPI {
 
         return {
           success: true,
-          message: responseData.message || 'Key successfully re-whitelisted in Raptor system'
+          message: 'Key successfully rewhitelisted ✓'
         };
       } else {
         return {

@@ -1940,7 +1940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get system health based on bot status and recent activity
       const recentLogs = await storage.getActivityLogs(10);
       const errorLogs = recentLogs.filter(log => log.type.includes('error')).length;
-      const systemHealth = raptorBot.isOnline() ? 
+      const systemHealth = raptorBot.client?.isReady() ? 
         (errorLogs > 5 ? 'critical' : errorLogs > 2 ? 'warning' : 'healthy') : 'critical';
 
       // Check for sync errors from recent activity logs
@@ -1960,7 +1960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enhancedStats = {
         ...stats,
         systemHealth,
-        botOnline: raptorBot.isOnline(),
+        botOnline: raptorBot.client?.isReady(),
         lastUpdate: new Date().toISOString(),
         syncError: accessDeniedError ? "Access not approved" : lastSyncError,
         syncStatus: accessDeniedError ? "access_denied" : (lastSyncError ? "error" : "ok"),
@@ -2484,7 +2484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get bot instance and trigger backup
       const { raptorBot } = await import('./discord-bot');
       
-      if (!raptorBot.isOnline()) {
+      if (!raptorBot.client?.isReady()) {
         return res.status(503).json({ error: "Discord bot is not online" });
       }
 
@@ -2613,7 +2613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "sync_discord":
           // Sync Discord bot data
           const { raptorBot } = await import('./discord-bot');
-          if (raptorBot.isOnline()) {
+          if (raptorBot.client?.isReady()) {
             await raptorBot.refreshSettings();
             result.message = "Discord sync completed";
           } else {
@@ -2796,7 +2796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { raptorBot } = await import('./discord-bot');
       
-      if (!raptorBot.isOnline()) {
+      if (!raptorBot.client?.isReady()) {
         return res.status(503).json({ error: "Discord bot is offline" });
       }
 

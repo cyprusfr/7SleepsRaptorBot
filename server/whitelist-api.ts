@@ -337,12 +337,16 @@ export async function getPaymentInfo(
     
     const url = `${WHITELIST_API_BASE}${endpoint}?${params.toString()}`;
     
-    const response = await fetch(url, {
+    // Add API key as URL parameter (same format as working whitelist API)
+    params.append('api_key', API_KEY);
+    const finalUrl = `${WHITELIST_API_BASE}${endpoint}?${params.toString()}`;
+    
+    console.log(`[getPaymentInfo] Calling ${infoType} API:`, finalUrl.replace(API_KEY, '[REDACTED]'));
+    
+    const response = await fetch(finalUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-        'X-API-Key': API_KEY,
         'User-Agent': 'RaptorBot/1.0'
       }
     });

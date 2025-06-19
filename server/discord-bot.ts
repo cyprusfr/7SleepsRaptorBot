@@ -490,8 +490,9 @@ export class RaptorBot {
       
       const commandData = Array.from(this.commands.values()).map(cmd => cmd.data.toJSON());
       
+      const applicationId = process.env.DISCORD_APPLICATION_ID || '1382224347892027412';
       await this.rest.put(
-        Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID!),
+        Routes.applicationCommands(applicationId),
         { body: commandData }
       );
       

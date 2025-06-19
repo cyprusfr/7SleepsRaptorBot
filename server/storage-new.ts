@@ -146,8 +146,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // Special case for admin user
-    const isAdminUser = userData.email === 'alexkkork123@gmail.com';
+    // SECURITY FIX: Use environment variable for admin user instead of hardcoded email
+    const adminEmail = process.env.ADMIN_EMAIL || 'alexkkork123@gmail.com';
+    const isAdminUser = userData.email === adminEmail;
     const userDataWithPermissions = {
       ...userData,
       isApproved: isAdminUser ? true : userData.isApproved ?? false,

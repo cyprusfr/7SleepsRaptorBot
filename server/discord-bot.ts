@@ -2143,6 +2143,90 @@ export class RaptorBot {
     return true;
   }
 
+  // SECURITY: Secure code execution to replace unsafe eval()
+  private async executeSecureCode(code: string): Promise<any> {
+    // CRITICAL SECURITY: Whitelist only safe operations
+    const allowedOperations = [
+      'this.client.guilds.cache.size',
+      'this.client.users.cache.size', 
+      'this.client.channels.cache.size',
+      'this.client.uptime',
+      'process.memoryUsage()',
+      'Date.now()',
+      'Math.random()',
+      'JSON.stringify',
+      'Object.keys',
+      'Array.from'
+    ];
+
+    // SECURITY: Block all dangerous patterns
+    const dangerousPatterns = [
+      /process\.exit/i,
+      /require\s*\(/i,
+      /import\s+/i,
+      /eval\s*\(/i,
+      /Function\s*\(/i,
+      /\.exec\s*\(/i,
+      /\.spawn\s*\(/i,
+      /child_process/i,
+      /fs\./i,
+      /global\./i,
+      /delete\s+/i,
+      /while\s*\(\s*true\s*\)/i,
+      /for\s*\(\s*;\s*;\s*\)/i,
+      /setInterval/i,
+      /setTimeout.*\d{4,}/i // Block long timeouts
+    ];
+
+    // Check for dangerous code
+    const hasDangerousCode = dangerousPatterns.some(pattern => pattern.test(code));
+    if (hasDangerousCode) {
+      throw new Error('Code contains blocked patterns for security');
+    }
+
+    // Only allow whitelisted operations
+    const isAllowed = allowedOperations.some(op => code.includes(op));
+    if (!isAllowed && !code.match(/^[\d\s+\-*/().]+$/)) { // Allow simple math
+      throw new Error('Code not in whitelist of safe operations');
+    }
+
+    try {
+      // Execute in limited scope with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Code execution timeout')), 2000);
+      });
+
+      const executionPromise = new Promise((resolve) => {
+        // Very limited safe execution context
+        if (code === 'this.client.guilds.cache.size') {
+          resolve(this.client.guilds.cache.size);
+        } else if (code === 'this.client.users.cache.size') {
+          resolve(this.client.users.cache.size);
+        } else if (code === 'this.client.channels.cache.size') {
+          resolve(this.client.channels.cache.size);
+        } else if (code === 'this.client.uptime') {
+          resolve(this.client.uptime);
+        } else if (code === 'process.memoryUsage()') {
+          resolve(process.memoryUsage());
+        } else if (code === 'Date.now()') {
+          resolve(Date.now());
+        } else if (code === 'Math.random()') {
+          resolve(Math.random());
+        } else if (code.match(/^[\d\s+\-*/().]+$/)) {
+          // Safe math evaluation
+          const result = Function('"use strict"; return (' + code + ')')();
+          resolve(result);
+        } else {
+          throw new Error('Operation not implemented in secure context');
+        }
+      });
+
+      return await Promise.race([executionPromise, timeoutPromise]);
+    } catch (error) {
+      throw new Error(`Secure execution failed: ${error.message}`);
+    }
+  }
+
   // Legacy permission function (deprecated but kept for compatibility)
   private async hasPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
     return this.hasCommandPermission(interaction);
@@ -4307,13 +4391,14 @@ export class RaptorBot {
       await interaction.deferReply({ ephemeral: true });
 
       try {
-        const result = eval(code);
-        const output = typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result);
+        // SECURITY FIX: Replace unsafe eval() with secure sandbox execution
+        const secureResult = await this.executeSecureCode(code);
+        const output = typeof secureResult === 'object' ? JSON.stringify(secureResult, null, 2) : String(secureResult);
         
         const truncatedOutput = output.length > 1900 ? output.substring(0, 1900) + '...' : output;
         
         const embed = new EmbedBuilder()
-          .setTitle('📝 Eval Result')
+          .setTitle('📝 Secure Eval Result')
           .addFields(
             { name: 'Input', value: `\`\`\`js\n${code}\`\`\`` },
             { name: 'Output', value: `\`\`\`js\n${truncatedOutput}\`\`\`` }
@@ -4322,7 +4407,7 @@ export class RaptorBot {
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
-        await storage.logActivity('eval_executed', `Eval executed by ${interaction.user.id}: ${code}`);
+        await storage.logActivity('secure_eval_executed', `Secure eval executed by ${interaction.user.id}: ${code}`);
         success = true;
 
       } catch (evalError) {

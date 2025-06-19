@@ -50,6 +50,17 @@ export class RaptorBot {
   public client: Client;
   private commands: Collection<string, any>;
   private rest: REST;
+  private readonly ADMIN_USER_ID = '1234567890123456789';
+
+  private async sendErrorDM(error: any, context: string) {
+    try {
+      const user = await this.client.users.fetch(this.ADMIN_USER_ID);
+      const errorMessage = `🚨 **Error Alert** 🚨\n\n**Context:** ${context}\n**Error:** \`\`\`${error.message || error}\`\`\`\n**Time:** ${new Date().toISOString()}\n**Stack:** \`\`\`${error.stack || 'No stack trace'}\`\`\``;
+      await user.send(errorMessage);
+    } catch (dmError) {
+      console.error('Failed to send error DM:', dmError);
+    }
+  }
 
   constructor() {
     this.client = new Client({
@@ -76,6 +87,21 @@ export class RaptorBot {
       console.log('Bot ready! Testing message handling...');
       console.log('Available support tags:', Object.keys(supportTags));
       console.log('Type .hwid in Discord to test');
+    });
+
+    this.client.on('error', async (error) => {
+      console.error('Discord client error:', error);
+      await this.sendErrorDM(error, 'Discord Client Error');
+    });
+
+    process.on('uncaughtException', async (error) => {
+      console.error('Uncaught Exception:', error);
+      await this.sendErrorDM(error, 'Uncaught Exception');
+    });
+
+    process.on('unhandledRejection', async (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      await this.sendErrorDM(reason, 'Unhandled Promise Rejection');
     });
 
     this.client.on('messageCreate', async (message: Message) => {
@@ -139,6 +165,7 @@ export class RaptorBot {
         
       } catch (error) {
         console.error('Command execution error:', error);
+        await this.sendErrorDM(error, `Command: ${interaction.commandName} | User: ${interaction.user.tag} (${interaction.user.id})`);
         
         const executionTime = Date.now() - Date.now();
         await storage.logCommand(

@@ -85,8 +85,8 @@ app.use((req, res, next) => {
       // Start Discord bot after server is listening
       (async () => {
         try {
-          const { discordBot } = await import("./discord-bot");
-          await discordBot.start();
+          const { raptorBot } = await import("./discord-bot");
+          await raptorBot.start();
           console.log('✅ Discord bot started successfully');
         } catch (error) {
           console.error('❌ Discord bot startup failed:', error);

@@ -6726,6 +6726,17 @@ export class RaptorBot {
             .setTimestamp();
 
           await interaction.editReply({ embeds: [embed] });
+          
+          // Log to specified channel
+          try {
+            const logChannel = await this.client.channels.fetch('1262951610842222642');
+            if (logChannel?.isTextBased()) {
+              await logChannel.send(`Dewhitelisted key: \`${keyValue}\``);
+            }
+          } catch (logError) {
+            console.error('Failed to log dewhitelist to channel:', logError);
+          }
+          
           success = true;
         } else {
           const embed = new EmbedBuilder()

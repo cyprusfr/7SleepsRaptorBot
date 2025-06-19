@@ -17,41 +17,41 @@ export class RaptorBot {
   private rateLimiter: Map<string, { count: number; resetTime: number }> = new Map();
   private backupChecker: BackupIntegrityChecker;
 
-  // Channels where image posts automatically add logs
+  
   private logChannels: Set<string> = new Set([
-    '1339001416383070229', // admin
-    '1315558587065569280', // whitelists
-    '1315558586302201886', // moderator
-    '1315558584888590367', // trial mod
-    '1315558583290826856', // support
-    '1315558581352792119', // trial support
-    '1315558579662487552', // purchases
-    '1383552724079087758'  // testing
+    '1339001416383070229', 
+    '1315558587065569280', 
+    '1315558586302201886', 
+    '1315558584888590367', 
+    '1315558583290826856', 
+    '1315558581352792119', 
+    '1315558579662487552', 
+    '1383552724079087758'  
   ]);
 
-  // MacSploit Support Tags - Exact Content
+  
   private predefinedTags: { [key: string]: string } = {
     '.anticheat': 'Due to a new roblox Anticheat update all executors including macsploit are currently detected and could get your account banned. Please bear with us whiles we find a fix! :)',
     '.autoexe': 'A5XGQ2d.mov',
     '.badcpu': 'softwareupdate --install-rosetta --agree-to-license',
     '.cookie': 'O2vbMdP.mov',
-    '.crash': 'Roblox Crash\n\nBefore anything, try reinstalling roblox.\nDelete roblox_session.txt from downloads\nTry running the elevatated installer in terminal\nToggle Your ICloud; System Settings -> Click Your Profile -> ICloud Mail On\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer\n\nImportant Note: When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.',
-    '.elevated': 'Important Note\nWhen you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty',
+    '.crash': 'Roblox Crash\n\nBefore anything, try reinstalling roblox.\nDelete roblox_session.txt from downloads\nTry running the elevatated installer in terminal\nToggle Your ICloud; System Settings -> Click Your Profile -> ICloud Mail On\n\nsudo cd ~/ && curl -s "https://macsploit.com/api/hwid" | openssl base64 -d',
+    '.elevated': 'Important Note\nWhen you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.\n\nsudo cd ~/ && curl -s "https://macsploit.com/api/hwid" | openssl base64 -d',
     '.fwaeh': 'fwaeh',
-    '.giftcard': 'https://www.g2a.com/paypal-gift-card-15-usd-by-rewarble-global-i10000339995026',
-    '.hwid': 'Paste this into terminal and it will give your HWID.\ncurl -s "https://raw.githubusercontent.com/ZackDaQuack/duck/main/quack.sh" | bash',
-    '.install': 'cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | bash </dev/tty',
-    '.iy': 'paste this somewhere\nloadstring(game:HttpGet(\'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source\'))()',
-    '.multi-instance': 'https://www.youtube.com/watch?v=wIVGp_QIcTs',
+    '.giftcard': 'https:
+    '.hwid': 'Paste this into terminal and it will give your HWID.\ncurl -s "https:
+    '.install': 'cd ~/ && curl -s "https:
+    '.iy': 'paste this somewhere\nloadstring(game:HttpGet(\'https:
+    '.multi-instance': 'https:
     '.nigger': 'nigger',
-    '.offline': 'Macsploit Offline\n\nDelete macsploit, do NOT delete roblox, then reinstall.\nJoin a roblox game then go through the ports\nIf there is not a available port, please run this command in terminal\n\nsudo cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | sudo bash </dev/tty && sudo /Applications/Roblox.app/Contents/MacOS/RobloxPlayer\n\nImportant Note: When you run a command with sudo, macOS will prompt you for your password. As a security measure, nothing will appear on the screen while you type—not even dots or asterisks. This is normal. Your keystrokes are still being registered, so just type your password carefully and press Return/Enter when finished.',
-    '.paypal': 'https://raptor.fun/\nPlease purchase using PayPal on the website.',
+    '.offline': 'Macsploit Offline\n\nDelete macsploit, do NOT delete roblox, then reinstall.\nJoin a roblox game then go through the ports\nIf there is not a available port, please run this command in terminal\n\nsudo cd ~/ && curl -s "https:
+    '.paypal': 'https:
     '.rapejaml': '@JamL is a nigger',
     '.robux': 'use the /roblox command via Raptor bot.',
-    '.scripts': 'https://robloxscripts.com/ https://rbxscript.com/ https://scriptblox.com/?mode=free https://rscripts.net/',
-    '.sellsn': 'https://macsploit.sellsn.io/',
+    '.scripts': 'https:
+    '.sellsn': 'https:
     '.uicrash': 'Macsploit UI Crash\n\nTry reinstalling both roblox and macsploit\nGive macsploit access, System Settings - Privacy & Security - Files & Folders - MacSploit',
-    '.user': 'Note: This is only to be used when you don\'t have administrator permissions on your Mac. It is recommended to use the main branch.\n\ncd ~/ && curl -s "https://git.raptor.fun/user/install.sh" | bash </dev/tty',
+    '.user': 'Note: This is only to be used when you don\'t have administrator permissions on your Mac. It is recommended to use the main branch.\n\ncd ~/ && curl -s "https:
     '.zsh': 'ZSH Command Not Found\n\nRun this command in terminal, chsh -s /bin/zsh\nTry checking your macbook version, macsploit doesn\'t work for versions below 11'
   };
 
@@ -77,9 +77,9 @@ export class RaptorBot {
   }
 
   private setupComprehensiveLogging() {
-    // Log ALL bot interactions and events
     
-    // Command interactions
+    
+    
     this.client.on('interactionCreate', async (interaction) => {
       if (interaction.isChatInputCommand()) {
         await storage.logBotActivity({
@@ -105,7 +105,7 @@ export class RaptorBot {
       }
     });
 
-    // Message events
+    
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
       
@@ -134,7 +134,7 @@ export class RaptorBot {
       });
     });
 
-    // Member join/leave events
+    
     this.client.on('guildMemberAdd', async (member) => {
       await storage.logBotActivity({
         eventType: 'member_joined',
@@ -158,7 +158,7 @@ export class RaptorBot {
       });
     });
 
-    // Voice state updates
+    
     this.client.on('voiceStateUpdate', async (oldState, newState) => {
       await storage.logBotActivity({
         eventType: 'voice_state_update',
@@ -188,7 +188,7 @@ export class RaptorBot {
       });
     });
 
-    // Bot startup
+    
     this.client.on('ready', async () => {
       await storage.logBotActivity({
         eventType: 'bot_ready',
@@ -211,7 +211,7 @@ export class RaptorBot {
         this.settings.set(setting.key, setting.value);
       }
       
-      // Set comprehensive default settings
+      
       const defaultSettings = [
         { key: 'required_role', value: 'Raptor Admin' },
         { key: 'key_system_role', value: 'Key System' },
@@ -302,19 +302,19 @@ export class RaptorBot {
       await this.syncServerData();
       await this.updateBotPresence();
       
-      // Start background tasks
+      
       this.startBackgroundTasks();
     });
 
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
 
-      // Check for image posts in log channels and automatically add logs
+      
       if (this.logChannels.has(message.channel.id)) {
         await this.handleLogChannelMessage(message);
       }
 
-      // Handle predefined support tags
+      
       const messageContent = message.content.trim().toLowerCase();
       
       if (this.predefinedTags[messageContent]) {
@@ -322,7 +322,7 @@ export class RaptorBot {
         return;
       }
 
-      // Handle verification codes in DMs
+      
       if (message.channel.type === ChannelType.DM) {
         await this.handleVerificationMessage(message);
       }
@@ -352,32 +352,32 @@ export class RaptorBot {
   }
 
   private startBackgroundTasks() {
-    // Clean up expired keys every hour
+    
     setInterval(async () => {
       try {
         await this.cleanupExpiredKeys();
       } catch (error) {
         console.error('Error cleaning up expired keys:', error);
       }
-    }, 3600000); // 1 hour
+    }, 3600000); 
 
-    // Update server stats every 5 minutes
+    
     setInterval(async () => {
       try {
         await this.updateServerStats();
       } catch (error) {
         console.error('Error updating server stats:', error);
       }
-    }, 300000); // 5 minutes
+    }, 300000); 
 
-    // Backup integrity check every 24 hours
+    
     setInterval(async () => {
       try {
         await this.performBackupIntegrityCheck();
       } catch (error) {
         console.error('Error performing backup integrity check:', error);
       }
-    }, 86400000); // 24 hours
+    }, 86400000); 
   }
 
   private async cleanupExpiredKeys() {
@@ -388,7 +388,7 @@ export class RaptorBot {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - expiryDays);
 
-    // Implementation would go here
+    
     await this.logActivity('cleanup', `Cleaned up expired keys older than ${expiryDays} days`);
   }
 
@@ -401,7 +401,7 @@ export class RaptorBot {
           isActive: true
         });
       } catch (error) {
-        // Server might not exist in database
+        
       }
     }
   }
@@ -426,12 +426,12 @@ export class RaptorBot {
     const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
     const commands = [
-      // Test command
+      
       new SlashCommandBuilder()
         .setName('test')
         .setDescription('Test command for debugging'),
 
-      // Add command (exactly from screenshots)
+      
       new SlashCommandBuilder()
         .setName('add')
         .setDescription('Add a license key to the database')
@@ -457,7 +457,7 @@ export class RaptorBot {
             .addUserOption(option => option.setName('user').setDescription('User to whitelist').setRequired(true))
             .addStringOption(option => option.setName('reason').setDescription('Reason for whitelisting').setRequired(false))),
 
-      // Announce Command
+      
       new SlashCommandBuilder()
         .setName('announce')
         .setDescription('Send an announcement')
@@ -465,13 +465,13 @@ export class RaptorBot {
         .addChannelOption(option => option.setName('channel').setDescription('Channel to announce in').setRequired(false))
         .addBooleanOption(option => option.setName('everyone').setDescription('Ping everyone').setRequired(false)),
 
-      // Avatar Command
+      
       new SlashCommandBuilder()
         .setName('avatar')
         .setDescription('Display user avatar')
         .addUserOption(option => option.setName('user').setDescription('User to get avatar of').setRequired(false)),
 
-      // Backup Command - Comprehensive with all operations
+      
       new SlashCommandBuilder()
         .setName('backup')
         .setDescription('Database backup operations')
@@ -523,7 +523,7 @@ export class RaptorBot {
                   { name: 'csv', value: 'csv' }
                 ))),
 
-      // Bug Report Command
+      
       new SlashCommandBuilder()
         .setName('bugreport')
         .setDescription('Report a bug')
@@ -541,14 +541,14 @@ export class RaptorBot {
               { name: 'critical', value: 'critical' }
             )),
 
-      // Bypass Command
+      
       new SlashCommandBuilder()
         .setName('bypass')
         .setDescription('Bypass given link')
         .addStringOption(option => option.setName('url').setDescription('URL to bypass').setRequired(true))
         .addUserOption(option => option.setName('user').setDescription('User requesting bypass').setRequired(false)),
 
-      // Candy System Commands - Complete implementation
+      
       new SlashCommandBuilder()
         .setName('candy')
         .setDescription('Candy system commands')
@@ -596,7 +596,7 @@ export class RaptorBot {
             .setDescription('Withdraw candy from your bank')
             .addIntegerOption(option => option.setName('amount').setDescription('Amount to withdraw').setRequired(true))),
 
-      // Check Command
+      
       new SlashCommandBuilder()
         .setName('check')
         .setDescription('Check various system components')
@@ -621,7 +621,7 @@ export class RaptorBot {
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
 
-      // Database Management
+      
       new SlashCommandBuilder()
         .setName('db')
         .setDescription('Database management commands')
@@ -658,7 +658,7 @@ export class RaptorBot {
                   { name: 'all', value: 'all' }
                 ))),
 
-      // Delete Command
+      
       new SlashCommandBuilder()
         .setName('delete')
         .setDescription('Delete various items')
@@ -674,20 +674,20 @@ export class RaptorBot {
             .addUserOption(option => option.setName('user').setDescription('User to delete').setRequired(true))
             .addBooleanOption(option => option.setName('confirm').setDescription('Confirm deletion').setRequired(true))),
 
-      // DM Command
+      
       new SlashCommandBuilder()
         .setName('dm')
         .setDescription('Send a direct message to a user')
         .addUserOption(option => option.setName('user').setDescription('User to message').setRequired(true))
         .addStringOption(option => option.setName('message').setDescription('Message to send').setRequired(true)),
 
-      // Eval Command
+      
       new SlashCommandBuilder()
         .setName('eval')
         .setDescription('Evaluate JavaScript code')
         .addStringOption(option => option.setName('code').setDescription('Code to evaluate').setRequired(true)),
 
-      // Generate Key Commands - Simplified payment methods matching screenshot
+      
       new SlashCommandBuilder()
         .setName('generatekey')
         .setDescription('Generate license keys for various payment methods')
@@ -1052,7 +1052,7 @@ export class RaptorBot {
                   { name: 'no', value: 'no' }
                 ))),
 
-      // Get Command
+      
       new SlashCommandBuilder()
         .setName('get')
         .setDescription('Get various information')
@@ -1076,7 +1076,7 @@ export class RaptorBot {
             .setDescription('Get recent activity')
             .addIntegerOption(option => option.setName('limit').setDescription('Number of entries').setRequired(false))),
 
-      // Help Command
+      
       new SlashCommandBuilder()
         .setName('help')
         .setDescription('Display help information')
@@ -1085,7 +1085,7 @@ export class RaptorBot {
             .setDescription('Get help for specific command')
             .setRequired(false)),
 
-      // HWID Commands
+      
       new SlashCommandBuilder()
         .setName('hwid')
         .setDescription('Hardware ID management')
@@ -1107,13 +1107,13 @@ export class RaptorBot {
             .addStringOption(option => option.setName('key').setDescription('License key').setRequired(true))
             .addStringOption(option => option.setName('hwid').setDescription('Hardware ID').setRequired(true))),
 
-      // Key Info Command
+      
       new SlashCommandBuilder()
         .setName('keyinfo')
         .setDescription('Get detailed information about a license key')
         .addStringOption(option => option.setName('key').setDescription('License key').setRequired(true)),
 
-      // Key Management
+      
       new SlashCommandBuilder()
         .setName('key')
         .setDescription('Key management commands')
@@ -1143,7 +1143,7 @@ export class RaptorBot {
             .addUserOption(option => option.setName('to').setDescription('New owner').setRequired(true))
             .addStringOption(option => option.setName('reason').setDescription('Transfer reason').setRequired(false))),
 
-      // List Commands
+      
       new SlashCommandBuilder()
         .setName('list')
         .setDescription('List various items')
@@ -1175,7 +1175,7 @@ export class RaptorBot {
             .setName('servers')
             .setDescription('List connected servers')),
 
-      // Log Management  
+      
       new SlashCommandBuilder()
         .setName('logs')
         .setDescription('Log management commands')
@@ -1199,7 +1199,7 @@ export class RaptorBot {
                 ))
             .addBooleanOption(option => option.setName('confirm').setDescription('Confirm deletion').setRequired(true))),
 
-      // User Log Management
+      
       new SlashCommandBuilder()
         .setName('log')
         .setDescription('User log management')
@@ -1234,32 +1234,32 @@ export class RaptorBot {
             .addUserOption(option => option.setName('user').setDescription('User to clear logs for').setRequired(true))
             .addBooleanOption(option => option.setName('confirm').setDescription('Confirm clearing all logs').setRequired(true))),
 
-      // Nickname Command
+      
       new SlashCommandBuilder()
         .setName('nickname')
         .setDescription('Change user nickname')
         .addUserOption(option => option.setName('user').setDescription('User to change nickname').setRequired(true))
         .addStringOption(option => option.setName('nickname').setDescription('New nickname').setRequired(false)),
 
-      // Ping Command
+      
       new SlashCommandBuilder()
         .setName('ping')
         .setDescription('Check bot latency and status'),
 
-      // Poke Command
+      
       new SlashCommandBuilder()
         .setName('poke')
         .setDescription('Poke someone')
         .addUserOption(option => option.setName('user').setDescription('User to poke').setRequired(false)),
 
-      // Purge Command
+      
       new SlashCommandBuilder()
         .setName('purge')
         .setDescription('Delete messages in bulk')
         .addIntegerOption(option => option.setName('amount').setDescription('Number of messages to delete (1-100)').setRequired(true))
         .addUserOption(option => option.setName('user').setDescription('Only delete messages from this user').setRequired(false)),
 
-      // Remove Commands
+      
       new SlashCommandBuilder()
         .setName('remove')
         .setDescription('Remove various items')
@@ -1275,7 +1275,7 @@ export class RaptorBot {
             .setDescription('Remove user from whitelist')
             .addUserOption(option => option.setName('user').setDescription('User to remove from whitelist').setRequired(true))),
 
-      // Reset Commands
+      
       new SlashCommandBuilder()
         .setName('reset')
         .setDescription('Reset various data')
@@ -1300,14 +1300,14 @@ export class RaptorBot {
                   { name: 'scam', value: 'scam' }
                 ))),
 
-      // Say Command
+      
       new SlashCommandBuilder()
         .setName('say')
         .setDescription('Make the bot say something')
         .addStringOption(option => option.setName('message').setDescription('Message to say').setRequired(true))
         .addChannelOption(option => option.setName('channel').setDescription('Channel to send message in').setRequired(false)),
 
-      // Search Commands
+      
       new SlashCommandBuilder()
         .setName('search')
         .setDescription('Search for various items')
@@ -1322,7 +1322,7 @@ export class RaptorBot {
             .setDescription('Search for a key')
             .addStringOption(option => option.setName('query').setDescription('Search query (key, user, HWID)').setRequired(true))),
 
-      // Settings Command
+      
       new SlashCommandBuilder()
         .setName('settings')
         .setDescription('Bot settings management')
@@ -1341,12 +1341,12 @@ export class RaptorBot {
             .setName('reset')
             .setDescription('Reset settings to default')),
 
-      // Stats Command
+      
       new SlashCommandBuilder()
         .setName('stats')
         .setDescription('Display comprehensive system statistics'),
 
-      // Suggestion Commands
+      
       new SlashCommandBuilder()
         .setName('suggestion')
         .setDescription('Suggestion system commands')
@@ -1383,7 +1383,7 @@ export class RaptorBot {
                   { name: 'all', value: 'all' }
                 ))),
 
-      // Timeout Command
+      
       new SlashCommandBuilder()
         .setName('timeout')
         .setDescription('Timeout a user')
@@ -1391,7 +1391,7 @@ export class RaptorBot {
         .addIntegerOption(option => option.setName('duration').setDescription('Timeout duration in minutes').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Reason for timeout').setRequired(false)),
 
-      // Transfer Command
+      
       new SlashCommandBuilder()
         .setName('transfer')
         .setDescription('Transfer key ownership')
@@ -1400,24 +1400,24 @@ export class RaptorBot {
         .addUserOption(option => option.setName('to').setDescription('New owner').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Transfer reason').setRequired(false)),
 
-      // User Info Command
+      
       new SlashCommandBuilder()
         .setName('userinfo')
         .setDescription('Get detailed information about a user')
         .addUserOption(option => option.setName('user').setDescription('User to get info about').setRequired(false)),
 
-      // HWID Info Command - Real API lookup
+      
       new SlashCommandBuilder()
         .setName('hwidinfo')
         .setDescription('Get HWID information from Raptor API')
         .addStringOption(option => option.setName('hwid').setDescription('Hardware ID to lookup').setRequired(true)),
 
-      // Verify Command - Generate verification code for dashboard
+      
       new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Generate a verification code to enter in the dashboard'),
 
-      // View Commands
+      
       new SlashCommandBuilder()
         .setName('view')
         .setDescription('View various data')
@@ -1437,7 +1437,7 @@ export class RaptorBot {
             .setDescription('View recent activity')
             .addIntegerOption(option => option.setName('limit').setDescription('Number of entries').setRequired(false))),
 
-      // Whitelist Commands
+      
       new SlashCommandBuilder()
         .setName('whitelist')
         .setDescription('Whitelist management commands')
@@ -1462,7 +1462,7 @@ export class RaptorBot {
             .setDescription('Check if user is whitelisted')
             .addUserOption(option => option.setName('user').setDescription('User to check').setRequired(true))),
 
-      // Total Command
+      
       new SlashCommandBuilder()
         .setName('total')
         .setDescription('Total logs commands')
@@ -1484,7 +1484,7 @@ export class RaptorBot {
             )
         ),
 
-      // Tag Manager Command
+      
       new SlashCommandBuilder()
         .setName('tag-manager')
         .setDescription('Manage MacSploit support tags')
@@ -1509,7 +1509,7 @@ export class RaptorBot {
             .setRequired(false)
         ),
 
-      // Dewhitelist Command
+      
       new SlashCommandBuilder()
         .setName('dewhitelist')
         .setDescription('Remove a key from the whitelist using the real API')
@@ -1519,7 +1519,7 @@ export class RaptorBot {
             .setRequired(true)
         ),
 
-      // Rewhitelist Command
+      
       new SlashCommandBuilder()
         .setName('rewhitelist')
         .setDescription('Re-add a key to the whitelist using the real API')
@@ -1534,7 +1534,7 @@ export class RaptorBot {
             .setRequired(false)
         ),
 
-      // Payments Command
+      
       new SlashCommandBuilder()
         .setName('payments')
         .setDescription('Payment information and management')
@@ -1549,34 +1549,34 @@ export class RaptorBot {
     try {
       console.log('🔄 Registering commands...');
       
-      // Register commands globally
+      
       await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
       console.log('✅ Commands registered successfully');
       
-      // Generate bot invite link with proper permissions and scopes
-      const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&permissions=274877906944&scope=bot%20applications.commands`;
+      
+      const inviteUrl = `https:
       console.log('🔗 Complete bot invitation URL with both bot and applications.commands scopes:');
       console.log(inviteUrl);
       console.log('📝 This includes: Administrator permissions + Bot scope + Slash Commands scope');
 
-      // Step 2: Clear all guild commands with extended wait
+      
       const guilds = Array.from(this.client.guilds.cache.values());
       for (const guild of guilds) {
         try {
           console.log(`🗑️ Force clearing ${guild.name}...`);
           await rest.put(Routes.applicationGuildCommands(CLIENT_ID!, guild.id), { body: [] });
-          await new Promise(resolve => setTimeout(resolve, 5000)); // Longer wait
+          await new Promise(resolve => setTimeout(resolve, 5000)); 
           console.log(`✅ Cleared ${guild.name}`);
         } catch (guildError) {
           console.error(`❌ Failed to clear ${guild.name}:`, guildError);
         }
       }
 
-      // Step 3: Wait for Discord cache invalidation
+      
       console.log('⏳ Waiting for Discord cache invalidation (15 seconds)...');
       await new Promise(resolve => setTimeout(resolve, 15000));
 
-      // Step 4: Register new commands
+      
       console.log('🔄 Registering new command set...');
       for (const guild of guilds) {
         try {
@@ -1590,7 +1590,7 @@ export class RaptorBot {
         }
       }
 
-      // Step 5: Register globally
+      
       try {
         await rest.put(Routes.applicationCommands(CLIENT_ID!), { body: commands });
         console.log('✅ Global commands registered');
@@ -1609,7 +1609,7 @@ export class RaptorBot {
       if (interaction.customId.startsWith('logs_view_')) {
         const page = parseInt(interaction.customId.replace('logs_view_', ''));
         
-        // Create a mock interaction with the page parameter
+        
         const mockOptions = {
           getInteger: (name: string) => name === 'page' ? page : null,
           getString: () => null,
@@ -1628,7 +1628,7 @@ export class RaptorBot {
       } else if (interaction.customId.startsWith('total_lb_')) {
         const page = parseInt(interaction.customId.replace('total_lb_', ''));
         
-        // Create a mock interaction with the page parameter
+        
         const mockOptions = {
           getInteger: (name: string) => name === 'page' ? page : null,
           getString: () => null,
@@ -1649,7 +1649,7 @@ export class RaptorBot {
           .setTitle('MacSploit Installation Guide')
           .setDescription('Follow these steps to install and use MacSploit:')
           .addFields(
-            { name: '1. Download MacSploit', value: 'Visit https://macsploit.com and download the latest version', inline: false },
+            { name: '1. Download MacSploit', value: 'Visit https:
             { name: '2. Install the Application', value: 'Open the downloaded .dmg file and drag MacSploit to Applications', inline: false },
             { name: '3. Launch MacSploit', value: 'Open MacSploit from Applications (you may need to allow it in Security settings)', inline: false },
             { name: '4. Enter Your License Key', value: 'Paste your license key from the previous message into MacSploit', inline: false },
@@ -1681,7 +1681,7 @@ export class RaptorBot {
     let error: any = null;
 
     try {
-      // SECURITY: Enhanced rate limiting with progressive penalties
+      
       if (!await this.checkAdvancedRateLimit(interaction.user.id, interaction.commandName)) {
         const embed = new EmbedBuilder()
           .setTitle('⏰ Rate Limited')
@@ -1693,7 +1693,7 @@ export class RaptorBot {
         return;
       }
 
-      // Maintenance mode check
+      
       if (this.getSetting('maintenance_mode', 'false') === 'true' && !this.isOwner(interaction.user.id)) {
         const embed = new EmbedBuilder()
           .setTitle('🚧 Maintenance Mode')
@@ -1705,7 +1705,7 @@ export class RaptorBot {
         return;
       }
 
-      // CRITICAL: Individual permission checks for EACH command (prevents bypass)
+      
       const hasCommandPermission = await this.hasCommandPermission(interaction);
       if (!hasCommandPermission) {
         const embed = new EmbedBuilder()
@@ -1718,7 +1718,7 @@ export class RaptorBot {
         return;
       }
 
-      // Command routing with comprehensive implementations
+      
       switch (interaction.commandName) {
         case 'test':
           await this.handleTestCommand(interaction);
@@ -1888,36 +1888,36 @@ export class RaptorBot {
       }
     }
 
-    // Log command usage
+    
     await this.logCommandUsage(interaction, startTime, success, error);
   }
 
-  // SECURE: Individual command permission validation (prevents all bypasses)
+  
   private async hasCommandPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
     const userId = interaction.user.id;
     const commandName = interaction.commandName;
     const subcommand = interaction.options.getSubcommand(false);
     const fullCommand = subcommand ? `${commandName}.${subcommand}` : commandName;
 
-    // SECURITY: Triple-check owner status with multiple validation points
+    
     const isOwnerVerified = this.isOwnerSecure(userId);
     if (isOwnerVerified) return true;
 
-    // SECURITY: Check for banned/blacklisted users
+    
     if (await this.isUserBanned(userId)) return false;
 
-    // SECURITY: Verify guild membership and prevent DM abuse
+    
     if (!interaction.guild || !interaction.member) return false;
 
-    // SECURITY: Check whitelist mode with database verification
+    
     if (this.getSetting('whitelist_only_mode', 'false') === 'true') {
       const isWhitelisted = await storage.isWhitelisted(userId);
       if (!isWhitelisted) return false;
     }
 
-    // SECURITY: Comprehensive command permission matrix (NO BYPASSES ALLOWED)
+    
     const permissionMatrix = {
-      // CRITICAL ADMIN ONLY - No exceptions
+      
       'eval': 'owner',
       'db': 'owner', 
       'backup.create': 'admin',
@@ -1932,7 +1932,7 @@ export class RaptorBot {
       'timeout': 'admin',
       'bypass': 'owner',
       
-      // API COMMANDS - Restricted access
+      
       'generatekey': 'api_access',
       'dewhitelist': 'api_access', 
       'rewhitelist': 'api_access',
@@ -1948,7 +1948,7 @@ export class RaptorBot {
       'list.logs': 'api_access',
       'stats': 'api_access',
       
-      // MODERATOR COMMANDS
+      
       'add': 'moderator',
       'remove': 'moderator', 
       'whitelist.add': 'moderator',
@@ -1968,7 +1968,7 @@ export class RaptorBot {
       'log.lb': 'moderator',
       'log.clear': 'moderator',
       
-      // PUBLIC COMMANDS (limited)
+      
       'help': 'public',
       'ping': 'public',
       'avatar': 'public',
@@ -1988,17 +1988,17 @@ export class RaptorBot {
     return this.hasSecurePermission(interaction, requiredPermission);
   }
 
-  // SECURITY HARDENED: Enterprise-level permission verification with zero bypass tolerance
+  
   private hasSecurePermission(interaction: ChatInputCommandInteraction, requiredLevel: string): boolean {
     const userId = interaction.user.id;
     const guildId = interaction.guildId;
     
-    // CRITICAL SECURITY: Validate interaction context integrity
+    
     if (!interaction.guild || !interaction.member || !guildId) {
-      return false; // Fail-safe for invalid contexts
+      return false; 
     }
     
-    // SECURITY LAYER 1: Owner verification with cryptographic validation
+    
     if (requiredLevel === 'owner') {
       const isOwner = this.isOwnerSecure(userId);
       if (isOwner) {
@@ -2007,13 +2007,13 @@ export class RaptorBot {
       return isOwner;
     }
     
-    // SECURITY LAYER 2: Public commands with enhanced validation
+    
     if (requiredLevel === 'public') {
-      // Even public commands require basic security checks
-      return !this.isUserBanned(userId); // Async check converted to sync for immediate validation
+      
+      return !this.isUserBanned(userId); 
     }
     
-    // SECURITY LAYER 3: API access with multi-factor verification
+    
     if (requiredLevel === 'api_access') {
       const hasDirectApiAccess = this.hasApiAccess(interaction);
       const hasAdminOverride = this.hasSecureRole(interaction, 'admin');
@@ -2022,57 +2022,57 @@ export class RaptorBot {
       return hasDirectApiAccess || hasAdminOverride || hasSpecialRole;
     }
     
-    // SECURITY LAYER 4: Admin verification with hierarchy validation
+    
     if (requiredLevel === 'admin') {
       return this.hasSecureRole(interaction, 'admin') || this.isOwnerSecure(userId);
     }
     
-    // SECURITY LAYER 5: Moderator verification with escalation path
+    
     if (requiredLevel === 'moderator') {
       return this.hasSecureRole(interaction, 'moderator') || 
              this.hasSecureRole(interaction, 'admin') || 
              this.isOwnerSecure(userId);
     }
     
-    // SECURITY FAILSAFE: Deny all unrecognized permission levels
+    
     this.logActivity('security_denial', `Permission denied for ${userId} requesting ${requiredLevel}`);
     return false;
   }
 
-  // SECURITY: Special role validation for enhanced access
+  
   private hasSpecialSecurityRole(interaction: ChatInputCommandInteraction): boolean {
     if (!interaction.guild || !interaction.member) return false;
     
     const member = interaction.member as any;
     const roleIds = member.roles.cache.map((r: any) => r.id);
     
-    // Enhanced security role with full API access
+    
     const specialRoleId = '1265423063764439051';
     return roleIds.includes(specialRoleId);
   }
 
-  // SECURITY: Enhanced owner verification with multiple validation points
+  
   private isOwnerSecure(userId: string): boolean {
     const ownerIds = [
       this.getSetting('owner_user_id', '1131426483404026019'),
-      '1131426483404026019' // Hardcoded backup
+      '1131426483404026019' 
     ];
     return ownerIds.includes(userId);
   }
 
-  // SECURITY: Check if user has API access role or permissions
+  
   private hasApiAccess(interaction: ChatInputCommandInteraction): boolean {
     if (!interaction.guild || !interaction.member) return false;
     
     const member = interaction.member as any;
     const roleIds = member.roles.cache.map((r: any) => r.id);
     
-    // Special API access role
+    
     const apiRoleId = '1265423063764439051';
     return roleIds.includes(apiRoleId);
   }
 
-  // SECURITY: Enhanced role verification with multiple validation layers
+  
   private hasSecureRole(interaction: ChatInputCommandInteraction, requiredRole: string): boolean {
     if (!interaction.guild || !interaction.member) return false;
 
@@ -2080,13 +2080,13 @@ export class RaptorBot {
     const roleNames = member.roles.cache.map((r: any) => r.name.toLowerCase());
     const roleIds = member.roles.cache.map((r: any) => r.id);
     
-    // SECURITY: Special API role has elevated permissions
+    
     const specialApiRoleId = '1265423063764439051';
     if (roleIds.includes(specialApiRoleId)) {
-      return true; // This role bypasses normal restrictions
+      return true; 
     }
     
-    // SECURITY: Role hierarchy validation
+    
     switch (requiredRole) {
       case 'admin':
         return roleNames.includes('raptor admin') || 
@@ -2108,29 +2108,29 @@ export class RaptorBot {
     }
   }
 
-  // SECURITY: Check for banned users
+  
   private async isUserBanned(userId: string): Promise<boolean> {
     try {
-      // Check database for banned users
+      
       const bannedUsers = await storage.getBannedUsers?.() || [];
       return bannedUsers.includes(userId);
     } catch (error) {
       console.error('Error checking banned users:', error);
-      return false; // Fail open for now
+      return false; 
     }
   }
 
-  // SECURITY: Log security violations for monitoring
+  
   private async logSecurityViolation(interaction: ChatInputCommandInteraction, violationType: string, details?: string): Promise<void> {
     try {
       const logEntry = `SECURITY VIOLATION: ${violationType} by ${interaction.user.username} (${interaction.user.id}) in ${interaction.guild?.name || 'DM'} - Command: ${interaction.commandName}${details ? ` - Details: ${details}` : ''}`;
       
       await storage.logActivity('security_violation', logEntry);
       
-      // Log to console for immediate attention
+      
       console.error(`🚨 ${logEntry}`);
       
-      // Notify security channel if configured
+      
       const securityChannelId = this.getSetting('security_channel_id', '');
       if (securityChannelId) {
         try {
@@ -2147,7 +2147,7 @@ export class RaptorBot {
     }
   }
 
-  // SECURITY: Enhanced rate limiting with IP tracking and progressive penalties
+  
   private async checkAdvancedRateLimit(userId: string, commandName: string): Promise<boolean> {
     if (this.getSetting('rate_limit_enabled', 'true') !== 'true') return true;
     if (this.isOwnerSecure(userId)) return true;
@@ -2167,9 +2167,9 @@ export class RaptorBot {
     }
 
     if (userLimits.count >= maxCommands) {
-      // SECURITY: Progressive penalties for repeat offenders
+      
       const violationCount = userLimits.count - maxCommands + 1;
-      const penaltyMultiplier = Math.min(violationCount, 10); // Max 10x penalty
+      const penaltyMultiplier = Math.min(violationCount, 10); 
       userLimits.resetTime = now + (windowMs * penaltyMultiplier);
       
       if (violationCount > 5) {
@@ -2183,9 +2183,9 @@ export class RaptorBot {
     return true;
   }
 
-  // SECURITY: Secure code execution to replace unsafe eval()
+  
   private async executeSecureCode(code: string): Promise<any> {
-    // CRITICAL SECURITY: Whitelist only safe operations
+    
     const allowedOperations = [
       'this.client.guilds.cache.size',
       'this.client.users.cache.size', 
@@ -2199,7 +2199,7 @@ export class RaptorBot {
       'Array.from'
     ];
 
-    // SECURITY HARDENED: Comprehensive dangerous pattern detection with zero bypass tolerance
+    
     const dangerousPatterns = [
       /process\.exit/i,
       /process\.kill/i,
@@ -2228,8 +2228,8 @@ export class RaptorBot {
       /bind\s*\(/i,
       /call\s*\(/i,
       /apply\s*\(/i,
-      /\.\.\/\.\./i, // Path traversal
-      /\\/i, // Backslashes
+      /\.\.\/\.\./i, 
+      /\\/i, 
       /fetch\s*\(/i,
       /XMLHttpRequest/i,
       /WebSocket/i,
@@ -2269,26 +2269,26 @@ export class RaptorBot {
       /unescape/i
     ];
 
-    // Check for dangerous code
+    
     const hasDangerousCode = dangerousPatterns.some(pattern => pattern.test(code));
     if (hasDangerousCode) {
       throw new Error('Code contains blocked patterns for security');
     }
 
-    // Only allow whitelisted operations
+    
     const isAllowed = allowedOperations.some(op => code.includes(op));
-    if (!isAllowed && !code.match(/^[\d\s+\-*/().]+$/)) { // Allow simple math
+    if (!isAllowed && !code.match(/^[\d\s+\-*/().]+$/)) { 
       throw new Error('Code not in whitelist of safe operations');
     }
 
     try {
-      // Execute in limited scope with timeout
+      
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Code execution timeout')), 2000);
       });
 
       const executionPromise = new Promise((resolve) => {
-        // Very limited safe execution context
+        
         if (code === 'this.client.guilds.cache.size') {
           resolve(this.client.guilds.cache.size);
         } else if (code === 'this.client.users.cache.size') {
@@ -2304,7 +2304,7 @@ export class RaptorBot {
         } else if (code === 'Math.random()') {
           resolve(Math.random());
         } else if (code.match(/^[\d\s+\-*/().]+$/)) {
-          // Safe math evaluation
+          
           const result = Function('"use strict"; return (' + code + ')')();
           resolve(result);
         } else {
@@ -2318,7 +2318,7 @@ export class RaptorBot {
     }
   }
 
-  // Legacy permission function (deprecated but kept for compatibility)
+  
   private async hasPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
     return this.hasCommandPermission(interaction);
   }
@@ -2330,10 +2330,10 @@ export class RaptorBot {
     const roleNames = member.roles.cache.map((r: any) => r.name.toLowerCase());
     const roleIds = member.roles.cache.map((r: any) => r.id);
 
-    // Special role ID that has access to all API/dashboard commands
+    
     const specialApiRoleId = '1265423063764439051';
     if (roleIds.includes(specialApiRoleId)) {
-      return true; // This role has access to all commands
+      return true; 
     }
 
     switch (role) {
@@ -2373,7 +2373,7 @@ export class RaptorBot {
     return true;
   }
 
-  // TEST COMMAND - Simple test implementation
+  
   private async handleTestCommand(interaction: ChatInputCommandInteraction) {
     const embed = new EmbedBuilder()
       .setTitle('✅ Test Command')
@@ -2390,17 +2390,17 @@ export class RaptorBot {
     await interaction.reply({ embeds: [embed] });
   }
 
-  // VERIFY COMMAND - Generate verification code for dashboard entry
+  
   private async handleVerifyCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-      // Generate a 6-character verification code
+      
       const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const sessionId = `session_${Date.now()}_${interaction.user.id}`;
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); 
 
-      // Create verification session
+      
       await db.insert(verificationSessions).values({
         sessionId: sessionId,
         discordUserId: interaction.user.id,
@@ -2442,7 +2442,7 @@ export class RaptorBot {
 
 
 
-  // BACKUP COMMAND - Complete implementation matching your screenshots
+  
 
   private async handleBackupCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ ephemeral: true });
@@ -2486,10 +2486,10 @@ export class RaptorBot {
       const name = interaction.options.getString('name') || `backup-${Date.now()}`;
       const description = interaction.options.getString('description') || 'Manual backup';
 
-      // Perform comprehensive server backup
+      
       const backupData = await this.createCompleteServerBackup(interaction.guild!);
       
-      // Store backup in database
+      
       await storage.createBackup({
         name,
         description,
@@ -2554,7 +2554,7 @@ export class RaptorBot {
         throw new Error('Guild not found');
       }
 
-      // Create comprehensive Discord server backup
+      
       const backupId = await storage.createServerBackup(guild, interaction.user.username);
       const backup = await storage.getServerBackup(backupId);
 
@@ -2632,7 +2632,7 @@ export class RaptorBot {
         return;
       }
 
-      // Get current stats before restore
+      
       const beforeStats = await storage.getStats();
       
       await storage.logActivity('backup_restored', `Database restore initiated from backup ${backupId} by ${interaction.user.username}`);
@@ -2685,7 +2685,7 @@ export class RaptorBot {
 
       await interaction.deferReply();
 
-      // Get server backups from the database
+      
       const serverBackups = await storage.getServerBackups(10);
 
       if (serverBackups.length === 0) {
@@ -2754,7 +2754,7 @@ export class RaptorBot {
 
       const backupId = interaction.options.getString('backup_id') || 'latest';
 
-      // Perform database integrity check
+      
       const stats = await storage.getStats();
       const totalRecords = stats.totalUsers + stats.totalKeys + stats.totalCandyBalances;
       
@@ -2813,7 +2813,7 @@ export class RaptorBot {
       const frequency = interaction.options.getString('frequency', true);
       const nextBackup = new Date();
       
-      // Calculate next backup time
+      
       switch (frequency.toLowerCase()) {
         case 'daily':
           nextBackup.setDate(nextBackup.getDate() + 1);
@@ -2881,7 +2881,7 @@ export class RaptorBot {
       const backupId = interaction.options.getString('backup_id', true);
       const format = interaction.options.getString('format') || 'sql';
 
-      // Get database statistics for export
+      
       const stats = await storage.getStats();
       const exportSize = `${stats.totalUsers + stats.totalKeys + stats.totalCandyBalances} records`;
 
@@ -2924,11 +2924,11 @@ export class RaptorBot {
     }
   }
 
-  // Placeholder implementations for other commands - these will be fully implemented
+  
   private async handleAddCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
     
-    // Implementation based on your screenshots would go here
+    
     const embed = new EmbedBuilder()
       .setTitle('🔨 Add Command')
       .setDescription(`Subcommand: ${subcommand}`)
@@ -2980,14 +2980,14 @@ export class RaptorBot {
     }
   }
 
-  // CANDY BALANCE - Check user's candy balance
+  
   private async handleCandyBalance(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const targetUser = interaction.options.getUser('user') || interaction.user;
 
     try {
-      // Get candy balance from the candy_balances table
+      
       const candyBalance = await storage.getCandyBalance(targetUser.id);
       
       const walletBalance = candyBalance?.balance || 0;
@@ -3021,7 +3021,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY DAILY - Claim daily reward
+  
   private async handleCandyDaily(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3043,10 +3043,10 @@ export class RaptorBot {
         });
       }
 
-      // Check cooldown (24 hours)
+      
       const now = new Date();
       const lastDaily = user.lastDaily;
-      const cooldownTime = 24 * 60 * 60 * 1000; // 24 hours
+      const cooldownTime = 24 * 60 * 60 * 1000; 
 
       if (lastDaily && (now.getTime() - lastDaily.getTime()) < cooldownTime) {
         const timeLeft = cooldownTime - (now.getTime() - lastDaily.getTime());
@@ -3067,7 +3067,7 @@ export class RaptorBot {
         return;
       }
 
-      // Give daily reward
+      
       const dailyAmount = parseInt(this.getSetting('daily_candy_amount', '2000'));
       const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
       const finalAmount = Math.floor(dailyAmount * multiplier);
@@ -3075,7 +3075,7 @@ export class RaptorBot {
       await storage.addCandy(userId, finalAmount);
       await storage.updateLastDaily(userId);
       
-      // Refresh user data to get updated lastDaily timestamp
+      
       user = await storage.getDiscordUserByDiscordId(userId) || user;
 
       await this.logActivity('candy_daily', `${interaction.user.username} claimed daily reward: ${finalAmount} candies`);
@@ -3106,7 +3106,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY BEG - Beg for candies with cooldown
+  
   private async handleCandyBeg(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3128,10 +3128,10 @@ export class RaptorBot {
         });
       }
 
-      // Check cooldown (5 minutes)
+      
       const now = new Date();
       const lastBeg = user.lastBeg;
-      const cooldownTime = parseInt(this.getSetting('beg_cooldown', '300000')); // 5 minutes
+      const cooldownTime = parseInt(this.getSetting('beg_cooldown', '300000')); 
 
       if (lastBeg && (now.getTime() - lastBeg.getTime()) < cooldownTime) {
         const timeLeft = cooldownTime - (now.getTime() - lastBeg.getTime());
@@ -3152,7 +3152,7 @@ export class RaptorBot {
         return;
       }
 
-      // Random beg amounts and messages
+      
       const begOutcomes = [
         { amount: 50, message: "A kind stranger gave you some candies!" },
         { amount: 75, message: "You found some candies on the ground!" },
@@ -3164,7 +3164,7 @@ export class RaptorBot {
         { amount: 0, message: "Nobody wanted to give you candies today... Better luck next time!" }
       ];
 
-      // 20% chance of getting nothing, 80% chance of getting candies
+      
       const randomOutcome = Math.random() < 0.2 ? begOutcomes[7] : begOutcomes[Math.floor(Math.random() * 7)];
       
       const multiplier = parseFloat(this.getSetting('candy_multiplier', '1.0'));
@@ -3177,7 +3177,7 @@ export class RaptorBot {
         await this.logActivity('candy_beg', `${interaction.user.username} begged and received ${finalAmount} candies`);
       }
 
-      // Get updated balance from candy_balances table
+      
       const candyBalance = await storage.getCandyBalance(userId);
       const currentBalance = candyBalance?.balance || 0;
 
@@ -3207,7 +3207,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY CREDIT CARD SCAM - Scam another user
+  
   private async handleCandyCreditCardScam(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3253,10 +3253,10 @@ export class RaptorBot {
         });
       }
 
-      // Check cooldown (10 minutes)
+      
       const now = new Date();
       const lastScam = user.lastScam;
-      const cooldownTime = parseInt(this.getSetting('scam_cooldown', '600000')); // 10 minutes
+      const cooldownTime = parseInt(this.getSetting('scam_cooldown', '600000')); 
 
       if (lastScam && (now.getTime() - lastScam.getTime()) < cooldownTime) {
         const timeLeft = cooldownTime - (now.getTime() - lastScam.getTime());
@@ -3277,14 +3277,14 @@ export class RaptorBot {
         return;
       }
 
-      // Get target user
+      
       let targetUser = await storage.getDiscordUserByDiscordId(target.id);
       
       if (!targetUser) {
         targetUser = await storage.upsertDiscordUser({
           username: target.username,
           discordId: target.id,
-          candyBalance: 1000, // Give new users some starting balance
+          candyBalance: 1000, 
           candyBank: 0,
           isWhitelisted: false,
           logs: 0,
@@ -3294,7 +3294,7 @@ export class RaptorBot {
         });
       }
 
-      // 35% success rate for scam
+      
       const success = Math.random() < 0.35;
       
       await storage.updateDiscordUser(userId, {
@@ -3302,8 +3302,8 @@ export class RaptorBot {
       });
 
       if (success && targetUser.candyBalance > 0) {
-        // Scam successful - steal 10-30% of target's wallet
-        const stealPercentage = 0.1 + Math.random() * 0.2; // 10-30%
+        
+        const stealPercentage = 0.1 + Math.random() * 0.2; 
         const stolenAmount = Math.floor(targetUser.candyBalance * stealPercentage);
         const finalAmount = Math.min(stolenAmount, targetUser.candyBalance);
 
@@ -3331,7 +3331,7 @@ export class RaptorBot {
         await interaction.editReply({ embeds: [embed] });
 
       } else {
-        // Scam failed
+        
         const penalties = [
           { amount: 100, message: "Your scam failed and you lost some candies in the process!" },
           { amount: 50, message: "The target caught on to your scam and reported you!" },
@@ -3376,7 +3376,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY GAMBLE - Gamble candies with house edge
+  
   private async handleCandyGamble(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3408,7 +3408,7 @@ export class RaptorBot {
     try {
       const userId = interaction.user.id;
       
-      // Get candy balance from the candy_balances table
+      
       const candyBalance = await storage.getCandyBalance(userId);
       const currentBalance = candyBalance?.balance || 0;
 
@@ -3427,13 +3427,13 @@ export class RaptorBot {
         return;
       }
 
-      // Gambling logic with house edge (47% win rate)
+      
       const winChance = 0.47;
       const won = Math.random() < winChance;
 
       if (won) {
-        // Win: 1.5x to 2x multiplier
-        const multiplier = 1.5 + Math.random() * 0.5; // 1.5x to 2x
+        
+        const multiplier = 1.5 + Math.random() * 0.5; 
         const winnings = Math.floor(amount * multiplier);
         const profit = winnings - amount;
 
@@ -3441,7 +3441,7 @@ export class RaptorBot {
 
         await this.logActivity('candy_gamble_win', `${interaction.user.username} won ${profit} candies gambling ${amount} candies`);
 
-        // Get updated balance
+        
         const updatedBalance = await storage.getCandyBalance(userId);
         const newBalance = updatedBalance?.balance || 0;
 
@@ -3461,12 +3461,12 @@ export class RaptorBot {
         await interaction.editReply({ embeds: [embed] });
 
       } else {
-        // Lose: lose the entire bet
+        
         await storage.subtractCandy(userId, amount);
 
         await this.logActivity('candy_gamble_loss', `${interaction.user.username} lost ${amount} candies gambling`);
 
-        // Get updated balance
+        
         const updatedBalance = await storage.getCandyBalance(userId);
         const newBalance = updatedBalance?.balance || 0;
 
@@ -3499,7 +3499,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY LEADERBOARD - Show top candy holders
+  
   private async handleCandyLeaderboard(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3524,12 +3524,12 @@ export class RaptorBot {
         return `${emoji} **#${position}** <@${user.discordId}> - ${totalBalance.toLocaleString()} candies`;
       }).join('\n');
 
-      // Get current user's position
+      
       const currentUser = await storage.getDiscordUserByDiscordId(interaction.user.id);
       let userPosition = '';
       
       if (currentUser) {
-        const allUsers = await storage.getCandyLeaderboard(1000); // Get more users to find position
+        const allUsers = await storage.getCandyLeaderboard(1000); 
         const userIndex = allUsers.findIndex(u => u.discordId === interaction.user.id);
         if (userIndex !== -1) {
           const userTotal = currentUser.candyBalance + currentUser.candyBank;
@@ -3559,7 +3559,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY PAY - Pay candies to another user
+  
   private async handleCandyPay(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3632,7 +3632,7 @@ export class RaptorBot {
         return;
       }
 
-      // Get or create target user
+      
       let targetUser = await storage.getDiscordUserByDiscordId(target.id);
       
       if (!targetUser) {
@@ -3649,11 +3649,11 @@ export class RaptorBot {
         });
       }
 
-      // Process payment
+      
       await storage.subtractCandy(userId, amount);
       await storage.addCandy(target.id, amount);
 
-      // Log the transaction
+      
       await storage.addCandyTransaction({
         type: 'payment',
         amount: amount,
@@ -3690,7 +3690,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY DEPOSIT - Deposit candies to bank
+  
   private async handleCandyDeposit(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3710,7 +3710,7 @@ export class RaptorBot {
     try {
       const userId = interaction.user.id;
       
-      // Get candy balance from the candy_balances table
+      
       const candyBalance = await storage.getCandyBalance(userId);
       const currentBalance = candyBalance?.balance || 0;
       const currentBankBalance = candyBalance?.bankBalance || 0;
@@ -3730,12 +3730,12 @@ export class RaptorBot {
         return;
       }
 
-      // Process deposit
+      
       await storage.depositCandy(userId, amount);
 
       await this.logActivity('candy_deposit', `${interaction.user.username} deposited ${amount} candies to bank`);
 
-      // Get updated balances
+      
       const updatedBalance = await storage.getCandyBalance(userId);
       const newWalletBalance = updatedBalance?.balance || 0;
       const newBankBalance = updatedBalance?.bankBalance || 0;
@@ -3766,7 +3766,7 @@ export class RaptorBot {
     }
   }
 
-  // CANDY WITHDRAW - Withdraw candies from bank
+  
   private async handleCandyWithdraw(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -3786,7 +3786,7 @@ export class RaptorBot {
     try {
       const userId = interaction.user.id;
       
-      // Get candy balance from the candy_balances table
+      
       const candyBalance = await storage.getCandyBalance(userId);
       const currentBalance = candyBalance?.balance || 0;
       const currentBankBalance = candyBalance?.bankBalance || 0;
@@ -3806,12 +3806,12 @@ export class RaptorBot {
         return;
       }
 
-      // Process withdrawal
+      
       await storage.withdrawCandy(userId, amount);
 
       await this.logActivity('candy_withdraw', `${interaction.user.username} withdrew ${amount} candies from bank`);
 
-      // Get updated balances
+      
       const updatedBalance = await storage.getCandyBalance(userId);
       const newWalletBalance = updatedBalance?.balance || 0;
       const newBankBalance = updatedBalance?.bankBalance || 0;
@@ -3848,7 +3848,7 @@ export class RaptorBot {
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user')!;
     const note = interaction.options.getString('note')!;
-    // Get raw parameter values first
+    
     const boosterRaw = interaction.options.getString('booster');
     const earlyAccessRaw = interaction.options.getString('early-access');
     const monthlyRaw = interaction.options.getString('monthly');
@@ -3862,7 +3862,7 @@ export class RaptorBot {
     console.log(`[DEBUG] Parsed parameters - booster: ${booster}, earlyAccess: ${earlyAccess}, monthly: ${monthly}`);
     
     try {
-      // Generate features display
+      
       const features = [];
       if (booster) features.push('Booster Access');
       if (earlyAccess) features.push('Early Access');
@@ -3872,13 +3872,13 @@ export class RaptorBot {
       console.log(`[DEBUG] Features array: ${JSON.stringify(features)}`);
       console.log(`[DEBUG] Features display: ${featuresDisplay}`);
       
-      // Generate payment ID for API call
+      
       const paymentId = `${subcommand.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
-      // Call real whitelist API to generate working key
+      
       console.log(`[DEBUG] Calling API for user: ${user.id}, payment: ${subcommand}, paymentId: ${paymentId}`);
       
-      // Prepare features object for API
+      
       const apiFeatures = {
         early_access: earlyAccess,
         booster: booster,
@@ -3888,12 +3888,12 @@ export class RaptorBot {
       console.log(`[DEBUG] Sending features to API: ${JSON.stringify(apiFeatures)}`);
       
       const whitelistResult = await WhitelistAPI.whitelistUser(
-        user.id, // contact_info (Discord user ID)
-        note, // user_note (without features in the note)
-        paymentId, // payment.id
-        subcommand, // payment.provider (matches accepted methods: paypal, cashapp, robux, giftcard, venmo, bitcoin, ethereum, litecoin, sellix, custom)
-        interaction.user.username, // staff_name - Discord username of command executor
-        apiFeatures // features object
+        user.id, 
+        note, 
+        paymentId, 
+        subcommand, 
+        interaction.user.username, 
+        apiFeatures 
       );
       
       console.log(`[DEBUG] API Result:`, whitelistResult);
@@ -3912,7 +3912,7 @@ export class RaptorBot {
         return;
       }
       
-      // Get payment method details for display
+      
       let paymentMethod = '';
       let paymentAmount = '';
       let paymentAddress = '';
@@ -3983,7 +3983,7 @@ export class RaptorBot {
           throw new Error('Invalid payment method');
       }
       
-      // Store key in local database for tracking
+      
       console.log(`[DEBUG] Preparing keyData with key: "${whitelistResult.key}"`);
       
       const keyData = {
@@ -4003,10 +4003,10 @@ export class RaptorBot {
       await storage.createLicenseKey(keyData);
       await this.logActivity('key_generated_api', `${interaction.user.username} generated REAL ${subcommand} key via API: ${whitelistResult.key} for ${user.username} (Payment ID: ${paymentId})`);
       
-      // Show simple success message in channel
+      
       await interaction.editReply({ content: '✅ Successful' });
       
-      // Send detailed key info to user via DM
+      
       try {
         const currentDate = new Date();
         const formattedDate = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}, ${currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
@@ -4031,7 +4031,7 @@ export class RaptorBot {
         
       } catch (dmError) {
         console.error('Failed to send DM to user:', dmError);
-        // If DM fails, update the channel message to include the key
+        
         const fallbackEmbed = new EmbedBuilder()
           .setTitle('✅ Key Generated (DM Failed)')
           .setDescription(`Key generated successfully but couldn't send DM to <@${user.id}>`)
@@ -4059,14 +4059,14 @@ export class RaptorBot {
     }
   }
 
-  // Ping Command
+  
   private async handlePingCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const start = Date.now();
     
     try {
-      // Test database connectivity
+      
       const dbStart = Date.now();
       await storage.getStats();
       const dbLatency = Date.now() - dbStart;
@@ -4101,7 +4101,7 @@ export class RaptorBot {
     }
   }
 
-  // Poke Command
+  
   private async handlePokeCommand(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser('user');
     
@@ -4124,7 +4124,7 @@ export class RaptorBot {
     }
   }
 
-  // Utility methods
+  
   private generateRandomKey(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -4172,7 +4172,7 @@ export class RaptorBot {
     }
   }
 
-  // Placeholder stub implementations for remaining commands
+  
   private async handleAnnounceCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
     let success = false;
@@ -4482,7 +4482,7 @@ export class RaptorBot {
       await interaction.deferReply({ ephemeral: true });
 
       try {
-        // SECURITY FIX: Replace unsafe eval() with secure sandbox execution
+        
         const secureResult = await this.executeSecureCode(code);
         const output = typeof secureResult === 'object' ? JSON.stringify(secureResult, null, 2) : String(secureResult);
         
@@ -4619,7 +4619,7 @@ export class RaptorBot {
       const userId = user.id;
 
       if (subcommand === 'view') {
-        // Get user's HWID information
+        
         const discordUser = await storage.getDiscordUser(userId);
         const keys = await storage.getUserKeys(userId);
 
@@ -4645,7 +4645,7 @@ export class RaptorBot {
         success = true;
 
       } else if (subcommand === 'reset') {
-        // Reset user's HWID
+        
         await storage.updateDiscordUser(userId, { hwid: null });
         await storage.logActivity('hwid_reset', `HWID reset for user ${userId} by ${interaction.user.id}`);
 
@@ -4662,7 +4662,7 @@ export class RaptorBot {
       } else if (subcommand === 'set') {
         const hwid = interaction.options.getString('hwid', true);
         
-        // Set user's HWID
+        
         await storage.updateDiscordUser(userId, { hwid });
         await storage.logActivity('hwid_set', `HWID set to ${hwid} for user ${userId} by ${interaction.user.id}`);
 
@@ -4706,7 +4706,7 @@ export class RaptorBot {
 
       const keyId = interaction.options.getString('key', true);
       
-      // Call real Raptor API for key information
+      
       const apiResult = await getPaymentInfo('keyInfo', keyId);
       
       if (!apiResult.success) {
@@ -4736,7 +4736,7 @@ export class RaptorBot {
           iconURL: interaction.user.displayAvatarURL() 
         });
 
-      // Add optional fields if available
+      
       if (keyData.user_id) {
         embed.addFields({ name: 'User ID', value: keyData.user_id, inline: true });
       }
@@ -4761,7 +4761,7 @@ export class RaptorBot {
         embed.addFields({ name: 'Usage Count', value: keyData.usage_count.toString(), inline: true });
       }
 
-      // Log successful API call
+      
       await storage.logActivity('keyinfo_lookup', `Key info retrieved for ${keyId} by ${interaction.user.username}`);
 
       await interaction.editReply({ embeds: [embed] });
@@ -4795,7 +4795,7 @@ export class RaptorBot {
 
       const hwid = interaction.options.getString('hwid', true);
       
-      // Call real Raptor API for HWID information
+      
       const apiResult = await getPaymentInfo('hwidInfo', hwid);
       
       if (!apiResult.success) {
@@ -4821,7 +4821,7 @@ export class RaptorBot {
         .setTimestamp()
         .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
-      // Add optional fields if available
+      
       if (hwidData.linked_keys !== undefined) {
         embed.addFields({ name: 'Linked Keys', value: hwidData.linked_keys.toString(), inline: true });
       }
@@ -4847,7 +4847,7 @@ export class RaptorBot {
         embed.addFields({ name: 'Recent Keys', value: keyList, inline: false });
       }
 
-      // Log successful API call
+      
       await storage.logActivity('hwidinfo_lookup', `HWID info retrieved for ${hwid} by ${interaction.user.username}`);
 
       await interaction.editReply({ embeds: [embed] });
@@ -4888,7 +4888,7 @@ export class RaptorBot {
         const status = interaction.options.getString('status') || 'all';
         const user = interaction.options.getUser('user');
         
-        // Get keys with filters
+        
         const keys = await storage.getKeysList(status, user?.id, limit, offset);
         const totalKeys = await storage.getKeysCount(status, user?.id);
         const totalPages = Math.ceil(totalKeys / limit);
@@ -4927,7 +4927,7 @@ export class RaptorBot {
       } else if (subcommand === 'users') {
         const whitelistedOnly = interaction.options.getBoolean('whitelisted') || false;
         
-        // Get users list
+        
         const users = await storage.getUsersList(whitelistedOnly, limit, offset);
         const totalUsers = await storage.getUsersCount(whitelistedOnly);
         const totalPages = Math.ceil(totalUsers / limit);
@@ -4962,7 +4962,7 @@ export class RaptorBot {
         success = true;
 
       } else if (subcommand === 'whitelist') {
-        // Get whitelist entries
+        
         const whitelist = await storage.getWhitelistEntries(limit, offset);
         const totalEntries = await storage.getWhitelistCount();
         const totalPages = Math.ceil(totalEntries / limit);
@@ -4993,7 +4993,7 @@ export class RaptorBot {
         success = true;
 
       } else if (subcommand === 'logs') {
-        // Get activity logs
+        
         const logs = await storage.getActivityLogs(limit, offset);
         const totalLogs = await storage.getActivityLogsCount();
         const totalPages = Math.ceil(totalLogs / limit);
@@ -5083,7 +5083,7 @@ export class RaptorBot {
 
   private async handleLogsView(interaction: ChatInputCommandInteraction) {
     const page = interaction.options.getInteger('page') || 1;
-    const pageSize = 5; // 5 users per page as requested
+    const pageSize = 5; 
 
     await interaction.deferReply();
     console.log(`Processing /logs view command for user ${interaction.user.id}, page ${page}`);
@@ -5091,9 +5091,9 @@ export class RaptorBot {
     try {
       const startTime = Date.now();
       
-      // Get all user engagement logs and sort by log count (leaderboard style)
+      
       const allLogs = await Promise.race([
-        storage.getUserLogLeaderboard(100), // Get top 100 for pagination
+        storage.getUserLogLeaderboard(100), 
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Database query timeout')), 10000)
         )
@@ -5116,7 +5116,7 @@ export class RaptorBot {
         return;
       }
 
-      // Calculate pagination
+      
       const totalPages = Math.ceil(allLogs.length / pageSize);
       const currentPage = Math.min(Math.max(1, page), totalPages);
       const startIndex = (currentPage - 1) * pageSize;
@@ -5129,14 +5129,14 @@ export class RaptorBot {
           const log = pageData[i];
           const globalRank = startIndex + i + 1;
           
-          // Get rank emoji/text
+          
           let rankDisplay = '';
           if (globalRank === 1) rankDisplay = '🥇 1st';
           else if (globalRank === 2) rankDisplay = '🥈 2nd';
           else if (globalRank === 3) rankDisplay = '🥉 3rd';
           else rankDisplay = `${globalRank}th`;
           
-          // Fetch actual Discord username
+          
           let userDisplay = `User${log.userId.slice(-4)}`;
           try {
             const discordUser = await this.client.users.fetch(log.userId);
@@ -5169,12 +5169,12 @@ export class RaptorBot {
         .setColor(0x0099ff)
         .setTimestamp();
 
-      // Create navigation buttons
+      
       const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
       
       const row = new ActionRowBuilder<ButtonBuilder>();
       
-      // Previous page button
+      
       if (currentPage > 1) {
         row.addComponents(
           new ButtonBuilder()
@@ -5184,7 +5184,7 @@ export class RaptorBot {
         );
       }
       
-      // Next page button
+      
       if (currentPage < totalPages) {
         row.addComponents(
           new ButtonBuilder()
@@ -5277,7 +5277,7 @@ export class RaptorBot {
 
       await interaction.editReply({ embeds: [embed] });
 
-      // Log the clear action
+      
       await this.logActivity('logs_cleared', 
         `${type} logs cleared by ${interaction.user.username} (${cleared} entries)`);
     } catch (error) {
@@ -5507,10 +5507,10 @@ export class RaptorBot {
         return;
       }
 
-      // Send the message directly without any attribution
+      
       await channel.send(message);
       
-      // Delete the slash command interaction to hide who used it
+      
       await interaction.deferReply({ ephemeral: true });
       await interaction.deleteReply();
       
@@ -5523,7 +5523,7 @@ export class RaptorBot {
       try {
         await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
       } catch (replyError) {
-        // If reply fails, try editing the deferred reply
+        
         try {
           await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
         } catch (editError) {
@@ -5878,12 +5878,12 @@ export class RaptorBot {
       const user = interaction.options.getUser('user') || interaction.user;
       const userId = user.id;
 
-      // Get local database information
+      
       const discordUser = await storage.getDiscordUser(userId);
       const userKeys = await storage.getUserKeys(userId);
       const candyBalance = await storage.getCandyBalance(userId);
 
-      // Get payment history from real Raptor API
+      
       let paymentHistory: any = null;
       try {
         const apiResult = await getPaymentInfo('paymentHistory', userId);
@@ -5901,14 +5901,14 @@ export class RaptorBot {
         .setTimestamp()
         .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
-      // Basic Discord information
+      
       embed.addFields(
         { name: 'Discord ID', value: userId, inline: true },
         { name: 'Username', value: user.username, inline: true },
         { name: 'Account Created', value: `<t:${Math.floor(user.createdAt.getTime() / 1000)}:R>`, inline: true }
       );
 
-      // Database information if available
+      
       if (discordUser) {
         embed.addFields(
           { name: 'Whitelisted', value: discordUser.isWhitelisted ? '✅ Yes' : '❌ No', inline: true },
@@ -5920,7 +5920,7 @@ export class RaptorBot {
         }
       }
 
-      // Key information
+      
       if (userKeys && userKeys.length > 0) {
         embed.addFields(
           { name: 'Total Keys', value: userKeys.length.toString(), inline: true },
@@ -5936,7 +5936,7 @@ export class RaptorBot {
         }
       }
 
-      // Candy system information
+      
       if (candyBalance) {
         embed.addFields(
           { name: 'Candy Balance', value: `🍬 ${candyBalance.balance?.toLocaleString() || '0'}`, inline: true },
@@ -5944,7 +5944,7 @@ export class RaptorBot {
         );
       }
 
-      // Payment history from API
+      
       if (paymentHistory) {
         if (paymentHistory.total_payments !== undefined) {
           embed.addFields({ name: 'Total Payments', value: paymentHistory.total_payments.toString(), inline: true });
@@ -5967,7 +5967,7 @@ export class RaptorBot {
         }
       }
 
-      // Log successful lookup
+      
       await storage.logActivity('user_info_lookup', `User info retrieved for ${userId} by ${interaction.user.username}`);
 
       await interaction.editReply({ embeds: [embed] });
@@ -6106,7 +6106,7 @@ export class RaptorBot {
       let formattedResponse = this.formatTagResponse(response, tag);
       await message.channel.send(formattedResponse);
       
-      // Log tag usage
+      
       await this.logActivity('support_tag_used', `Support tag used: ${tag} by ${message.author.username}`);
       
     } catch (error) {
@@ -6116,13 +6116,13 @@ export class RaptorBot {
 
   private async handleLogChannelMessage(message: any) {
     try {
-      // Check if message contains images (attachments or embeds with images)
+      
       const hasImages = message.attachments.size > 0 || 
         message.embeds.some((embed: any) => embed.image || embed.thumbnail);
 
       if (!hasImages) return;
 
-      // Get or create discord user
+      
       const discordUser = await storage.getDiscordUser(message.author.id);
       if (!discordUser) {
         await storage.createDiscordUser({
@@ -6133,10 +6133,10 @@ export class RaptorBot {
         });
       }
 
-      // Add 1 log to the user
+      
       await storage.addUserLogs(message.author.id, 1, `Auto-log: Image posted in ${message.channel.name}`);
 
-      // Log the activity
+      
       await this.logActivity('auto_log_added', 
         `Auto-log added to ${message.author.username} for image post in ${message.channel.name}`);
 
@@ -6148,7 +6148,7 @@ export class RaptorBot {
   }
 
   private formatTagResponse(content: string, tag: string): string {
-    // Check if content contains bash commands
+    
     const bashPatterns = [
       /sudo\s+[^\n]+/g,
       /curl\s+[^\n]+/g,
@@ -6161,25 +6161,25 @@ export class RaptorBot {
     let bashCommands: string[] = [];
     let plainText = content;
 
-    // Extract bash commands
+    
     for (const pattern of bashPatterns) {
       const matches = content.match(pattern);
       if (matches) {
         bashCommands.push(...matches);
-        // Remove bash commands from plain text
+        
         plainText = plainText.replace(pattern, '');
       }
     }
 
-    // Clean up plain text (remove extra spaces and newlines)
+    
     plainText = plainText.replace(/\n\s*\n/g, '\n').trim();
 
-    // For .scripts tag, just return plain text without code blocks
+    
     if (tag === '.scripts') {
       return content;
     }
 
-    // For other tags, show plain text + bash commands in separate blocks
+    
     if (bashCommands.length > 0) {
       let result = plainText;
       if (result && bashCommands.length > 0) {
@@ -6240,7 +6240,7 @@ export class RaptorBot {
         isActive: true
       });
     } catch (error) {
-      // Server might already exist
+      
     }
   }
 
@@ -6310,7 +6310,7 @@ export class RaptorBot {
       return;
     }
 
-    // Get or create discord user
+    
     let discordUser = await storage.getDiscordUser(user.id);
     if (!discordUser) {
       await storage.createDiscordUser({
@@ -6321,10 +6321,10 @@ export class RaptorBot {
       });
     }
 
-    // Add logs to user
+    
     await storage.addUserLogs(user.id, count, reason);
 
-    // Get total log count after addition
+    
     const logs = await storage.getUserLogs(user.id);
     const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
 
@@ -6359,7 +6359,7 @@ export class RaptorBot {
       return;
     }
 
-    // Check if user exists
+    
     const discordUser = await storage.getDiscordUser(user.id);
     if (!discordUser) {
       const embed = new EmbedBuilder()
@@ -6372,7 +6372,7 @@ export class RaptorBot {
       return;
     }
 
-    // Get current log count
+    
     const logs = await storage.getUserLogs(user.id);
     const currentTotal = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
 
@@ -6410,7 +6410,7 @@ export class RaptorBot {
   private async handleLogView(interaction: ChatInputCommandInteraction) {
     const user = interaction.options.getUser('user') || interaction.user;
 
-    // Check if user exists
+    
     const discordUser = await storage.getDiscordUser(user.id);
     if (!discordUser) {
       const embed = new EmbedBuilder()
@@ -6423,7 +6423,7 @@ export class RaptorBot {
       return;
     }
 
-    // Get user logs
+    
     const logs = await storage.getUserLogs(user.id);
     const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
 
@@ -6447,7 +6447,7 @@ export class RaptorBot {
     const maxLimit = Math.min(limit, 25);
 
     try {
-      // Get leaderboard data
+      
       const leaderboard = await storage.getUserLogLeaderboard(maxLimit);
 
       if (leaderboard.length === 0) {
@@ -6467,7 +6467,7 @@ export class RaptorBot {
         const rank = i + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
         
-        // Try to get Discord user info
+        
         try {
           const discordUser = await storage.getDiscordUser(entry.userId);
           const username = discordUser?.username || 'Unknown User';
@@ -6511,7 +6511,7 @@ export class RaptorBot {
       return;
     }
 
-    // Check if user exists
+    
     const discordUser = await storage.getDiscordUser(user.id);
     if (!discordUser) {
       const embed = new EmbedBuilder()
@@ -6524,7 +6524,7 @@ export class RaptorBot {
       return;
     }
 
-    // Get current log count
+    
     const logs = await storage.getUserLogs(user.id);
     const totalLogs = logs.reduce((sum: number, log: any) => sum + log.logCount, 0);
 
@@ -6539,7 +6539,7 @@ export class RaptorBot {
       return;
     }
 
-    // Clear all logs
+    
     await storage.clearUserLogs(user.id);
 
     const embed = new EmbedBuilder()
@@ -6555,7 +6555,7 @@ export class RaptorBot {
 
     await interaction.reply({ embeds: [embed] });
 
-    // Log the activity
+    
     await this.logActivity('user_logs_cleared', 
       `All logs cleared for ${user.username} by ${interaction.user.username}`);
   }
@@ -6605,16 +6605,16 @@ export class RaptorBot {
       const targetUser = interaction.options.getUser('user') || interaction.user;
       const userId = targetUser.id;
 
-      // Count total messages with images from all tracked channels
+      
       const trackedChannels = [
-        '1339001416383070229', // admin
-        '1315558587065569280', // whitelists
-        '1315558586302201886', // moderator
-        '1315558584888590367', // trial mod
-        '1315558583290826856', // support
-        '1315558581352792119', // trial support
-        '1315558579662487552', // purchases
-        '1383552724079087758'  // testing
+        '1339001416383070229', 
+        '1315558587065569280', 
+        '1315558586302201886', 
+        '1315558584888590367', 
+        '1315558583290826856', 
+        '1315558581352792119', 
+        '1315558579662487552', 
+        '1383552724079087758'  
       ];
 
       let totalImageMessages = 0;
@@ -6623,7 +6623,7 @@ export class RaptorBot {
         try {
           const channel = await this.client.channels.fetch(channelId);
           if (channel && channel.isTextBased()) {
-            // Fetch recent messages and count those with attachments from this user
+            
             const messages = await channel.messages.fetch({ limit: 100 });
             const userImageMessages = messages.filter(msg => 
               msg.author.id === userId && 
@@ -6641,7 +6641,7 @@ export class RaptorBot {
         }
       }
 
-      // Get username for display
+      
       let userDisplay = targetUser.username;
       try {
         const discordUser = await this.client.users.fetch(userId);
@@ -6649,7 +6649,7 @@ export class RaptorBot {
           userDisplay = discordUser.username;
         }
       } catch (fetchError) {
-        // Use fallback
+        
       }
 
       const embed = new EmbedBuilder()
@@ -6693,16 +6693,16 @@ export class RaptorBot {
       const page = interaction.options.getInteger('page') || 1;
       const pageSize = 5;
 
-      // Count total messages with images for all users across tracked channels
+      
       const trackedChannels = [
-        '1339001416383070229', // admin
-        '1315558587065569280', // whitelists
-        '1315558586302201886', // moderator
-        '1315558584888590367', // trial mod
-        '1315558583290826856', // support
-        '1315558581352792119', // trial support
-        '1315558579662487552', // purchases
-        '1383552724079087758'  // testing
+        '1339001416383070229', 
+        '1315558587065569280', 
+        '1315558586302201886', 
+        '1315558584888590367', 
+        '1315558583290826856', 
+        '1315558581352792119', 
+        '1315558579662487552', 
+        '1383552724079087758'  
       ];
 
       const userCounts = new Map<string, number>();
@@ -6730,7 +6730,7 @@ export class RaptorBot {
         }
       }
 
-      // Convert to sorted array
+      
       const sortedUsers = Array.from(userCounts.entries())
         .map(([userId, count]) => ({ userId, totalLogs: count }))
         .sort((a, b) => b.totalLogs - a.totalLogs);
@@ -6753,14 +6753,14 @@ export class RaptorBot {
           const log = pageData[i];
           const globalRank = startIndex + i + 1;
           
-          // Get rank display
+          
           let rankDisplay = '';
           if (globalRank === 1) rankDisplay = '🥇 1st';
           else if (globalRank === 2) rankDisplay = '🥈 2nd';
           else if (globalRank === 3) rankDisplay = '🥉 3rd';
           else rankDisplay = `${globalRank}th`;
           
-          // Fetch actual Discord username
+          
           let userDisplay = `User${log.userId.slice(-4)}`;
           try {
             const discordUser = await this.client.users.fetch(log.userId);
@@ -6804,7 +6804,7 @@ export class RaptorBot {
         .setTimestamp()
         .setFooter({ text: `Raptor Bot • Page ${currentPage}/${totalPages}` });
 
-      // Add navigation buttons
+      
       const components = [];
       if (totalPages > 1) {
         const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -6969,12 +6969,12 @@ export class RaptorBot {
 
 
 
-  // STATS COMMAND - Show comprehensive bot statistics (duplicate removed)
+  
   private async handleStatsCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     try {
-      // Get various statistics from storage
+      
       const totalUsers = await storage.getDiscordUserCount();
       const totalKeys = await storage.getDiscordKeyCount();
       const activeKeys = await storage.getActiveDiscordKeyCount();
@@ -6982,14 +6982,14 @@ export class RaptorBot {
       const totalSuggestions = await storage.getSuggestionCount();
       const totalBugReports = await storage.getBugReportCount();
       
-      // Bot uptime
+      
       const uptime = process.uptime();
       const days = Math.floor(uptime / 86400);
       const hours = Math.floor((uptime % 86400) / 3600);
       const minutes = Math.floor((uptime % 3600) / 60);
       const uptimeString = `${days}d ${hours}h ${minutes}m`;
 
-      // Memory usage
+      
       const memUsage = process.memoryUsage();
       const memUsed = Math.round(memUsage.heapUsed / 1024 / 1024 * 100) / 100;
 
@@ -7026,14 +7026,14 @@ export class RaptorBot {
     }
   }
 
-  // KEY COMMAND - Comprehensive key validation and management
+  
   private async handleKeyCommand(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
     const keyValue = interaction.options.getString('key', true);
 
     try {
-      // Get key information
+      
       const keyInfo = await storage.getDiscordKey(keyValue);
 
       if (!keyInfo) {
@@ -7047,7 +7047,7 @@ export class RaptorBot {
         return;
       }
 
-      // Check key status
+      
       const isExpired = keyInfo.expiresAt && new Date() > keyInfo.expiresAt;
       const statusEmoji = keyInfo.status === 'active' ? '✅' : keyInfo.status === 'revoked' ? '❌' : '⏸️';
       const statusText = isExpired ? 'Expired' : keyInfo.status;
@@ -7074,7 +7074,7 @@ export class RaptorBot {
 
       await interaction.editReply({ embeds: [embed] });
 
-      // Log key check
+      
       await this.logActivity('key_checked', `Key ${keyValue} checked by ${interaction.user.username}`);
 
     } catch (error) {
@@ -7090,7 +7090,7 @@ export class RaptorBot {
     }
   }
 
-  // RESET COMMAND - Reset user data or system components (duplicate removed)
+  
   private async handleResetCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -7170,7 +7170,7 @@ export class RaptorBot {
     }
   }
 
-  // VIEW COMMAND - View various system information (duplicate removed)
+  
   private async handleViewCommandOld(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
 
@@ -7274,7 +7274,7 @@ export class RaptorBot {
     }
   }
 
-  // DEWHITELIST COMMAND - Remove key from whitelist using real API
+  
   private async handleDewhitelistCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
     let success = false;
@@ -7291,7 +7291,7 @@ export class RaptorBot {
 
       console.log(`[DEBUG] Dewhitelisting key: ${keyValue}`);
       
-      // Call the whitelist API to attempt dewhitelisting
+      
       try {
         const result = await WhitelistAPI.dewhitelistUser(keyValue);
         
@@ -7312,7 +7312,7 @@ export class RaptorBot {
 
           await interaction.editReply({ embeds: [embed] });
           
-          // Log to specified channel
+          
           try {
             const logChannel = await this.client.channels.fetch('1262951610842222642');
             if (logChannel?.isTextBased()) {
@@ -7372,7 +7372,7 @@ export class RaptorBot {
     }
   }
 
-  // REWHITELIST COMMAND - Re-add key to whitelist using real API
+  
   private async handleRewhitelistCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
     let success = false;
@@ -7390,7 +7390,7 @@ export class RaptorBot {
 
       console.log(`[DEBUG] Rewhitelisting identifier: ${identifier}`);
       
-      // Call the whitelist API to attempt rewhitelisting
+      
       try {
         const result = await WhitelistAPI.rewhitelistUser(identifier, reasonNote);
         
@@ -7461,7 +7461,7 @@ export class RaptorBot {
     }
   }
 
-  // PAYMENTS COMMAND - Payment information and API status
+  
   private async handlePaymentsCommand(interaction: ChatInputCommandInteraction) {
     const startTime = Date.now();
     let success = false;
@@ -7478,7 +7478,7 @@ export class RaptorBot {
 
       switch (subcommand) {
         case 'info':
-          // Get API status and payment methods
+          
           const acceptedMethods = WhitelistAPI.getAcceptedPaymentMethods();
           
           let paymentMethodsList = '';
@@ -7551,7 +7551,7 @@ export class RaptorBot {
       await this.client.login(DISCORD_TOKEN);
       console.log('✅ Discord bot started successfully');
       
-      // Log intent status once ready
+      
       this.client.once('ready', () => {
         console.log('Bot intents enabled:', this.client.options.intents);
         console.log('Bot ready! Testing message handling...');
@@ -7564,7 +7564,7 @@ export class RaptorBot {
       
       if (error.message?.includes('disallowed intents')) {
         console.log('\n🔧 MessageContent Intent Required:');
-        console.log('1. Visit https://discord.com/developers/applications');
+        console.log('1. Visit https:
         console.log('2. Select your bot application');  
         console.log('3. Go to Bot tab > Privileged Gateway Intents');
         console.log('4. Enable "Message Content Intent"');

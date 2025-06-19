@@ -40,7 +40,7 @@ export interface IStorage {
   createEmailUser(email: string, password: string, name?: string): Promise<User>;
   validateEmailUser(email: string, password: string): Promise<User | null>;
   
-  // SECURITY: Critical security functions
+  
   getBannedUsers(): Promise<string[]>;
   isWhitelisted(userId: string): Promise<boolean>;
 
@@ -265,7 +265,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(discordKeys.keyId, keyId));
     
-    // Log the reactivation activity
+    
     await this.logActivity('key_reactivated', `Key ${keyId} reactivated by ${reactivatedBy}`);
   }
 
@@ -379,23 +379,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateLastDaily(userId: string): Promise<void> {
-    // Update both tables to ensure consistency
+    
     const now = new Date();
     
-    // Update discordUsers table
+    
     await db
       .update(discordUsers)
       .set({ lastDaily: now })
       .where(eq(discordUsers.discordId, userId));
     
-    // Also update candyBalances table if it exists
+    
     try {
       await db
         .update(candyBalances)
         .set({ lastDaily: now })
         .where(eq(candyBalances.userId, userId));
     } catch (error) {
-      // Create candy balance record if it doesn't exist
+      
       await db
         .insert(candyBalances)
         .values({
@@ -498,15 +498,15 @@ export class DatabaseStorage implements IStorage {
 
   async logActivity(typeOrData: any, description?: string): Promise<void> {
     try {
-      // Handle both old format (type, description) and new format (object)
+      
       if (typeof typeOrData === 'string') {
-        // Old format - separate type and description parameters
+        
         await db.insert(activityLogs).values({
           type: typeOrData,
           description: description || `Activity: ${typeOrData}`
         });
       } else {
-        // New format - object with type, description, etc.
+        
         await db.insert(activityLogs).values({
           type: typeOrData.type,
           description: typeOrData.description || `Activity: ${typeOrData.type}`
@@ -589,7 +589,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addUserLogs(userId: string, count: number, reason: string): Promise<void> {
-    // Add multiple log entries for the user
+    
     for (let i = 0; i < count; i++) {
       await db.insert(userLogs).values({
         userId,
@@ -597,20 +597,20 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
-    // Log the activity
+    
     await this.logActivity('user_logs_added', `${count} logs added to user ${userId}: ${reason}`);
   }
 
   async removeUserLogs(userId: string, count: number, reason: string): Promise<void> {
-    // Get existing logs to remove
+    
     const existingLogs = await db.select().from(userLogs).where(eq(userLogs.userId, userId)).limit(count);
     
-    // Remove the specified number of log entries
+    
     for (const log of existingLogs) {
       await db.delete(userLogs).where(eq(userLogs.id, log.id));
     }
     
-    // Log the activity
+    
     await this.logActivity('user_logs_removed', `${count} logs removed from user ${userId}: ${reason}`);
   }
 
@@ -636,11 +636,11 @@ export class DatabaseStorage implements IStorage {
   async clearUserLogs(userId: string): Promise<void> {
     await db.delete(userLogs).where(eq(userLogs.userId, userId));
     
-    // Log the activity
+    
     await this.logActivity('user_logs_cleared', `All logs cleared for user ${userId}`);
   }
 
-  // Additional statistics methods for bot commands
+  
   async getDiscordUserCount(): Promise<number> {
     const result = await db.select({ count: sql`count(*)` }).from(discordUsers);
     return parseInt(result[0]?.count as string || '0');
@@ -673,7 +673,7 @@ export class DatabaseStorage implements IStorage {
     return parseInt(result[0]?.count as string || '0');
   }
 
-  // Get all discord keys with limit
+  
   async getAllDiscordKeys(limit: number = 50): Promise<any[]> {
     return await db.select()
       .from(discordKeys)
@@ -681,7 +681,7 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  // Get all discord users with limit
+  
   async getAllDiscordUsers(limit: number = 50): Promise<any[]> {
     return await db.select()
       .from(discordUsers)
@@ -689,7 +689,7 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  // Get all bot settings as object
+  
   async getAllBotSettings(): Promise<Record<string, string>> {
     const settings = await db.select().from(botSettings);
     const settingsObject: Record<string, string> = {};
@@ -699,21 +699,21 @@ export class DatabaseStorage implements IStorage {
     return settingsObject;
   }
 
-  // Reset candy balance for user
+  
   async resetCandyBalance(userId: string): Promise<void> {
     await db.update(candyBalances)
       .set({ balance: 0, bankBalance: 0, updatedAt: new Date() })
       .where(eq(candyBalances.userId, userId));
   }
 
-  // Reset user HWID
+  
   async resetUserHwid(userId: string): Promise<void> {
     await db.update(discordKeys)
       .set({ hwid: null, updatedAt: new Date() })
       .where(eq(discordKeys.userId, userId));
   }
 
-  // Get discord key by key value
+  
   async getDiscordKey(keyValue: string): Promise<any | undefined> {
     const [key] = await db.select().from(discordKeys).where(eq(discordKeys.keyId, keyValue));
     return key;
@@ -846,7 +846,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getKeyUsageStats(keyId: string): Promise<{ lastUsed?: Date; usageCount?: number } | undefined> {
-    // Return basic stats - can be enhanced with usage tracking table later
+    
     return { lastUsed: new Date(), usageCount: 0 };
   }
 
@@ -995,13 +995,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(candyBalances.userId, userId));
   }
 
-  // Complete Discord server backup
+  
   async createServerBackup(guild: any, createdBy: string): Promise<string> {
     const backupId = nanoid();
     const startTime = Date.now();
 
     try {
-      // Fetch all server data
+      
       const [
         channels,
         roles,
@@ -1024,7 +1024,7 @@ export class DatabaseStorage implements IStorage {
         guild.fetchAuditLogs({ limit: 100 })
       ]);
 
-      // Fetch messages from all text channels
+      
       const allMessages: any[] = [];
       let totalMessageCount = 0;
 
@@ -1070,7 +1070,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Prepare backup data
+      
       const backupData = {
         backupId,
         serverId: guild.id,
@@ -1178,7 +1178,7 @@ export class DatabaseStorage implements IStorage {
           url: webhook.url,
           avatar: webhook.avatarURL()
         })),
-        integrations: [], // Would need additional API calls
+        integrations: [], 
         auditLogs: auditLogs.entries.map((entry: any) => ({
           id: entry.id,
           action: entry.action,
@@ -1201,7 +1201,7 @@ export class DatabaseStorage implements IStorage {
           selfMute: state.selfMute,
           selfDeaf: state.selfDeaf
         })),
-        threads: [], // Would need additional fetching
+        threads: [], 
         scheduledEvents: guild.scheduledEvents?.cache.map((event: any) => ({
           id: event.id,
           name: event.name,
@@ -1233,7 +1233,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Log comprehensive bot activity
+  
   async logBotActivity(activityData: {
     eventType: string;
     eventCategory: string;
@@ -1274,32 +1274,32 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Get server backups
+  
   async getServerBackups(limit = 10): Promise<any[]> {
     return await db.select().from(serverBackups)
       .orderBy(sql`${serverBackups.createdAt} DESC`)
       .limit(limit);
   }
 
-  // Get specific backup
+  
   async getServerBackup(backupId: string): Promise<any> {
     const [backup] = await db.select().from(serverBackups)
       .where(eq(serverBackups.backupId, backupId));
     return backup;
   }
 
-  // Get bot activity logs
+  
   async getBotActivityLogs(limit = 100): Promise<any[]> {
     return await db.select().from(botActivityLogs)
       .orderBy(sql`${botActivityLogs.timestamp} DESC`)
       .limit(limit);
   }
 
-  // SECURITY: Critical security functions implementation
+  
   async getBannedUsers(): Promise<string[]> {
     try {
-      // For now, return empty array - can be extended to use a banned_users table
-      // This prevents security violations while maintaining system integrity
+      
+      
       return [];
     } catch (error) {
       console.error('Error fetching banned users:', error);
@@ -1316,7 +1316,7 @@ export class DatabaseStorage implements IStorage {
       return result.count > 0;
     } catch (error) {
       console.error('Error checking whitelist status:', error);
-      return false; // Fail closed for security
+      return false; 
     }
   }
 }

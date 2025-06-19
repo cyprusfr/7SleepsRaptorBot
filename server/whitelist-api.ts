@@ -1,12 +1,10 @@
 import { storage } from "./storage";
 import { secureUtils } from "./security-hardening";
 
-// SECURITY HARDENED: Real whitelist API configuration with environment protection
-const WHITELIST_API_BASE = "https://www.raptor.fun";
+const WHITELIST_API_BASE = "https:
 const API_KEY = '85f9e513-8030-4e88-a04d-042e62e0f707';
 const PAYMENTS_API_KEY = process.env.RAPTOR_PAYMENTS_API_KEY || API_KEY;
 
-// Accepted payment methods from the API
 const ACCEPTED_PAYMENT_METHODS = [
   "paypal",
   "cashapp", 
@@ -66,7 +64,7 @@ export class WhitelistAPI {
         }
       };
 
-      // Add features as single parameters
+
       if (features) {
         if (features.early_access) {
           requestPayload.early_access = true;
@@ -145,7 +143,7 @@ export class WhitelistAPI {
       
       const requestPayload = {
         delete_note: deleteNote,
-        identifier: keyValue, // Can be email, key, or hwid
+        identifier: keyValue,
         api_key: API_KEY
       };
 
@@ -176,7 +174,7 @@ export class WhitelistAPI {
       }
 
       if (response.ok && (responseData.success !== false)) {
-        // Mark key as revoked in local database
+        
         try {
           await storage.revokeDiscordKey(keyValue, 'dewhitelisted');
           console.log('✅ Key marked as dewhitelisted in local database');
@@ -208,7 +206,7 @@ export class WhitelistAPI {
     try {
       console.log(`[REWHITELIST] Direct API call for: ${keyValue}`);
       
-      // Direct approach - exact parameters as specified
+      
       const requestPayload = {
         identifier: keyValue,
         reason_note: reasonNote,
@@ -238,10 +236,10 @@ export class WhitelistAPI {
         responseData = { message: responseText };
       }
 
-      // Check for successful rewhitelist operation
-      // Note: API may return 400 with "This key has not been activated" but still successfully reset HWID
+      
+      
       if (response.status === 200 && responseData.success === true) {
-        // Clear success case
+        
         try {
           await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
           console.log('[REWHITELIST] Key marked as rewhitelisted in local database');
@@ -254,7 +252,7 @@ export class WhitelistAPI {
           message: 'Key successfully rewhitelisted ✓'
         };
       } else if (response.status === 400 && responseData.message === "This key has not been activated.") {
-        // This means the key isn't HWID locked yet
+        
         return {
           success: false,
           error: 'This key isn\'t hwid locked'
@@ -284,17 +282,17 @@ export class WhitelistAPI {
   }
 }
 
-// NEW API: Payment info endpoint with multiple query types
+
 export async function getPaymentInfo(
   infoType: string,
   parameter: string
 ): Promise<{ success: boolean; data?: any; message: string }> {
   
-  // SECURITY: Input validation
+  
   infoType = secureUtils.sanitizeInput(infoType);
   parameter = secureUtils.sanitizeInput(parameter);
   
-  // Validate info type
+  
   const validInfoTypes = ['trialInfo', 'hwidInfo', 'keyInfo', 'paymentHistory'];
   if (!validInfoTypes.includes(infoType)) {
     return { success: false, message: 'Invalid info type' };
@@ -304,7 +302,7 @@ export async function getPaymentInfo(
     let endpoint = '';
     let params = new URLSearchParams();
     
-    // Build endpoint based on info type
+    
     switch (infoType) {
       case 'trialInfo':
         endpoint = '/api/payments/info';
@@ -327,7 +325,7 @@ export async function getPaymentInfo(
       case 'paymentHistory':
         endpoint = '/api/payments/info';
         params.append('info', 'paymentHistory');
-        // Check if parameter looks like email or discord ID
+        
         if (parameter.includes('@') || parameter.includes('#')) {
           params.append('contactInfo', parameter);
         } else {
@@ -343,9 +341,7 @@ export async function getPaymentInfo(
     console.log(`[getPaymentInfo] Calling ${infoType} API:`, finalUrl);
     console.log(`[getPaymentInfo] Using payments API key:`, PAYMENTS_API_KEY ? '[PROVIDED]' : '[NOT PROVIDED]');
     
-    // Try multiple authentication methods
     const authMethods = [
-      // Method 1: Authorization Bearer header
       {
         headers: {
           'Content-Type': 'application/json',
@@ -353,7 +349,6 @@ export async function getPaymentInfo(
           'User-Agent': 'RaptorBot/1.0'
         }
       },
-      // Method 2: X-API-Key header
       {
         headers: {
           'Content-Type': 'application/json',
@@ -361,7 +356,6 @@ export async function getPaymentInfo(
           'User-Agent': 'RaptorBot/1.0'
         }
       },
-      // Method 3: URL parameter (fallback)
       {
         url: `${finalUrl}&api_key=${PAYMENTS_API_KEY}`,
         headers: {
@@ -426,7 +420,6 @@ export async function getPaymentInfo(
       }
     }
     
-    // All methods failed
     return {
       success: false,
       message: lastError || 'All authentication methods failed'
@@ -454,7 +447,7 @@ export async function getPaymentInfo(
       };
     }
     
-    // Log successful API call
+    
     await storage.logActivity('api_call', `Payment info query: ${infoType} for ${parameter}`);
     
     return {

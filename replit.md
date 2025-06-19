@@ -145,6 +145,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Success Message Formatting**: Finalized dewhitelist and rewhitelist success messages with checkmarks per user preference - maintains professional appearance with visual confirmation
 - **Rewhitelist Fresh Key Handling**: Updated rewhitelist command to show "This key isn't hwid locked" error message for fresh keys that haven't been activated yet, replacing the previous API limitation message
 - **Role-Based API Access**: Added special role ID 1265423063764439051 with full access to all API and dashboard commands including generatekey, dewhitelist, rewhitelist, keyinfo, hwidinfo, userinfo, logs, stats, list, and hwid commands
+- **Anonymous Say Command**: Updated /say command to send messages without any attribution or confirmation - only the message content appears in the channel with no indication of who used the command
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

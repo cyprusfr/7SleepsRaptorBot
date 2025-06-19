@@ -5000,16 +5000,29 @@ export class RaptorBot {
         return;
       }
 
+      // Send the message directly without any attribution
       await channel.send(message);
       
+      // Delete the slash command interaction to hide who used it
+      await interaction.deferReply({ ephemeral: true });
+      await interaction.deleteReply();
+      
       await storage.logActivity('say_command', `Say command used by ${interaction.user.id} in ${channel.id}: ${message}`);
-      await interaction.reply({ content: `✅ Message sent to ${channel}`, ephemeral: true });
       success = true;
 
     } catch (error) {
       console.error('Error in handleSayCommand:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      try {
+        await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true });
+      } catch (replyError) {
+        // If reply fails, try editing the deferred reply
+        try {
+          await interaction.editReply({ content: `❌ Error: ${errorMessage}` });
+        } catch (editError) {
+          console.error('Failed to send error message:', editError);
+        }
+      }
     } finally {
       await this.logCommandUsage(interaction, startTime, success, null);
     }

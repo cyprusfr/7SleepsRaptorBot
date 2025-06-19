@@ -4,6 +4,7 @@ import { secureUtils } from "./security-hardening";
 // SECURITY HARDENED: Real whitelist API configuration with environment protection
 const WHITELIST_API_BASE = "https://www.raptor.fun";
 const API_KEY = '85f9e513-8030-4e88-a04d-042e62e0f707';
+const PAYMENTS_API_KEY = process.env.RAPTOR_PAYMENTS_API_KEY || API_KEY;
 
 // Accepted payment methods from the API
 const ACCEPTED_PAYMENT_METHODS = [
@@ -337,19 +338,99 @@ export async function getPaymentInfo(
     
     const url = `${WHITELIST_API_BASE}${endpoint}?${params.toString()}`;
     
-    // Add API key as URL parameter (same format as working whitelist API)
-    params.append('api_key', API_KEY);
     const finalUrl = `${WHITELIST_API_BASE}${endpoint}?${params.toString()}`;
     
-    console.log(`[getPaymentInfo] Calling ${infoType} API:`, finalUrl.replace(API_KEY, '[REDACTED]'));
+    console.log(`[getPaymentInfo] Calling ${infoType} API:`, finalUrl);
+    console.log(`[getPaymentInfo] Using payments API key:`, PAYMENTS_API_KEY ? '[PROVIDED]' : '[NOT PROVIDED]');
     
-    const response = await fetch(finalUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'RaptorBot/1.0'
+    // Try multiple authentication methods
+    const authMethods = [
+      // Method 1: Authorization Bearer header
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${PAYMENTS_API_KEY}`,
+          'User-Agent': 'RaptorBot/1.0'
+        }
+      },
+      // Method 2: X-API-Key header
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': PAYMENTS_API_KEY,
+          'User-Agent': 'RaptorBot/1.0'
+        }
+      },
+      // Method 3: URL parameter (fallback)
+      {
+        url: `${finalUrl}&api_key=${PAYMENTS_API_KEY}`,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'RaptorBot/1.0'
+        }
       }
-    });
+    ];
+    
+    let response;
+    let lastError = '';
+    
+    for (let i = 0; i < authMethods.length; i++) {
+      const method = authMethods[i];
+      const requestUrl = method.url || finalUrl;
+      
+      console.log(`[getPaymentInfo] Trying auth method ${i + 1}:`, method.headers);
+      
+      try {
+        response = await fetch(requestUrl, {
+          method: 'GET',
+          headers: method.headers
+        });
+        
+        const responseText = await response.text();
+        console.log(`[getPaymentInfo] Method ${i + 1} Response Status: ${response.status}`);
+        console.log(`[getPaymentInfo] Method ${i + 1} Response Body: ${responseText}`);
+        
+        if (response.ok) {
+          console.log(`[getPaymentInfo] Success with auth method ${i + 1}`);
+          let responseData;
+          try {
+            responseData = JSON.parse(responseText);
+          } catch (e) {
+            console.error('[getPaymentInfo] Failed to parse JSON response:', responseText);
+            return {
+              success: false,
+              message: 'Invalid JSON response from API'
+            };
+          }
+          
+          await storage.logActivity('api_call', `Payment info query: ${infoType} for ${parameter}`);
+          
+          return {
+            success: true,
+            data: responseData,
+            message: 'Information retrieved successfully'
+          };
+        } else {
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+            lastError = errorData.message || `API Error: ${response.status}`;
+          } catch (e) {
+            lastError = `HTTP ${response.status}: ${responseText}`;
+          }
+          console.log(`[getPaymentInfo] Method ${i + 1} failed:`, lastError);
+        }
+      } catch (error) {
+        console.error(`[getPaymentInfo] Method ${i + 1} error:`, error);
+        lastError = `Network error: ${error.message}`;
+      }
+    }
+    
+    // All methods failed
+    return {
+      success: false,
+      message: lastError || 'All authentication methods failed'
+    };
     
     const responseText = await response.text();
     console.log(`[getPaymentInfo] Response Status: ${response.status}`);

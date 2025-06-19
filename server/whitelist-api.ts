@@ -249,17 +249,10 @@ export class WhitelistAPI {
           message: 'Key successfully rewhitelisted ✓'
         };
       } else if (response.status === 400 && responseData.message === "This key has not been activated.") {
-        // This is actually a successful HWID reset for unused keys
-        try {
-          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
-          console.log('[REWHITELIST] HWID reset successful for unused key');
-        } catch (dbError) {
-          console.log('[REWHITELIST] Failed to update local database:', dbError.message);
-        }
-
+        // This means the key isn't HWID locked yet
         return {
-          success: true,
-          message: 'Key successfully rewhitelisted ✓'
+          success: false,
+          error: 'This key isn\'t hwid locked'
         };
       } else {
         return {

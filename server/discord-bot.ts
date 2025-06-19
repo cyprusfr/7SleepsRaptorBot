@@ -31,7 +31,21 @@ const supportTags: Record<string, string> = {
     '.fwaeh': 'fwaeh',
     '.giftcard': 'https://discord.gg/macsploit',
     '.hwid': 'Paste this into terminal and it will give your HWID.\ncurl -s "https://macsploit.com/api/hwid" | openssl base64 -d',
-    '.install': 'cd ~/ && curl -s "https://macsploit.com/scripts/install.sh" | bash',
+    '.install': `**How to Install MacSploit**
+
+Open terminal and enter one of these installs:
+
+**Main Branch**
+\`\`\`bash
+# Use this for sellix, quickfix and for normal installs!
+cd ~/ && curl -s "https://git.raptor.fun/main/install.sh" | bash </dev/tty
+\`\`\`
+
+**User Branch** *Warning: Try the above one first.*
+\`\`\`bash
+# Use this for sellix, quickfix and for normal installs (non admin)!
+cd ~/ && curl -s "https://git.raptor.fun/user/install.sh" | bash </dev/tty
+\`\`\``,
     '.iy': 'paste this somewhere\nloadstring(game:HttpGet(\'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source\'))()',
     '.multi-instance': 'https://www.loom.com/share/26e7e31119124dddad6ad1b18b4866b4',
     '.nigger': 'N-Word Pass Required',

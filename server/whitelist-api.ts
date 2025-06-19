@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { secureUtils } from "./security-hardening";
 
-const WHITELIST_API_BASE = "https:
+const WHITELIST_API_BASE = "https://www.raptor.fun/api";
 const API_KEY = '85f9e513-8030-4e88-a04d-042e62e0f707';
 const PAYMENTS_API_KEY = process.env.RAPTOR_PAYMENTS_API_KEY || API_KEY;
 

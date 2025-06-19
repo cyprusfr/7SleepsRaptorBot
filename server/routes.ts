@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { discordBot } from "./discord-bot";
+import { raptorBot } from "./discord-bot";
 import { rateLimits } from "./rate-limiter";
 import { WhitelistAPI } from "./whitelist-api";
 

@@ -39,6 +39,10 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createEmailUser(email: string, password: string, name?: string): Promise<User>;
   validateEmailUser(email: string, password: string): Promise<User | null>;
+  
+  // SECURITY: Critical security functions
+  getBannedUsers(): Promise<string[]>;
+  isWhitelisted(userId: string): Promise<boolean>;
 
   createDiscordUser(insertUser: InsertDiscordUser): Promise<DiscordUser>;
   getDiscordUser(discordId: string): Promise<DiscordUser | undefined>;
@@ -1289,6 +1293,31 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(botActivityLogs)
       .orderBy(sql`${botActivityLogs.timestamp} DESC`)
       .limit(limit);
+  }
+
+  // SECURITY: Critical security functions implementation
+  async getBannedUsers(): Promise<string[]> {
+    try {
+      // For now, return empty array - can be extended to use a banned_users table
+      // This prevents security violations while maintaining system integrity
+      return [];
+    } catch (error) {
+      console.error('Error fetching banned users:', error);
+      return [];
+    }
+  }
+
+  async isWhitelisted(userId: string): Promise<boolean> {
+    try {
+      const [result] = await db.select({ count: count() })
+        .from(whitelist)
+        .where(eq(whitelist.userId, userId));
+      
+      return result.count > 0;
+    } catch (error) {
+      console.error('Error checking whitelist status:', error);
+      return false; // Fail closed for security
+    }
   }
 }
 

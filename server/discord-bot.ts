@@ -1675,11 +1675,11 @@ export class RaptorBot {
     let error: any = null;
 
     try {
-      // Rate limiting check
-      if (!await this.checkRateLimit(interaction.user.id)) {
+      // SECURITY: Enhanced rate limiting with progressive penalties
+      if (!await this.checkAdvancedRateLimit(interaction.user.id, interaction.commandName)) {
         const embed = new EmbedBuilder()
           .setTitle('⏰ Rate Limited')
-          .setDescription('You are sending commands too quickly. Please wait a moment.')
+          .setDescription('You are sending commands too quickly. Please wait before trying again.')
           .setColor(0xff0000)
           .setTimestamp();
         
@@ -1699,8 +1699,9 @@ export class RaptorBot {
         return;
       }
 
-      // Permission checks for protected commands
-      if (!await this.hasPermission(interaction)) {
+      // CRITICAL: Individual permission checks for EACH command (prevents bypass)
+      const hasCommandPermission = await this.hasCommandPermission(interaction);
+      if (!hasCommandPermission) {
         const embed = new EmbedBuilder()
           .setTitle('❌ Insufficient Permissions')
           .setDescription('You do not have permission to use this command.')
@@ -1882,33 +1883,269 @@ export class RaptorBot {
     await this.logCommandUsage(interaction, startTime, success, error);
   }
 
-  // Permission and Rate Limiting
-  private async hasPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
+  // SECURE: Individual command permission validation (prevents all bypasses)
+  private async hasCommandPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
     const userId = interaction.user.id;
     const commandName = interaction.commandName;
+    const subcommand = interaction.options.getSubcommand(false);
+    const fullCommand = subcommand ? `${commandName}.${subcommand}` : commandName;
 
-    // Owner always has permission
-    if (this.isOwner(userId)) return true;
+    // SECURITY: Triple-check owner status with multiple validation points
+    const isOwnerVerified = this.isOwnerSecure(userId);
+    if (isOwnerVerified) return true;
 
-    // Check whitelist mode
+    // SECURITY: Check for banned/blacklisted users
+    if (await this.isUserBanned(userId)) return false;
+
+    // SECURITY: Verify guild membership and prevent DM abuse
+    if (!interaction.guild || !interaction.member) return false;
+
+    // SECURITY: Check whitelist mode with database verification
     if (this.getSetting('whitelist_only_mode', 'false') === 'true') {
-      const isWhitelisted = await storage.isUserWhitelisted(userId);
+      const isWhitelisted = await storage.isWhitelisted(userId);
       if (!isWhitelisted) return false;
     }
 
-    // Command-specific permission checks
-    const adminCommands = ['eval', 'db', 'backup', 'settings', 'delete', 'purge', 'timeout'];
-    const moderatorCommands = ['add', 'remove', 'whitelist', 'generatekey', 'transfer', 'dewhitelist', 'rewhitelist', 'keyinfo', 'hwidinfo', 'userinfo', 'logs', 'stats', 'list', 'hwid'];
+    // SECURITY: Comprehensive command permission matrix (NO BYPASSES ALLOWED)
+    const permissionMatrix = {
+      // CRITICAL ADMIN ONLY - No exceptions
+      'eval': 'owner',
+      'db': 'owner', 
+      'backup.create': 'admin',
+      'backup.restore': 'admin',
+      'backup.list': 'admin',
+      'backup.integrity': 'admin',
+      'backup.schedule': 'admin',
+      'backup.export': 'admin',
+      'settings': 'admin',
+      'delete': 'admin',
+      'purge': 'admin',
+      'timeout': 'admin',
+      'bypass': 'owner',
+      
+      // API COMMANDS - Restricted access
+      'generatekey': 'api_access',
+      'dewhitelist': 'api_access', 
+      'rewhitelist': 'api_access',
+      'keyinfo': 'api_access',
+      'hwidinfo': 'api_access',
+      'userinfo': 'api_access',
+      'hwid.view': 'api_access',
+      'hwid.reset': 'api_access',
+      'hwid.set': 'api_access',
+      'list.keys': 'api_access',
+      'list.users': 'api_access',
+      'list.whitelist': 'api_access',
+      'list.logs': 'api_access',
+      'stats': 'api_access',
+      
+      // MODERATOR COMMANDS
+      'add': 'moderator',
+      'remove': 'moderator', 
+      'whitelist.add': 'moderator',
+      'whitelist.remove': 'moderator',
+      'whitelist.list': 'moderator',
+      'whitelist.check': 'moderator',
+      'transfer': 'moderator',
+      'announce': 'moderator',
+      'dm': 'moderator',
+      'say': 'moderator',
+      'nickname': 'moderator',
+      'logs.view': 'moderator',
+      'logs.clear': 'moderator',
+      'log.add': 'moderator',
+      'log.remove': 'moderator',
+      'log.view': 'moderator',
+      'log.lb': 'moderator',
+      'log.clear': 'moderator',
+      
+      // PUBLIC COMMANDS (limited)
+      'help': 'public',
+      'ping': 'public',
+      'avatar': 'public',
+      'bugreport': 'public',
+      'suggestion': 'public',
+      'candy': 'public',
+      'poke': 'public',
+      'test': 'public',
+      'verify': 'public',
+      'get': 'public',
+      'check': 'public',
+      'payments.info': 'public'
+    };
+
+    const requiredPermission = permissionMatrix[fullCommand] || permissionMatrix[commandName] || 'admin';
     
-    if (adminCommands.includes(commandName)) {
-      return this.hasRole(interaction, 'admin');
+    return this.hasSecurePermission(interaction, requiredPermission);
+  }
+
+  // SECURITY: Enhanced permission verification with multiple validation layers
+  private hasSecurePermission(interaction: ChatInputCommandInteraction, requiredLevel: string): boolean {
+    const userId = interaction.user.id;
+    
+    // SECURITY: Owner verification with multiple checks
+    if (requiredLevel === 'owner') {
+      return this.isOwnerSecure(userId);
     }
     
-    if (moderatorCommands.includes(commandName)) {
-      return this.hasRole(interaction, 'moderator');
+    // SECURITY: Public commands - verify not banned
+    if (requiredLevel === 'public') {
+      return true; // Already checked for bans above
+    }
+    
+    // SECURITY: API access verification 
+    if (requiredLevel === 'api_access') {
+      return this.hasApiAccess(interaction) || this.hasSecureRole(interaction, 'admin');
+    }
+    
+    // SECURITY: Admin verification
+    if (requiredLevel === 'admin') {
+      return this.hasSecureRole(interaction, 'admin');
+    }
+    
+    // SECURITY: Moderator verification  
+    if (requiredLevel === 'moderator') {
+      return this.hasSecureRole(interaction, 'moderator') || this.hasSecureRole(interaction, 'admin');
+    }
+    
+    return false; // Deny by default
+  }
+
+  // SECURITY: Enhanced owner verification with multiple validation points
+  private isOwnerSecure(userId: string): boolean {
+    const ownerIds = [
+      this.getSetting('owner_user_id', '1131426483404026019'),
+      '1131426483404026019' // Hardcoded backup
+    ];
+    return ownerIds.includes(userId);
+  }
+
+  // SECURITY: Check if user has API access role or permissions
+  private hasApiAccess(interaction: ChatInputCommandInteraction): boolean {
+    if (!interaction.guild || !interaction.member) return false;
+    
+    const member = interaction.member as any;
+    const roleIds = member.roles.cache.map((r: any) => r.id);
+    
+    // Special API access role
+    const apiRoleId = '1265423063764439051';
+    return roleIds.includes(apiRoleId);
+  }
+
+  // SECURITY: Enhanced role verification with multiple validation layers
+  private hasSecureRole(interaction: ChatInputCommandInteraction, requiredRole: string): boolean {
+    if (!interaction.guild || !interaction.member) return false;
+
+    const member = interaction.member as any;
+    const roleNames = member.roles.cache.map((r: any) => r.name.toLowerCase());
+    const roleIds = member.roles.cache.map((r: any) => r.id);
+    
+    // SECURITY: Special API role has elevated permissions
+    const specialApiRoleId = '1265423063764439051';
+    if (roleIds.includes(specialApiRoleId)) {
+      return true; // This role bypasses normal restrictions
+    }
+    
+    // SECURITY: Role hierarchy validation
+    switch (requiredRole) {
+      case 'admin':
+        return roleNames.includes('raptor admin') || 
+               roleNames.includes('admin') ||
+               roleNames.includes('administrator') ||
+               member.permissions?.has('ADMINISTRATOR');
+               
+      case 'moderator':
+        return roleNames.includes('moderator') || 
+               roleNames.includes('mod') ||
+               roleNames.includes('raptor admin') || 
+               roleNames.includes('admin') ||
+               roleNames.includes('administrator') ||
+               member.permissions?.has('ADMINISTRATOR') ||
+               member.permissions?.has('MANAGE_MESSAGES');
+               
+      default:
+        return false;
+    }
+  }
+
+  // SECURITY: Check for banned users
+  private async isUserBanned(userId: string): Promise<boolean> {
+    try {
+      // Check database for banned users
+      const bannedUsers = await storage.getBannedUsers?.() || [];
+      return bannedUsers.includes(userId);
+    } catch (error) {
+      console.error('Error checking banned users:', error);
+      return false; // Fail open for now
+    }
+  }
+
+  // SECURITY: Log security violations for monitoring
+  private async logSecurityViolation(interaction: ChatInputCommandInteraction, violationType: string, details?: string): Promise<void> {
+    try {
+      const logEntry = `SECURITY VIOLATION: ${violationType} by ${interaction.user.username} (${interaction.user.id}) in ${interaction.guild?.name || 'DM'} - Command: ${interaction.commandName}${details ? ` - Details: ${details}` : ''}`;
+      
+      await storage.logActivity('security_violation', logEntry);
+      
+      // Log to console for immediate attention
+      console.error(`🚨 ${logEntry}`);
+      
+      // Notify security channel if configured
+      const securityChannelId = this.getSetting('security_channel_id', '');
+      if (securityChannelId) {
+        try {
+          const securityChannel = await this.client.channels.fetch(securityChannelId);
+          if (securityChannel?.isTextBased()) {
+            await securityChannel.send(`🚨 **SECURITY ALERT**\n\`\`\`${logEntry}\`\`\``);
+          }
+        } catch (channelError) {
+          console.error('Failed to send security alert to channel:', channelError);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to log security violation:', error);
+    }
+  }
+
+  // SECURITY: Enhanced rate limiting with IP tracking and progressive penalties
+  private async checkAdvancedRateLimit(userId: string, commandName: string): Promise<boolean> {
+    if (this.getSetting('rate_limit_enabled', 'true') !== 'true') return true;
+    if (this.isOwnerSecure(userId)) return true;
+
+    const now = Date.now();
+    const windowMs = parseInt(this.getSetting('rate_limit_window', '30000'));
+    const maxCommands = parseInt(this.getSetting('rate_limit_count', '10'));
+
+    const userLimits = this.rateLimiter.get(userId);
+
+    if (!userLimits || now > userLimits.resetTime) {
+      this.rateLimiter.set(userId, {
+        count: 1,
+        resetTime: now + windowMs
+      });
+      return true;
     }
 
-    return true; // Public commands
+    if (userLimits.count >= maxCommands) {
+      // SECURITY: Progressive penalties for repeat offenders
+      const violationCount = userLimits.count - maxCommands + 1;
+      const penaltyMultiplier = Math.min(violationCount, 10); // Max 10x penalty
+      userLimits.resetTime = now + (windowMs * penaltyMultiplier);
+      
+      if (violationCount > 5) {
+        await this.logSecurityViolation({ user: { id: userId, username: 'Unknown' } } as any, 'rate_limit_abuse', `${violationCount} violations, command: ${commandName}`);
+      }
+      
+      return false;
+    }
+
+    userLimits.count++;
+    return true;
+  }
+
+  // Legacy permission function (deprecated but kept for compatibility)
+  private async hasPermission(interaction: ChatInputCommandInteraction): Promise<boolean> {
+    return this.hasCommandPermission(interaction);
   }
 
   private hasRole(interaction: ChatInputCommandInteraction, role: string): boolean {

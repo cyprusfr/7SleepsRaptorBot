@@ -233,11 +233,26 @@ export class WhitelistAPI {
         responseData = { message: responseText };
       }
 
-      if (response.ok && responseData.success !== false) {
-        // Update key status in local database
+      // Check for successful rewhitelist operation
+      // Note: API may return 400 with "This key has not been activated" but still successfully reset HWID
+      if (response.status === 200 && responseData.success === true) {
+        // Clear success case
         try {
           await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
           console.log('[REWHITELIST] Key marked as rewhitelisted in local database');
+        } catch (dbError) {
+          console.log('[REWHITELIST] Failed to update local database:', dbError.message);
+        }
+
+        return {
+          success: true,
+          message: 'Key successfully rewhitelisted ✓'
+        };
+      } else if (response.status === 400 && responseData.message === "This key has not been activated.") {
+        // This is actually a successful HWID reset for unused keys
+        try {
+          await storage.reactivateDiscordKey(keyValue, 'rewhitelisted');
+          console.log('[REWHITELIST] HWID reset successful for unused key');
         } catch (dbError) {
           console.log('[REWHITELIST] Failed to update local database:', dbError.message);
         }

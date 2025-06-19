@@ -144,6 +144,7 @@ Discord bot management system with Google OAuth authentication and comprehensive
 - **Rewhitelist Functionality Understanding**: Confirmed that /rewhitelist command removes/resets the HWID of keys (not reactivating dewhitelisted keys), updated success messages to remove experimental API warnings and display clean "Key successfully dewhitelisted ✓" and "Key successfully rewhitelisted ✓" responses
 - **Success Message Formatting**: Finalized dewhitelist and rewhitelist success messages with checkmarks per user preference - maintains professional appearance with visual confirmation
 - **Rewhitelist Fresh Key Handling**: Updated rewhitelist command to show "This key isn't hwid locked" error message for fresh keys that haven't been activated yet, replacing the previous API limitation message
+- **Role-Based API Access**: Added special role ID 1265423063764439051 with full access to all API and dashboard commands including generatekey, dewhitelist, rewhitelist, keyinfo, hwidinfo, userinfo, logs, stats, list, and hwid commands
 
 ### Current Implementation Status
 - ✅ Authentication flow and dashboard navigation

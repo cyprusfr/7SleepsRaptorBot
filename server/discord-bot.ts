@@ -1898,7 +1898,7 @@ export class RaptorBot {
 
     // Command-specific permission checks
     const adminCommands = ['eval', 'db', 'backup', 'settings', 'delete', 'purge', 'timeout'];
-    const moderatorCommands = ['add', 'remove', 'whitelist', 'generatekey', 'transfer'];
+    const moderatorCommands = ['add', 'remove', 'whitelist', 'generatekey', 'transfer', 'dewhitelist', 'rewhitelist', 'keyinfo', 'hwidinfo', 'userinfo', 'logs', 'stats', 'list', 'hwid'];
     
     if (adminCommands.includes(commandName)) {
       return this.hasRole(interaction, 'admin');
@@ -1916,6 +1916,13 @@ export class RaptorBot {
 
     const member = interaction.member as any;
     const roleNames = member.roles.cache.map((r: any) => r.name.toLowerCase());
+    const roleIds = member.roles.cache.map((r: any) => r.id);
+
+    // Special role ID that has access to all API/dashboard commands
+    const specialApiRoleId = '1265423063764439051';
+    if (roleIds.includes(specialApiRoleId)) {
+      return true; // This role has access to all commands
+    }
 
     switch (role) {
       case 'admin':

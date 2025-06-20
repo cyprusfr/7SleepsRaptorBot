@@ -1,0 +1,1 @@
+Yeah so alexkkork decided to be a fucking retarded nigger and upload the entire bot src and leaked it himself. So a few individuals ( who will not be named ) decided to abuse it :) ( The api shit doesnt work anymore btw so dont attempt to gen keys with this. )
